@@ -1,25 +1,21 @@
-from datetime import UTC, datetime, time, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_current_user
 from app.db import get_session
-from app.models import Item, ReviewEvent, User, UserCard
-from app.scheduling import NEW_CARDS_PER_DAY, apply_review
+from app.models import FSRS_REVIEW_STATE, PRODUCTION, RECOGNITION, Item, User, UserCard
+from app.scheduling import NEW_CARDS_PER_SESSION, apply_review
 
 router = APIRouter(prefix="/api/v1/reviews", tags=["reviews"])
 
 # Cards in learning steps come due minutes later; include them in one sitting.
 QUEUE_HORIZON = timedelta(minutes=15)
-
-RECOGNITION = "recognition"
-PRODUCTION = "production"
-FSRS_REVIEW_STATE = 2  # fsrs.State.Review: card has graduated its learning steps
 
 
 class ItemOut(BaseModel):
@@ -56,26 +52,6 @@ class ReviewOut(BaseModel):
     card_id: UUID
     due: datetime
     requeue: bool  # true if the card comes due again within this sitting
-
-
-def _utc_day_start(now: datetime) -> datetime:
-    return datetime.combine(now.date(), time.min, tzinfo=UTC)
-
-
-async def _new_cards_introduced_today(
-    session: AsyncSession, user_id: UUID, now: datetime
-) -> int:
-    return (
-        await session.scalar(
-            select(func.count())
-            .select_from(ReviewEvent)
-            .where(
-                ReviewEvent.user_id == user_id,
-                ReviewEvent.was_new,
-                ReviewEvent.reviewed_at >= _utc_day_start(now),
-            )
-        )
-    ) or 0
 
 
 async def _introduce_new_cards(
@@ -191,8 +167,7 @@ async def queue(
             .limit(limit)
         )
     )
-    introduced_today = await _new_cards_introduced_today(session, user.id, now)
-    allowance = min(NEW_CARDS_PER_DAY - introduced_today, limit - len(due_cards))
+    allowance = min(NEW_CARDS_PER_SESSION, limit - len(due_cards))
     new_cards = await _introduce_new_cards(session, user, language, allowance)
 
     return QueueOut(

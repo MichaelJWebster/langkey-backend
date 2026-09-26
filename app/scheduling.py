@@ -9,7 +9,10 @@ from app.models import ReviewEvent, UserCard
 # Default FSRS parameters, 90% desired retention.
 _scheduler = Scheduler()
 
-NEW_CARDS_PER_DAY = 10
+# New cards introduced per queue fetch. There is no daily cap: every session
+# offers another batch, so the learner can study as much as they like; the
+# batch size just keeps single sittings digestible.
+NEW_CARDS_PER_SESSION = 10
 
 
 def _card_from_user_card(uc: UserCard) -> Card:

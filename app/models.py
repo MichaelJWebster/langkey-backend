@@ -11,6 +11,14 @@ def _utcnow() -> datetime:
     return datetime.now(UTC)
 
 
+# Card direction values for UserCard.direction.
+RECOGNITION = "recognition"  # Norwegian -> English
+PRODUCTION = "production"  # English -> Norwegian
+
+# fsrs.State.Review: the card has graduated its learning steps.
+FSRS_REVIEW_STATE = 2
+
+
 class User(Base):
     __tablename__ = "users"
 
