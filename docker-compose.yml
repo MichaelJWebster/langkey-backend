@@ -1,0 +1,53 @@
+name: langkey
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: langkey
+      POSTGRES_PASSWORD: langkey
+      POSTGRES_DB: langkey
+    ports:
+      # Host port 5433 to avoid clashing with other local Postgres instances.
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U langkey"]
+      interval: 2s
+      timeout: 2s
+      retries: 15
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: langkey
+      MINIO_ROOT_PASSWORD: langkey-dev
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - miniodata:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build: .
+    environment:
+      LANGKEY_DATABASE_URL: postgresql+asyncpg://langkey:langkey@postgres:5432/langkey
+      LANGKEY_S3_ENDPOINT_URL: http://minio:9000
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+
+volumes:
+  pgdata:
+  miniodata:
