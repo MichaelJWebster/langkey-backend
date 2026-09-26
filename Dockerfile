@@ -2,7 +2,9 @@ FROM python:3.12-slim
 
 WORKDIR /srv/langkey
 
-COPY pyproject.toml ./
+COPY pyproject.toml alembic.ini ./
+COPY alembic ./alembic
+COPY data ./data
 COPY app ./app
 
 RUN pip install --no-cache-dir uv && uv pip install --system --no-cache .
