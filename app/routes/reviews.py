@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.audio import audio_url
 from app.auth import get_current_user
 from app.db import get_session
+from app.glossary import record_encounters
 from app.models import FSRS_REVIEW_STATE, PRODUCTION, RECOGNITION, Item, User, UserCard
 from app.scheduling import NEW_CARDS_PER_SESSION, apply_review
 
@@ -169,7 +170,7 @@ def _card_out(uc: UserCard) -> CardOut:
             translation=item.translation,
             pos=item.pos,
             cefr_level=item.cefr_level,
-            audio_url=audio_url(lang, item.source_text),
+            audio_url=audio_url(lang, item.source_text, primary=True),
             examples=[
                 ExampleOut(
                     sentence=ex.sentence,
@@ -228,6 +229,8 @@ async def submit_review(
     now = datetime.now(UTC)
     event = apply_review(uc, body.rating, now)
     session.add(event)
+    if event.was_new:
+        await record_encounters(session, user.id, uc.item, now)
     await session.commit()
 
     return ReviewOut(card_id=uc.id, due=uc.due, requeue=uc.due <= now + QUEUE_HORIZON)

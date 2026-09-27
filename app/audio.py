@@ -20,13 +20,30 @@ from app.content import _s3_client
 router = APIRouter(prefix="/api/v1/audio", tags=["audio"])
 
 
-def audio_object_key(language: str, text: str) -> str:
-    digest = hashlib.sha256(text.strip().encode()).hexdigest()[:20]
+# ≈80% speaking speed for learners (Piper length_scale stretches phonemes).
+LENGTH_SCALE = 1.25
+
+# Primary voice reads headwords; example sentences draw from the pool so the
+# learner hears varied speakers. "nvcc:N" = speaker N of no_NO-nvcc-medium.
+PRIMARY_VOICE = "talesyntese"
+VOICE_POOL = [PRIMARY_VOICE] + [f"nvcc:{n}" for n in range(10)]
+
+
+def voice_for_text(text: str, primary: bool = False) -> str:
+    if primary:
+        return PRIMARY_VOICE
+    pick = int(hashlib.sha256(f"voice|{text.strip()}".encode()).hexdigest()[:8], 16)
+    return VOICE_POOL[pick % len(VOICE_POOL)]
+
+
+def audio_object_key(language: str, text: str, primary: bool = False) -> str:
+    voice = voice_for_text(text, primary)
+    digest = hashlib.sha256(f"{voice}|{LENGTH_SCALE}|{text.strip()}".encode()).hexdigest()[:20]
     return f"audio/{language}/{digest}.wav"
 
 
-def audio_url(language: str, text: str) -> str:
-    return f"/api/v1/{audio_object_key(language, text)}"
+def audio_url(language: str, text: str, primary: bool = False) -> str:
+    return f"/api/v1/{audio_object_key(language, text, primary)}"
 
 
 @router.get("/{language}/{filename}")

@@ -10,7 +10,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from app import audio, auth
 from app.config import get_settings
 from app.db import engine
-from app.routes import hello, progress, reviews, topics
+from app.routes import glossary, hello, progress, reviews, topics
+from app.glossary import backfill_glossary
 from app.seed import seed_data
 
 
@@ -24,6 +25,7 @@ async def lifespan(app: FastAPI):
     # Alembic's async env calls asyncio.run, so it needs its own thread.
     await asyncio.to_thread(_run_migrations)
     await seed_data()
+    await backfill_glossary()
     yield
     await engine.dispose()
 
@@ -44,6 +46,7 @@ app.include_router(hello.router)
 app.include_router(reviews.router)
 app.include_router(progress.router)
 app.include_router(topics.router)
+app.include_router(glossary.router)
 
 
 @app.get("/api/v1/health", tags=["health"])

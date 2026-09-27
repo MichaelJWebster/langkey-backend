@@ -62,3 +62,21 @@ async def test_focus_beats_leftover_unseen_rows(client: AsyncClient) -> None:
     q = (await client.get("/api/v1/reviews/queue?focus=shopping", headers=headers)).json()
     firsts = [c["item"]["source_text"] for c in q["cards"][:3]]
     assert firsts[0] == "å handle", firsts
+
+
+async def test_glossary_records_card_and_example_words(client: AsyncClient) -> None:
+    headers = await login(client)
+    queue = (await client.get("/api/v1/reviews/queue", headers=headers)).json()
+    card = queue["cards"][0]  # "jeg" — examples: "Jeg heter Anna." / "Jeg er sulten." / "Kan jeg sitte her?"
+    await client.post(
+        "/api/v1/reviews", json={"card_id": card["card_id"], "rating": 3}, headers=headers
+    )
+    entries = (await client.get("/api/v1/glossary", headers=headers)).json()
+    by_word = {e["word"]: e for e in entries}
+    assert by_word["jeg"]["via"] == "card"
+    assert by_word["jeg"]["status"] == "established"
+    # Words met inside the example sentences, before being taught:
+    for w in ("å hete", "å være", "sulten", "å sitte", "her"):
+        assert w in by_word, w
+        assert by_word[w]["via"] == "example"
+        assert by_word[w]["status"] == "seen"

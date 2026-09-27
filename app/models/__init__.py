@@ -13,6 +13,7 @@ from app.models.learning import (
     ReviewEvent,
     UserCard,
 )
+from app.models.glossary import UserGlossaryEntry
 from app.models.meta import AppMeta
 from app.models.users import User
 
@@ -27,4 +28,5 @@ __all__ = [
     "ReviewEvent",
     "User",
     "UserCard",
+    "UserGlossaryEntry",
 ]
