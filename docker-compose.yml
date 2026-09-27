@@ -48,6 +48,16 @@ services:
       minio:
         condition: service_healthy
 
+  # One-shot TTS generation: docker compose run --rm tts
+  tts:
+    build: docker/piper
+    profiles: ["tts"]
+    environment:
+      LANGKEY_S3_ENDPOINT_URL: http://minio:9000
+    depends_on:
+      minio:
+        condition: service_healthy
+
 volumes:
   pgdata:
   miniodata:

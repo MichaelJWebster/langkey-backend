@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.audio import audio_url
 from app.auth import get_current_user
 from app.db import get_session
 from app.models import FSRS_REVIEW_STATE, PRODUCTION, RECOGNITION, Item, User, UserCard
@@ -21,7 +22,7 @@ QUEUE_HORIZON = timedelta(minutes=15)
 class ExampleOut(BaseModel):
     sentence: str
     translation: str
-    audio_key: str | None
+    audio_url: str
 
 
 class ItemOut(BaseModel):
@@ -31,7 +32,7 @@ class ItemOut(BaseModel):
     translation: str
     pos: str | None
     cefr_level: str
-    audio_key: str | None
+    audio_url: str
     examples: list[ExampleOut]
 
 
@@ -142,12 +143,30 @@ async def _introduce_new_cards(
 
 
 def _card_out(uc: UserCard) -> CardOut:
+    item = uc.item
+    lang = item.language_code
     return CardOut(
         card_id=uc.id,
         direction=uc.direction,
         is_new=uc.last_review is None,
         due=uc.due,
-        item=ItemOut.model_validate(uc.item, from_attributes=True),
+        item=ItemOut(
+            id=item.id,
+            item_type=item.item_type,
+            source_text=item.source_text,
+            translation=item.translation,
+            pos=item.pos,
+            cefr_level=item.cefr_level,
+            audio_url=audio_url(lang, item.source_text),
+            examples=[
+                ExampleOut(
+                    sentence=ex.sentence,
+                    translation=ex.translation,
+                    audio_url=audio_url(lang, ex.sentence),
+                )
+                for ex in item.examples
+            ],
+        ),
     )
 
 

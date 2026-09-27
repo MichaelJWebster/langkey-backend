@@ -7,7 +7,7 @@ from alembic.config import Config
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app import auth
+from app import audio, auth
 from app.config import get_settings
 from app.db import engine
 from app.routes import hello, progress, reviews
@@ -39,6 +39,7 @@ app.add_middleware(
 )
 
 app.include_router(auth.router)
+app.include_router(audio.router)
 app.include_router(hello.router)
 app.include_router(reviews.router)
 app.include_router(progress.router)

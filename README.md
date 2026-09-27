@@ -42,3 +42,11 @@ Tests run against in-memory SQLite; no services required.
 - `scripts/publish_deck.py` — merge sources → Parquet → MinIO (`uv run python -m scripts.publish_deck`); the API prefers the MinIO snapshot at startup and syncs Postgres without touching user progress
 
 See `ARCHITECTURE.md` and `ROADMAP.md` in the parent workspace for decisions and plan.
+
+## Audio generation (Piper TTS)
+
+```bash
+docker compose --profile tts run --rm tts
+```
+
+Generates Norwegian audio for every deck word and example sentence into MinIO (content-addressed, idempotent — only missing clips are synthesised). Run after publishing content changes. Clips stream from `GET /api/v1/audio/{lang}/{hash}.wav`.
