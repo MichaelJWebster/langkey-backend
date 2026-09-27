@@ -62,16 +62,20 @@ class ReviewOut(BaseModel):
 
 
 async def _introduce_new_cards(
-    session: AsyncSession, user: User, language: str, allowance: int
+    session: AsyncSession, user: User, language: str, allowance: int, focus: str | None
 ) -> list[UserCard]:
-    """Pick unseen cards up to `allowance`: existing unseen rows first, then new rows.
+    """Pick unseen cards up to `allowance`, merging existing unseen rows and
+    yet-uncarded items under one ordering, so a focus topic wins even over
+    unseen rows created by earlier unfocused fetches.
 
     Staging: every item starts with a recognition card; a production card becomes
     eligible only once the item's recognition card has graduated to Review state.
-    Candidates from both stages interleave by frequency rank.
+    Candidates from both stages interleave by frequency rank; a focus topic's
+    items come first, spilling over to the rest once the topic is exhausted.
     """
     if allowance <= 0:
         return []
+    focus_order = (Item.topic != focus) if focus else Item.frequency_rank
 
     unseen = list(
         await session.scalars(
@@ -82,13 +86,10 @@ async def _introduce_new_cards(
                 UserCard.last_review.is_(None),
                 Item.language_code == language,
             )
-            .order_by(Item.frequency_rank)
+            .order_by(focus_order, Item.frequency_rank)
             .limit(allowance)
         )
     )
-    needed = allowance - len(unseen)
-    if needed <= 0:
-        return unseen
 
     carded = (
         select(UserCard.item_id)
@@ -96,10 +97,10 @@ async def _introduce_new_cards(
         .scalar_subquery()
     )
     rec_rows = await session.execute(
-        select(Item.id, Item.frequency_rank)
+        select(Item.id, Item.frequency_rank, Item.topic)
         .where(Item.language_code == language, Item.id.not_in(carded))
-        .order_by(Item.frequency_rank)
-        .limit(needed)
+        .order_by(focus_order, Item.frequency_rank)
+        .limit(allowance)
     )
     graduated_recognition = (
         select(UserCard.item_id)
@@ -116,30 +117,41 @@ async def _introduce_new_cards(
         .scalar_subquery()
     )
     prod_rows = await session.execute(
-        select(Item.id, Item.frequency_rank)
+        select(Item.id, Item.frequency_rank, Item.topic)
         .where(
             Item.language_code == language,
             Item.id.in_(graduated_recognition),
             Item.id.not_in(prod_carded),
         )
-        .order_by(Item.frequency_rank)
-        .limit(needed)
+        .order_by(focus_order, Item.frequency_rank)
+        .limit(allowance)
     )
 
-    candidates = [(rank, item_id, RECOGNITION) for item_id, rank in rec_rows] + [
-        (rank, item_id, PRODUCTION) for item_id, rank in prod_rows
-    ]
-    candidates.sort()
+    def key(topic, rank, tiebreak) -> tuple:
+        return (bool(focus) and topic != focus, rank, tiebreak)
 
+    # Merge unseen rows and would-be new cards under the same focus-first order.
+    pool: list[tuple[tuple, str, object]] = [
+        (key(uc.item.topic, uc.item.frequency_rank, 0), "unseen", uc) for uc in unseen
+    ]
+    pool += [(key(t, r, 1), RECOGNITION, i) for i, r, t in rec_rows]
+    pool += [(key(t, r, 2), PRODUCTION, i) for i, r, t in prod_rows]
+    pool.sort(key=lambda entry: entry[0])
+
+    picked: list[UserCard] = []
     created: list[UserCard] = []
-    for _rank, item_id, direction in candidates[:needed]:
-        card = UserCard(user_id=user.id, item_id=item_id, direction=direction)
-        session.add(card)
-        created.append(card)
+    for _k, kind, payload in pool[:allowance]:
+        if kind == "unseen":
+            picked.append(payload)  # type: ignore[arg-type]
+        else:
+            card = UserCard(user_id=user.id, item_id=payload, direction=kind)
+            session.add(card)
+            created.append(card)
+            picked.append(card)
     await session.commit()
     for card in created:
         await session.refresh(card)
-    return unseen + created
+    return picked
 
 
 def _card_out(uc: UserCard) -> CardOut:
@@ -176,6 +188,7 @@ async def queue(
     session: Annotated[AsyncSession, Depends(get_session)],
     language: str = "nb",
     limit: int = 30,
+    focus: str | None = None,
 ) -> QueueOut:
     now = datetime.now(UTC)
     due_cards = list(
@@ -193,7 +206,7 @@ async def queue(
         )
     )
     allowance = min(NEW_CARDS_PER_SESSION, limit - len(due_cards))
-    new_cards = await _introduce_new_cards(session, user, language, allowance)
+    new_cards = await _introduce_new_cards(session, user, language, allowance, focus)
 
     return QueueOut(
         cards=[_card_out(c) for c in due_cards + new_cards],

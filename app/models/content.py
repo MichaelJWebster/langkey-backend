@@ -26,6 +26,7 @@ class Item(Base):
     pos: Mapped[str | None] = mapped_column(String(24))  # part of speech
     cefr_level: Mapped[str] = mapped_column(String(4))  # "A1" | "A2" | ...
     frequency_rank: Mapped[int] = mapped_column(Integer, index=True)  # introduction order
+    topic: Mapped[str | None] = mapped_column(String(32), index=True)  # focus area slug
     audio_key: Mapped[str | None] = mapped_column(String(256))  # MinIO key, from M2
 
     examples: Mapped[list["ItemExample"]] = relationship(

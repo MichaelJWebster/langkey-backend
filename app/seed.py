@@ -52,6 +52,7 @@ async def _sync_deck(session: AsyncSession, language: str, entries: list[DeckEnt
                     pos=e["pos"],
                     cefr_level=e["cefr"],
                     frequency_rank=rank,
+                    topic=e.get("topic"),
                     examples=examples,
                 )
             )
@@ -60,6 +61,7 @@ async def _sync_deck(session: AsyncSession, language: str, entries: list[DeckEnt
             item.pos = e["pos"]
             item.cefr_level = e["cefr"]
             item.frequency_rank = rank
+            item.topic = e.get("topic")
             item.examples = examples  # delete-orphan cascade drops the old rows
 
     if meta is None:

@@ -22,7 +22,29 @@ logger = logging.getLogger(__name__)
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 
-DeckEntry = dict[str, Any]  # keys: no, en, pos, cefr, type, examples[{no,en}]
+DeckEntry = dict[str, Any]  # keys: no, en, pos, cefr, type, topic, examples[{no,en}]
+
+TOPIC_LABELS = {
+    "basics": "Basics",
+    "meeting-people": "Meeting people",
+    "time-numbers": "Time & numbers",
+    "people-family": "People & family",
+    "food-drink": "Food & drink",
+    "everyday-verbs": "Everyday verbs",
+    "home": "Home",
+    "describing": "Describing things",
+    "places-travel": "Places & travel",
+    "nature-weather": "Nature & weather",
+    "body-health": "Health & body",
+    "hobbies-leisure": "Hobbies & leisure",
+    "daily-routine": "Daily routine",
+    "shopping": "Buying things",
+    "directions": "Asking directions",
+    "communication": "Communication",
+    "language-school": "Language & school",
+    "celebrations": "Celebrations",
+    "culture": "Norwegian culture",
+}
 
 
 def merge_local_deck(language: str = "nb") -> list[DeckEntry]:
@@ -43,6 +65,7 @@ def merge_local_deck(language: str = "nb") -> list[DeckEntry]:
                 "pos": e.get("pos"),
                 "cefr": e.get("cefr", "A1"),
                 "type": e.get("type", "word"),
+                "topic": e.get("topic"),
                 "examples": examples,
             }
         )
@@ -74,12 +97,12 @@ def load_from_minio(language: str = "nb") -> list[DeckEntry]:
         _s3_client().download_fileobj(settings.s3_bucket, deck_object_key(language), tmp)
         tmp.flush()
         rows = duckdb.sql(
-            f"SELECT no, en, pos, cefr, type, examples FROM read_parquet('{tmp.name}') "
+            f"SELECT no, en, pos, cefr, type, topic, examples FROM read_parquet('{tmp.name}') "
             "ORDER BY rank"
         ).fetchall()
     return [
-        {"no": no, "en": en, "pos": pos, "cefr": cefr, "type": typ, "examples": examples}
-        for no, en, pos, cefr, typ, examples in rows
+        {"no": no, "en": en, "pos": pos, "cefr": cefr, "type": typ, "topic": topic, "examples": examples}
+        for no, en, pos, cefr, typ, topic, examples in rows
     ]
 
 

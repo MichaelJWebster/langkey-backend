@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app import audio, auth
 from app.config import get_settings
 from app.db import engine
-from app.routes import hello, progress, reviews
+from app.routes import hello, progress, reviews, topics
 from app.seed import seed_data
 
 
@@ -43,6 +43,7 @@ app.include_router(audio.router)
 app.include_router(hello.router)
 app.include_router(reviews.router)
 app.include_router(progress.router)
+app.include_router(topics.router)
 
 
 @app.get("/api/v1/health", tags=["health"])

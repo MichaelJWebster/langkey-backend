@@ -35,7 +35,30 @@ async def test_deck_sync_is_idempotent(client: AsyncClient) -> None:
 
 async def test_local_deck_merge_shape() -> None:
     entries = merge_local_deck("nb")
-    assert len(entries) == 447
+    assert len(entries) == 471
     assert all(len(e["examples"]) >= 1 for e in entries)
     # Extras cover the first 150 items with two additional examples each.
     assert all(len(e["examples"]) == 3 for e in entries[:150])
+
+
+async def test_topics_and_focus(client: AsyncClient) -> None:
+    headers = await login(client)
+    topics = (await client.get("/api/v1/topics", headers=headers)).json()
+    by_slug = {t["topic"]: t for t in topics}
+    assert by_slug["shopping"]["label"] == "Buying things"
+    assert by_slug["directions"]["remaining"] == by_slug["directions"]["total"] == 20
+
+    q = (await client.get("/api/v1/reviews/queue?focus=directions", headers=headers)).json()
+    assert q["new_count"] == 10
+    first = q["cards"][0]["item"]
+    assert first["source_text"] == "til venstre"  # lowest-rank directions item
+
+
+async def test_focus_beats_leftover_unseen_rows(client: AsyncClient) -> None:
+    headers = await login(client)
+    # Unfocused fetch creates 10 unseen basics rows.
+    await client.get("/api/v1/reviews/queue", headers=headers)
+    # A focused fetch must still lead with the focus topic, not those leftovers.
+    q = (await client.get("/api/v1/reviews/queue?focus=shopping", headers=headers)).json()
+    firsts = [c["item"]["source_text"] for c in q["cards"][:3]]
+    assert firsts[0] == "å handle", firsts
