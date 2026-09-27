@@ -18,6 +18,12 @@ router = APIRouter(prefix="/api/v1/reviews", tags=["reviews"])
 QUEUE_HORIZON = timedelta(minutes=15)
 
 
+class ExampleOut(BaseModel):
+    sentence: str
+    translation: str
+    audio_key: str | None
+
+
 class ItemOut(BaseModel):
     id: int
     item_type: str
@@ -25,8 +31,8 @@ class ItemOut(BaseModel):
     translation: str
     pos: str | None
     cefr_level: str
-    example_sentence: str
-    example_translation: str
+    audio_key: str | None
+    examples: list[ExampleOut]
 
 
 class CardOut(BaseModel):

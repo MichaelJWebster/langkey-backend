@@ -37,6 +37,8 @@ Tests run against in-memory SQLite; no services required.
 - `app/scheduling.py` — FSRS bridge (py-fsrs ↔ `UserCard` rows)
 - `app/config.py` — settings via `LANGKEY_*` env vars / `.env`
 - `app/routes/` — API routes (versioned under `/api/v1`)
-- `data/seed_deck_nb.json` — Norwegian A1–A2 seed deck
+- `data/seed_deck_nb.json` — Norwegian A1–A2 seed deck (source of truth while authoring)
+- `data/extra_examples_nb.json` — additional example sentences, keyed `<no>||<en>`
+- `scripts/publish_deck.py` — merge sources → Parquet → MinIO (`uv run python -m scripts.publish_deck`); the API prefers the MinIO snapshot at startup and syncs Postgres without touching user progress
 
 See `ARCHITECTURE.md` and `ROADMAP.md` in the parent workspace for decisions and plan.

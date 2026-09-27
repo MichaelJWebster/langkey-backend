@@ -5,7 +5,7 @@ Importing this package registers every table on `app.db.Base.metadata`
 callers use `from app.models import ...` without caring about the split.
 """
 
-from app.models.content import Item, Language
+from app.models.content import Item, ItemExample, Language
 from app.models.learning import (
     FSRS_REVIEW_STATE,
     PRODUCTION,
@@ -20,6 +20,7 @@ __all__ = [
     "AppMeta",
     "FSRS_REVIEW_STATE",
     "Item",
+    "ItemExample",
     "Language",
     "PRODUCTION",
     "RECOGNITION",

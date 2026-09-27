@@ -1,30 +1,78 @@
-"""Idempotent dev/content seeding.
+"""Idempotent dev/content seeding and deck synchronisation.
 
 Production startup runs Alembic migrations then `seed_data()`. Tests call
 `create_schema_and_seed()`, which uses `create_all` instead of migrations.
+
+Deck sync upserts items (matched by language + source text + translation) and
+replaces their examples, so content edits propagate to an existing database
+without touching user progress. A content hash in app_meta makes reruns no-ops.
 """
 
-import json
-from pathlib import Path
+import asyncio
 
-from sqlalchemy import func, select
-from sqlalchemy.ext.asyncio import AsyncEngine
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 
 import app.db as db
 from app.auth import hash_password
+from app.content import DeckEntry, deck_hash, load_deck
 from app.db import Base
-from app.models import AppMeta, Item, Language, User
+from app.models import AppMeta, Item, ItemExample, Language, User
 
 DEV_USER_EMAIL = "dev@langkey.dev"
 DEV_USER_PASSWORD = "langkey-dev"
 
-SEED_DECK = Path(__file__).parent.parent / "data" / "seed_deck_nb.json"
+LANGUAGES = {"nb": "Norwegian Bokmål"}
+
+
+async def _sync_deck(session: AsyncSession, language: str, entries: list[DeckEntry]) -> None:
+    fingerprint = deck_hash(entries)
+    meta_key = f"deck_hash:{language}"
+    meta = await session.get(AppMeta, meta_key)
+    if meta is not None and meta.value == fingerprint:
+        return
+
+    existing = {
+        (item.source_text, item.translation): item
+        for item in await session.scalars(select(Item).where(Item.language_code == language))
+    }
+    for rank, e in enumerate(entries, start=1):
+        examples = [
+            ItemExample(position=pos, sentence=ex["no"], translation=ex["en"])
+            for pos, ex in enumerate(e["examples"])
+        ]
+        item = existing.get((e["no"], e["en"]))
+        if item is None:
+            session.add(
+                Item(
+                    language_code=language,
+                    item_type=e["type"],
+                    source_text=e["no"],
+                    translation=e["en"],
+                    pos=e["pos"],
+                    cefr_level=e["cefr"],
+                    frequency_rank=rank,
+                    examples=examples,
+                )
+            )
+        else:
+            item.item_type = e["type"]
+            item.pos = e["pos"]
+            item.cefr_level = e["cefr"]
+            item.frequency_rank = rank
+            item.examples = examples  # delete-orphan cascade drops the old rows
+
+    if meta is None:
+        session.add(AppMeta(key=meta_key, value=fingerprint))
+    else:
+        meta.value = fingerprint
 
 
 async def seed_data() -> None:
     async with db.session_factory() as session:
-        if await session.get(Language, "nb") is None:
-            session.add(Language(code="nb", name="Norwegian Bokmål"))
+        for code, name in LANGUAGES.items():
+            if await session.get(Language, code) is None:
+                session.add(Language(code=code, name=name))
 
         if await session.get(AppMeta, "greeting") is None:
             session.add(AppMeta(key="greeting", value="Hei! Velkommen til LangKey 🇳🇴"))
@@ -37,27 +85,11 @@ async def seed_data() -> None:
                     password_hash=hash_password(DEV_USER_PASSWORD),
                 )
             )
+        await session.commit()
 
-        item_count = await session.scalar(
-            select(func.count()).select_from(Item).where(Item.language_code == "nb")
-        )
-        if not item_count and SEED_DECK.exists():
-            entries = json.loads(SEED_DECK.read_text())
-            for rank, e in enumerate(entries, start=1):
-                session.add(
-                    Item(
-                        language_code="nb",
-                        item_type=e.get("type", "word"),
-                        source_text=e["no"],
-                        translation=e["en"],
-                        pos=e.get("pos"),
-                        cefr_level=e.get("cefr", "A1"),
-                        frequency_rank=rank,
-                        example_sentence=e["ex_no"],
-                        example_translation=e["ex_en"],
-                    )
-                )
-
+        for code in LANGUAGES:
+            entries, _source = await asyncio.to_thread(load_deck, code)
+            await _sync_deck(session, code, entries)
         await session.commit()
 
 
