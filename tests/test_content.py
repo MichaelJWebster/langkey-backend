@@ -80,3 +80,35 @@ async def test_glossary_records_card_and_example_words(client: AsyncClient) -> N
         assert w in by_word, w
         assert by_word[w]["via"] == "example"
         assert by_word[w]["status"] == "seen"
+
+
+async def test_listening_session_and_attempts(client: AsyncClient) -> None:
+    headers = await login(client)
+    # No cards studied yet: no exercises.
+    empty = (await client.get("/api/v1/exercises/listening", headers=headers)).json()
+    assert empty["exercises"] == []
+
+    queue = (await client.get("/api/v1/reviews/queue", headers=headers)).json()
+    for card in queue["cards"][:3]:
+        await client.post(
+            "/api/v1/reviews", json={"card_id": card["card_id"], "rating": 3}, headers=headers
+        )
+
+    body = (await client.get("/api/v1/exercises/listening?limit=6", headers=headers)).json()
+    kinds = {e["kind"] for e in body["exercises"]}
+    assert kinds == {"dictation", "listen_choose"}
+    for e in body["exercises"]:
+        if e["kind"] == "dictation":
+            assert e["target"] and e["audio_url"].startswith("/api/v1/audio/")
+        else:
+            assert len(e["options"]) == 4
+            assert 0 <= e["correct_index"] < 4
+            assert e["options"][e["correct_index"]]
+
+    resp = await client.post(
+        "/api/v1/exercises/attempts",
+        json={"exercise_type": "dictation", "example_id": 1, "item_id": 1,
+              "correct": True, "near_miss": True, "answer": "jeg heter anna"},
+        headers=headers,
+    )
+    assert resp.status_code == 201
