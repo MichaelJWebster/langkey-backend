@@ -22,7 +22,7 @@ LANGUAGE = os.environ.get("LANGKEY_LANGUAGE", "nb")
 BUCKET = os.environ.get("LANGKEY_S3_BUCKET", "langkey-content")
 
 LENGTH_SCALE = 1.25
-DICTATION_SCALE = 1.5  # example sentences also get a slow primary-voice variant
+DICTATION_SCALES = [2.0, 1.6, 1.25]  # slow primary-voice dictation ladder
 PRIMARY_VOICE = "talesyntese"
 VOICE_POOL = [PRIMARY_VOICE] + [f"nvcc:{n}" for n in range(10)]
 
@@ -64,7 +64,8 @@ def deck_variants() -> dict[tuple[str, bool, float], None]:
         variants[(word, True, LENGTH_SCALE)] = None
         for ex in examples:
             variants.setdefault((ex["no"], False, LENGTH_SCALE), None)
-            variants.setdefault((ex["no"], True, DICTATION_SCALE), None)
+            for scale in DICTATION_SCALES:
+                variants.setdefault((ex["no"], True, scale), None)
     return variants
 
 

@@ -94,12 +94,19 @@ async def test_listening_session_and_attempts(client: AsyncClient) -> None:
             "/api/v1/reviews", json={"card_id": card["card_id"], "rating": 3}, headers=headers
         )
 
-    body = (await client.get("/api/v1/exercises/listening?limit=6", headers=headers)).json()
-    kinds = {e["kind"] for e in body["exercises"]}
-    assert kinds == {"dictation", "listen_choose"}
+    body = (await client.get("/api/v1/exercises/listening?limit=8", headers=headers)).json()
+    kinds = [e["kind"] for e in body["exercises"]]
+    assert set(kinds) == {"dictation", "listen_choose"}
+    # New learner (<25 attempts): word recognition dominates — 25% dictation.
+    assert kinds.count("dictation") == 2
     for e in body["exercises"]:
         if e["kind"] == "dictation":
-            assert e["target"] and e["audio_url"].startswith("/api/v1/audio/")
+            assert e["target"]
+            scales = [sp["scale"] for sp in e["speeds"]]
+            assert scales == [2.0, 1.6, 1.25]
+            assert e["suggested_scale"] == 2.0  # very slow until there's evidence
+            assert all(sp["url"].startswith("/api/v1/audio/") for sp in e["speeds"])
+            assert len({sp["url"] for sp in e["speeds"]}) == 3
         else:
             assert len(e["options"]) == 4
             assert 0 <= e["correct_index"] < 4
@@ -108,7 +115,8 @@ async def test_listening_session_and_attempts(client: AsyncClient) -> None:
     resp = await client.post(
         "/api/v1/exercises/attempts",
         json={"exercise_type": "dictation", "example_id": 1, "item_id": 1,
-              "correct": True, "near_miss": True, "answer": "jeg heter anna"},
+              "correct": True, "near_miss": True, "hints": 2, "speed": 1.8,
+              "answer": "jeg heter anna"},
         headers=headers,
     )
     assert resp.status_code == 201

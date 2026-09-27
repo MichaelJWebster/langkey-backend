@@ -3,17 +3,17 @@ from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.audio import DICTATION_SCALE, audio_url
+from app.audio import DICTATION_SCALES, audio_url
 from app.auth import get_current_user
 from app.db import get_session
+from app.glossary import _form_index
 from app.models import (
     RECOGNITION,
     ExerciseAttempt,
     Item,
-    ItemExample,
     User,
     UserCard,
 )
@@ -21,11 +21,17 @@ from app.models import (
 router = APIRouter(prefix="/api/v1/exercises", tags=["exercises"])
 
 
+class SpeedOut(BaseModel):
+    scale: float  # Piper length_scale (bigger = slower)
+    url: str
+
+
 class DictationOut(BaseModel):
     kind: Literal["dictation"] = "dictation"
     item_id: int
     example_id: int
-    audio_url: str
+    speeds: list[SpeedOut]  # slowest first
+    suggested_scale: float
     target: str  # checked client-side; this is practice, not an exam
     translation: str
 
@@ -50,7 +56,40 @@ class AttemptIn(BaseModel):
     correct: bool
     near_miss: bool = False
     hints: int = 0
+    speed: float | None = None
     answer: str | None = None
+
+
+def _dictation_share(total_attempts: int) -> float:
+    """Word recognition dominates early; transcription grows with practice."""
+    if total_attempts < 25:
+        return 0.25
+    if total_attempts < 75:
+        return 0.4
+    return 0.6
+
+
+async def _suggested_scale(session: AsyncSession, user_id) -> float:
+    """Pick a dictation speed from recent accuracy (hint-free correct answers)."""
+    recent = (
+        await session.execute(
+            select(ExerciseAttempt.correct, ExerciseAttempt.hints)
+            .where(
+                ExerciseAttempt.user_id == user_id,
+                ExerciseAttempt.exercise_type == "dictation",
+            )
+            .order_by(ExerciseAttempt.created_at.desc())
+            .limit(12)
+        )
+    ).all()
+    if len(recent) < 6:
+        return DICTATION_SCALES[0]  # very slow until there's evidence
+    accuracy = sum(1 for correct, hints in recent if correct and hints == 0) / len(recent)
+    if accuracy < 0.55:
+        return DICTATION_SCALES[0]
+    if accuracy < 0.8:
+        return DICTATION_SCALES[1]
+    return DICTATION_SCALES[2]
 
 
 @router.get("/listening", response_model=ListeningSessionOut)
@@ -75,28 +114,57 @@ async def listening_session(
     if not seen_items:
         return ListeningSessionOut(exercises=[])
 
+    total_attempts = (
+        await session.scalar(
+            select(func.count())
+            .select_from(ExerciseAttempt)
+            .where(ExerciseAttempt.user_id == user.id)
+        )
+    ) or 0
+    n_dictation = max(1, round(limit * _dictation_share(total_attempts)))
+    suggested = await _suggested_scale(session, user.id)
+
+    # Rank candidate sentences by how much of them the learner has already met:
+    # matched known deck words over total words (unknown-to-deck words count
+    # against), with a mild penalty for length.
+    index = await _form_index(session, language)
+    seen_ids = {item.id for item in seen_items}
+    candidates = []
+    for item in seen_items:
+        for ex in item.examples:
+            words = ex.sentence.split()
+            matched = index.match(ex.sentence) | {item.id}
+            known = len(matched & seen_ids)
+            ease = known / max(len(words), 1) - 0.02 * len(words)
+            candidates.append((ease, item, ex))
+    candidates.sort(key=lambda c: c[0], reverse=True)
+    # Sample among the easiest 60% so sessions vary but stay comprehensible.
+    pool = candidates[: max(n_dictation, int(len(candidates) * 0.6))]
+    picked = random.sample(pool, k=min(n_dictation, len(pool)))
+
+    dictations = [
+        DictationOut(
+            item_id=item.id,
+            example_id=ex.id,
+            speeds=[
+                SpeedOut(
+                    scale=scale,
+                    url=audio_url(language, ex.sentence, primary=True, scale=scale),
+                )
+                for scale in DICTATION_SCALES
+            ],
+            suggested_scale=suggested,
+            target=ex.sentence,
+            translation=ex.translation,
+        )
+        for _ease, item, ex in picked
+    ]
+
     all_translations = list(
         await session.scalars(
             select(Item.translation).where(Item.language_code == language).distinct()
         )
     )
-
-    n_dictation = (limit + 1) // 2
-    examples = random.sample(
-        [(item, ex) for item in seen_items for ex in item.examples],
-        k=min(n_dictation, sum(len(i.examples) for i in seen_items)),
-    )
-    dictations = [
-        DictationOut(
-            item_id=item.id,
-            example_id=ex.id,
-            audio_url=audio_url(language, ex.sentence, primary=True, scale=DICTATION_SCALE),
-            target=ex.sentence,
-            translation=ex.translation,
-        )
-        for item, ex in examples
-    ]
-
     choices: list[ChoiceOut] = []
     for item in random.sample(seen_items, k=min(limit - len(dictations), len(seen_items))):
         distractors = random.sample(
@@ -135,6 +203,7 @@ async def record_attempt(
             correct=body.correct,
             near_miss=body.near_miss,
             hints=body.hints,
+            speed=body.speed,
             answer=body.answer,
         )
     )

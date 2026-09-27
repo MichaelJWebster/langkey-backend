@@ -22,8 +22,9 @@ router = APIRouter(prefix="/api/v1/audio", tags=["audio"])
 
 # ≈80% speaking speed for learners (Piper length_scale stretches phonemes).
 LENGTH_SCALE = 1.25
-# Dictation sentences: much slower, and always the primary (clearest) voice.
-DICTATION_SCALE = 1.5
+# Dictation sentences: always the primary (clearest) voice, at a ladder of
+# speeds. The server suggests one from recent accuracy; the learner can switch.
+DICTATION_SCALES = [2.0, 1.6, 1.25]  # very slow / slow / normal
 
 # Primary voice reads headwords; example sentences draw from the pool so the
 # learner hears varied speakers. "nvcc:N" = speaker N of no_NO-nvcc-medium.
