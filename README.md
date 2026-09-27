@@ -30,10 +30,13 @@ Tests run against in-memory SQLite; no services required.
 
 ## Layout
 
-- `app/main.py` — FastAPI app, CORS, startup schema/seed
+- `app/main.py` — FastAPI app, CORS, startup migrations/seed
 - `app/auth.py` — JWT auth (dev-grade user store, production-shaped interfaces)
-- `app/models.py` — SQLAlchemy models
+- `app/db/` — database plumbing: engine, sessions, declarative `Base`
+- `app/models/` — SQLAlchemy models by functional area (`users`, `meta`, `content`, `learning`), re-exported from the package root
+- `app/scheduling.py` — FSRS bridge (py-fsrs ↔ `UserCard` rows)
 - `app/config.py` — settings via `LANGKEY_*` env vars / `.env`
 - `app/routes/` — API routes (versioned under `/api/v1`)
+- `data/seed_deck_nb.json` — Norwegian A1–A2 seed deck
 
 See `ARCHITECTURE.md` and `ROADMAP.md` in the parent workspace for decisions and plan.

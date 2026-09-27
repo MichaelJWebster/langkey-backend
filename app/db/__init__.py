@@ -1,3 +1,8 @@
+"""Database plumbing: engine, sessions, and the declarative base.
+
+Table definitions live in `app.models`, one module per functional area.
+"""
+
 from collections.abc import AsyncIterator
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
