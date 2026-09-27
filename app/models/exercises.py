@@ -20,6 +20,7 @@ class ExerciseAttempt(Base):
     example_id: Mapped[int | None] = mapped_column(ForeignKey("item_examples.id"))
     correct: Mapped[bool] = mapped_column(Boolean)
     near_miss: Mapped[bool] = mapped_column(Boolean, default=False)  # diacritics only
+    hints: Mapped[int] = mapped_column(Integer, default=0)  # words revealed before answering
     answer: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utcnow, index=True

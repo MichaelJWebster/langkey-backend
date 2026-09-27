@@ -22,6 +22,7 @@ LANGUAGE = os.environ.get("LANGKEY_LANGUAGE", "nb")
 BUCKET = os.environ.get("LANGKEY_S3_BUCKET", "langkey-content")
 
 LENGTH_SCALE = 1.25
+DICTATION_SCALE = 1.5  # example sentences also get a slow primary-voice variant
 PRIMARY_VOICE = "talesyntese"
 VOICE_POOL = [PRIMARY_VOICE] + [f"nvcc:{n}" for n in range(10)]
 
@@ -45,24 +46,26 @@ def voice_for_text(text: str, primary: bool = False) -> str:
     return VOICE_POOL[pick % len(VOICE_POOL)]
 
 
-def audio_object_key(language: str, text: str, primary: bool = False) -> str:
+def audio_object_key(language: str, text: str, primary: bool = False, scale: float = LENGTH_SCALE) -> str:
     voice = voice_for_text(text, primary)
-    digest = hashlib.sha256(f"{voice}|{LENGTH_SCALE}|{text.strip()}".encode()).hexdigest()[:20]
+    digest = hashlib.sha256(f"{voice}|{scale}|{text.strip()}".encode()).hexdigest()[:20]
     return f"audio/{language}/{digest}.wav"
 
 
-def deck_texts() -> dict[str, bool]:
-    """text -> is_headword (headwords keep the primary voice)."""
+def deck_variants() -> dict[tuple[str, bool, float], None]:
+    """(text, primary, scale) variants: headwords once; example sentences get a
+    pool-voice flashcard clip plus a slow primary-voice dictation clip."""
     with tempfile.NamedTemporaryFile(suffix=".parquet") as tmp:
         s3.download_fileobj(BUCKET, f"decks/{LANGUAGE}.parquet", tmp)
         tmp.flush()
         rows = duckdb.sql(f"SELECT no, examples FROM read_parquet('{tmp.name}')").fetchall()
-    texts: dict[str, bool] = {}
+    variants: dict[tuple[str, bool, float], None] = {}
     for word, examples in rows:
-        texts[word] = True
+        variants[(word, True, LENGTH_SCALE)] = None
         for ex in examples:
-            texts.setdefault(ex["no"], False)
-    return texts
+            variants.setdefault((ex["no"], False, LENGTH_SCALE), None)
+            variants.setdefault((ex["no"], True, DICTATION_SCALE), None)
+    return variants
 
 
 def existing_keys() -> set[str]:
@@ -74,23 +77,26 @@ def existing_keys() -> set[str]:
 
 
 def main() -> None:
-    texts = deck_texts()
-    expected = {audio_object_key(LANGUAGE, t, primary): (t, primary) for t, primary in texts.items()}
+    variants = deck_variants()
+    expected = {
+        audio_object_key(LANGUAGE, t, primary, scale): (t, primary, scale)
+        for t, primary, scale in variants
+    }
     have = existing_keys()
     todo = sorted((key, *expected[key]) for key in expected.keys() - have)
     stale = sorted(have - expected.keys())
     print(
-        f"{len(texts)} texts, {len(have)} clips exist, generating {len(todo)}, pruning {len(stale)}",
+        f"{len(variants)} variants, {len(have)} clips exist, generating {len(todo)}, pruning {len(stale)}",
         flush=True,
     )
 
     if todo:
         voices = {name: PiperVoice.load(path) for name, path in MODELS.items()}
-        for i, (key, text, primary) in enumerate(todo, 1):
+        for i, (key, text, primary, scale) in enumerate(todo, 1):
             voice_id = voice_for_text(text, primary)
             model_name, _, speaker = voice_id.partition(":")
             config = SynthesisConfig(
-                length_scale=LENGTH_SCALE,
+                length_scale=scale,
                 speaker_id=int(speaker) if speaker else None,
             )
             buf = io.BytesIO()

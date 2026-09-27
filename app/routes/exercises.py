@@ -6,7 +6,7 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.audio import audio_url
+from app.audio import DICTATION_SCALE, audio_url
 from app.auth import get_current_user
 from app.db import get_session
 from app.models import (
@@ -49,6 +49,7 @@ class AttemptIn(BaseModel):
     example_id: int | None = None
     correct: bool
     near_miss: bool = False
+    hints: int = 0
     answer: str | None = None
 
 
@@ -89,7 +90,7 @@ async def listening_session(
         DictationOut(
             item_id=item.id,
             example_id=ex.id,
-            audio_url=audio_url(language, ex.sentence),
+            audio_url=audio_url(language, ex.sentence, primary=True, scale=DICTATION_SCALE),
             target=ex.sentence,
             translation=ex.translation,
         )
@@ -133,6 +134,7 @@ async def record_attempt(
             example_id=body.example_id,
             correct=body.correct,
             near_miss=body.near_miss,
+            hints=body.hints,
             answer=body.answer,
         )
     )

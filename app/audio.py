@@ -22,6 +22,8 @@ router = APIRouter(prefix="/api/v1/audio", tags=["audio"])
 
 # ≈80% speaking speed for learners (Piper length_scale stretches phonemes).
 LENGTH_SCALE = 1.25
+# Dictation sentences: much slower, and always the primary (clearest) voice.
+DICTATION_SCALE = 1.5
 
 # Primary voice reads headwords; example sentences draw from the pool so the
 # learner hears varied speakers. "nvcc:N" = speaker N of no_NO-nvcc-medium.
@@ -36,14 +38,19 @@ def voice_for_text(text: str, primary: bool = False) -> str:
     return VOICE_POOL[pick % len(VOICE_POOL)]
 
 
-def audio_object_key(language: str, text: str, primary: bool = False) -> str:
+def audio_object_key(
+    language: str, text: str, primary: bool = False, scale: float | None = None
+) -> str:
     voice = voice_for_text(text, primary)
-    digest = hashlib.sha256(f"{voice}|{LENGTH_SCALE}|{text.strip()}".encode()).hexdigest()[:20]
+    s = scale or LENGTH_SCALE
+    digest = hashlib.sha256(f"{voice}|{s}|{text.strip()}".encode()).hexdigest()[:20]
     return f"audio/{language}/{digest}.wav"
 
 
-def audio_url(language: str, text: str, primary: bool = False) -> str:
-    return f"/api/v1/{audio_object_key(language, text, primary)}"
+def audio_url(
+    language: str, text: str, primary: bool = False, scale: float | None = None
+) -> str:
+    return f"/api/v1/{audio_object_key(language, text, primary, scale)}"
 
 
 @router.get("/{language}/{filename}")
