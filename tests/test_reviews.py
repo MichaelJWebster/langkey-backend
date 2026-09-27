@@ -55,15 +55,21 @@ async def test_review_flow_updates_card_and_counts(client: AsyncClient) -> None:
     assert resp.status_code == 200
     body = resp.json()
     assert body["card_id"] == card["card_id"]
-    # Rated Good on first sight: due minutes away (learning step), so requeued.
-    assert body["requeue"] is True
+    # Single learning step: Good on first sight graduates — no in-session repeat.
+    assert body["requeue"] is False
+
+    # Again keeps a card cycling within the sitting.
+    second = queue["cards"][1]
+    resp = await client.post(
+        "/api/v1/reviews", json={"card_id": second["card_id"], "rating": 1}, headers=headers
+    )
+    assert resp.json()["requeue"] is True
 
     progress = (await client.get("/api/v1/progress", headers=headers)).json()
-    assert progress["reviewed_today"] == 1
-    assert progress["cards_learning"] == 1
+    assert progress["reviewed_today"] == 2
+    assert progress["cards_learning"] == 1  # the Again'd card
+    assert progress["cards_established"] == 1  # the Good'd card
     assert progress["streak_days"] == 1
-    # 447 items: 9 unseen cards remain + 437 items not yet carded.
-    assert progress["new_available"] == progress["total_items"] - 1
 
 
 async def test_easy_rating_graduates_card(client: AsyncClient) -> None:

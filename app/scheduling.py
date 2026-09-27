@@ -1,13 +1,20 @@
 """FSRS scheduling: the bridge between py-fsrs cards and UserCard rows."""
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from fsrs import Card, Rating, Scheduler, State
 
 from app.models import ReviewEvent, UserCard
 
-# Default FSRS parameters, 90% desired retention.
-_scheduler = Scheduler()
+# Default FSRS parameters, 90% desired retention. Single short learning /
+# relearning steps (vs the default 1m+10m): a new card graded Good graduates
+# immediately and returns in days, so sessions stay short — the user shadows
+# every phrase aloud, so first exposures are deep already (ADR-015). Only
+# Again keeps a card cycling within the sitting.
+_scheduler = Scheduler(
+    learning_steps=(timedelta(minutes=1),),
+    relearning_steps=(timedelta(minutes=5),),
+)
 
 # New cards introduced per queue fetch. There is no daily cap: every session
 # offers another batch, so the learner can study as much as they like; the
