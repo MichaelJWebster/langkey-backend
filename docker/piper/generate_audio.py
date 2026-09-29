@@ -21,8 +21,10 @@ from piper import PiperVoice, SynthesisConfig
 LANGUAGE = os.environ.get("LANGKEY_LANGUAGE", "nb")
 BUCKET = os.environ.get("LANGKEY_S3_BUCKET", "langkey-content")
 
-LENGTH_SCALE = 1.25
-DICTATION_SCALES = [2.0, 1.6, 1.25]  # slow primary-voice dictation ladder
+# Calibrated: Piper's length_scale is sub-linear on these voices (keep in
+# sync with app/audio.py).
+LENGTH_SCALE = 1.6
+DICTATION_SCALES = [2.8, 2.2, 1.6]  # slow primary-voice dictation ladder
 PRIMARY_VOICE = "talesyntese"
 VOICE_POOL = [PRIMARY_VOICE] + [f"nvcc:{n}" for n in range(10)]
 

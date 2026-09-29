@@ -2,6 +2,7 @@ from httpx import AsyncClient
 from sqlalchemy import func, select
 
 import app.db as db
+from app.audio import DICTATION_SCALES
 from app.content import merge_local_deck
 from app.models import Item, ItemExample
 from app.seed import seed_data
@@ -103,8 +104,8 @@ async def test_listening_session_and_attempts(client: AsyncClient) -> None:
         if e["kind"] == "dictation":
             assert e["target"]
             scales = [sp["scale"] for sp in e["speeds"]]
-            assert scales == [2.0, 1.6, 1.25]
-            assert e["suggested_scale"] == 2.0  # very slow until there's evidence
+            assert scales == list(DICTATION_SCALES)
+            assert e["suggested_scale"] == DICTATION_SCALES[0]  # very slow until there's evidence
             assert all(sp["url"].startswith("/api/v1/audio/") for sp in e["speeds"])
             assert len({sp["url"] for sp in e["speeds"]}) == 3
         else:

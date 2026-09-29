@@ -20,11 +20,14 @@ from app.content import _s3_client
 router = APIRouter(prefix="/api/v1/audio", tags=["audio"])
 
 
-# ≈80% speaking speed for learners (Piper length_scale stretches phonemes).
-LENGTH_SCALE = 1.25
+# ≈80% speaking speed for learners. Piper's length_scale is severely
+# sub-linear on these voices (measured: 1.25→1.06x, 1.6→1.28x, 2.8→1.9x
+# actual voiced slowdown), so these values are calibrated by ear/measurement,
+# not nominal ratios.
+LENGTH_SCALE = 1.6
 # Dictation sentences: always the primary (clearest) voice, at a ladder of
 # speeds. The server suggests one from recent accuracy; the learner can switch.
-DICTATION_SCALES = [2.0, 1.6, 1.25]  # very slow / slow / normal
+DICTATION_SCALES = [2.8, 2.2, 1.6]  # very slow / slow / normal
 
 # Primary voice reads headwords; example sentences draw from the pool so the
 # learner hears varied speakers. "nvcc:N" = speaker N of no_NO-nvcc-medium.
