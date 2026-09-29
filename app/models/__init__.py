@@ -16,6 +16,13 @@ from app.models.learning import (
 )
 from app.models.glossary import UserGlossaryEntry
 from app.models.meta import AppMeta
+from app.models.reading import (
+    ReadingText,
+    Sentence,
+    SentenceTranslation,
+    TextSection,
+    UserReadingPosition,
+)
 from app.models.users import User
 
 __all__ = [
@@ -27,8 +34,13 @@ __all__ = [
     "Language",
     "PRODUCTION",
     "RECOGNITION",
+    "ReadingText",
     "ReviewEvent",
+    "Sentence",
+    "SentenceTranslation",
+    "TextSection",
     "User",
     "UserCard",
     "UserGlossaryEntry",
+    "UserReadingPosition",
 ]
