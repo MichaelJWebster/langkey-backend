@@ -2,7 +2,7 @@ import random
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -56,8 +56,17 @@ class AttemptIn(BaseModel):
     correct: bool
     near_miss: bool = False
     hints: int = 0
+    # Graded mark: share of the answer produced without hints (0 when wrong).
+    score: float | None = Field(default=None, ge=0.0, le=1.0)
     speed: float | None = None
     answer: str | None = None
+
+
+def _attempt_score(correct: bool, hints: int, score: float | None) -> float:
+    """An attempt's mark, with the pre-grading fallback for old rows."""
+    if score is not None:
+        return score
+    return 1.0 if correct and hints == 0 else 0.0
 
 
 def _dictation_share(total_attempts: int) -> float:
@@ -70,10 +79,10 @@ def _dictation_share(total_attempts: int) -> float:
 
 
 async def _suggested_scale(session: AsyncSession, user_id) -> float:
-    """Pick a dictation speed from recent accuracy (hint-free correct answers)."""
+    """Pick a dictation speed from recent graded marks (hints lower the mark)."""
     recent = (
         await session.execute(
-            select(ExerciseAttempt.correct, ExerciseAttempt.hints)
+            select(ExerciseAttempt.correct, ExerciseAttempt.hints, ExerciseAttempt.score)
             .where(
                 ExerciseAttempt.user_id == user_id,
                 ExerciseAttempt.exercise_type == "dictation",
@@ -84,12 +93,52 @@ async def _suggested_scale(session: AsyncSession, user_id) -> float:
     ).all()
     if len(recent) < 6:
         return DICTATION_SCALES[0]  # very slow until there's evidence
-    accuracy = sum(1 for correct, hints in recent if correct and hints == 0) / len(recent)
+    accuracy = sum(_attempt_score(c, h, s) for c, h, s in recent) / len(recent)
     if accuracy < 0.55:
         return DICTATION_SCALES[0]
     if accuracy < 0.8:
         return DICTATION_SCALES[1]
     return DICTATION_SCALES[2]
+
+
+async def _practice_need(session: AsyncSession, user_id) -> dict[int, float]:
+    """How much each sentence wants another go: 1 minus its recent graded marks.
+
+    Averages the last few marks per sentence from the learner's recent
+    dictation attempts; a clean run scores 1.0 and drops the sentence back
+    into the ordinary rotation.
+    """
+    rows = (
+        await session.execute(
+            select(
+                ExerciseAttempt.example_id,
+                ExerciseAttempt.correct,
+                ExerciseAttempt.hints,
+                ExerciseAttempt.score,
+            )
+            .where(
+                ExerciseAttempt.user_id == user_id,
+                ExerciseAttempt.exercise_type == "dictation",
+                ExerciseAttempt.example_id.is_not(None),
+            )
+            .order_by(ExerciseAttempt.created_at.desc())
+            .limit(60)
+        )
+    ).all()
+    marks: dict[int, list[float]] = {}
+    for example_id, correct, hints, score in rows:
+        bucket = marks.setdefault(example_id, [])
+        if len(bucket) < 3:  # the three most recent attempts per sentence
+            bucket.append(_attempt_score(correct, hints, score))
+    return {ex_id: 1.0 - sum(b) / len(b) for ex_id, b in marks.items()}
+
+
+def _weighted_sample(pool: list, weights: list[float], k: int) -> list:
+    """k distinct picks, higher weight = more likely (Efraimidis–Spirakis keys)."""
+    keyed = sorted(
+        zip(pool, weights), key=lambda pw: random.random() ** (1.0 / pw[1]), reverse=True
+    )
+    return [p for p, _w in keyed[:k]]
 
 
 @router.get("/listening", response_model=ListeningSessionOut)
@@ -139,8 +188,14 @@ async def listening_session(
             candidates.append((ease, item, ex))
     candidates.sort(key=lambda c: c[0], reverse=True)
     # Sample among the easiest 60% so sessions vary but stay comprehensible.
+    # Sentences the learner recently struggled with (low graded marks) always
+    # join the pool and are weighted to come around sooner.
+    need = await _practice_need(session, user.id)
     pool = candidates[: max(n_dictation, int(len(candidates) * 0.6))]
-    picked = random.sample(pool, k=min(n_dictation, len(pool)))
+    pooled_ids = {ex.id for _ease, _item, ex in pool}
+    pool += [c for c in candidates if c[2].id not in pooled_ids and need.get(c[2].id, 0) > 0]
+    weights = [1.0 + 3.0 * need.get(ex.id, 0.0) for _ease, _item, ex in pool]
+    picked = _weighted_sample(pool, weights, k=min(n_dictation, len(pool)))
 
     dictations = [
         DictationOut(
@@ -203,6 +258,7 @@ async def record_attempt(
             correct=body.correct,
             near_miss=body.near_miss,
             hints=body.hints,
+            score=body.score,
             speed=body.speed,
             answer=body.answer,
         )

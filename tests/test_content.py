@@ -116,8 +116,8 @@ async def test_listening_session_and_attempts(client: AsyncClient) -> None:
     resp = await client.post(
         "/api/v1/exercises/attempts",
         json={"exercise_type": "dictation", "example_id": 1, "item_id": 1,
-              "correct": True, "near_miss": True, "hints": 2, "speed": 1.8,
-              "answer": "jeg heter anna"},
+              "correct": True, "near_miss": True, "hints": 2, "score": 0.67,
+              "speed": 1.8, "answer": "jeg heter anna"},
         headers=headers,
     )
     assert resp.status_code == 201

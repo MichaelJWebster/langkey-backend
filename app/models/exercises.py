@@ -20,7 +20,10 @@ class ExerciseAttempt(Base):
     example_id: Mapped[int | None] = mapped_column(ForeignKey("item_examples.id"))
     correct: Mapped[bool] = mapped_column(Boolean)
     near_miss: Mapped[bool] = mapped_column(Boolean, default=False)  # diacritics only
-    hints: Mapped[int] = mapped_column(Integer, default=0)  # words revealed before answering
+    hints: Mapped[int] = mapped_column(Integer, default=0)  # hint presses before answering
+    # Graded mark 0..1: share of the sentence produced without hints (0 when
+    # wrong or fully revealed). Null on rows from before grading existed.
+    score: Mapped[float | None] = mapped_column(Float)
     speed: Mapped[float | None] = mapped_column(Float)  # dictation length_scale used
     answer: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(
