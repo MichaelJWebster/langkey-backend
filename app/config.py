@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     s3_access_key: str = "langkey"
     s3_secret_key: str = "langkey-dev"
     s3_bucket: str = "langkey-content"
+    s3_region: str = "auto"
 
     cors_origins: list[str] = ["http://localhost:5173"]
 

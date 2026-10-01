@@ -81,6 +81,9 @@ def _s3_client():
         endpoint_url=settings.s3_endpoint_url,
         aws_access_key_id=settings.s3_access_key,
         aws_secret_access_key=settings.s3_secret_key,
+        # Pin the region: R2 requires "auto", MinIO ignores it, and without
+        # this an ambient ~/.aws/config region leaks in and breaks R2.
+        region_name=settings.s3_region,
     )
 
 

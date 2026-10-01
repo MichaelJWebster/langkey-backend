@@ -25,9 +25,12 @@ def publish(language: str = "nb") -> None:
 
     settings = get_settings()
     client = _s3_client()
-    existing = {b["Name"] for b in client.list_buckets()["Buckets"]}
-    if settings.s3_bucket not in existing:
-        client.create_bucket(Bucket=settings.s3_bucket)
+    try:
+        existing = {b["Name"] for b in client.list_buckets()["Buckets"]}
+        if settings.s3_bucket not in existing:
+            client.create_bucket(Bucket=settings.s3_bucket)
+    except Exception:
+        pass  # bucket-scoped credentials (e.g. R2) can't list; bucket exists
 
     with tempfile.TemporaryDirectory() as tmp:
         src = Path(tmp) / "deck.json"

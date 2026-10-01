@@ -38,6 +38,7 @@ s3 = boto3.client(
     endpoint_url=os.environ.get("LANGKEY_S3_ENDPOINT_URL", "http://minio:9000"),
     aws_access_key_id=os.environ.get("LANGKEY_S3_ACCESS_KEY", "langkey"),
     aws_secret_access_key=os.environ.get("LANGKEY_S3_SECRET_KEY", "langkey-dev"),
+    region_name=os.environ.get("LANGKEY_S3_REGION", "auto"),  # R2 needs "auto"
 )
 
 
