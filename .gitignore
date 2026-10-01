@@ -8,3 +8,4 @@ dist/
 data/texts_staging/
 .neon
 .env.local
+.secrets.local
