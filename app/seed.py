@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 
 import app.db as db
 from app.auth import hash_password
+from app.config import get_settings
 from app.content import DeckEntry, deck_hash, load_deck
 from app.db import Base
 from app.models import AppMeta, Item, ItemExample, Language, User
@@ -79,14 +80,18 @@ async def seed_data() -> None:
         if await session.get(AppMeta, "greeting") is None:
             session.add(AppMeta(key="greeting", value="Hei! Velkommen til LangKey 🇳🇴"))
 
-        if await session.scalar(select(User).where(User.email == DEV_USER_EMAIL)) is None:
-            session.add(
-                User(
-                    email=DEV_USER_EMAIL,
-                    display_name="Dev Learner",
-                    password_hash=hash_password(DEV_USER_PASSWORD),
+        # The well-known dev login must never exist outside dev; elsewhere the
+        # initial user comes from LANGKEY_ADMIN_EMAIL / LANGKEY_ADMIN_PASSWORD.
+        settings = get_settings()
+        if settings.environment == "dev":
+            email, password, name = DEV_USER_EMAIL, DEV_USER_PASSWORD, "Dev Learner"
+        else:
+            email, password, name = settings.admin_email, settings.admin_password, "Learner"
+        if email and password:
+            if await session.scalar(select(User).where(User.email == email)) is None:
+                session.add(
+                    User(email=email, display_name=name, password_hash=hash_password(password))
                 )
-            )
         await session.commit()
 
         for code in LANGUAGES:

@@ -8,7 +8,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app import audio, auth
-from app.config import get_settings
+from app.config import check_production_config, get_settings
 from app.db import engine
 from app.routes import exercises, glossary, hello, progress, reviews, texts, topics
 from app.glossary import backfill_glossary
@@ -22,6 +22,7 @@ def _run_migrations() -> None:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    check_production_config(get_settings())
     # Alembic's async env calls asyncio.run, so it needs its own thread.
     await asyncio.to_thread(_run_migrations)
     await seed_data()
