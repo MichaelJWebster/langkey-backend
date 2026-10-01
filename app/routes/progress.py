@@ -1,5 +1,6 @@
-from datetime import UTC, datetime, time, timedelta
+from datetime import UTC, date, datetime, time, timedelta
 from typing import Annotated
+from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
@@ -7,6 +8,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_current_user
+from app.config import get_settings
 from app.db import get_session
 from app.models import (
     FSRS_REVIEW_STATE,
@@ -31,8 +33,27 @@ class ProgressOut(BaseModel):
     streak_days: int
 
 
-def _utc_day_start(now: datetime) -> datetime:
-    return datetime.combine(now.date(), time.min, tzinfo=UTC)
+def _tz() -> ZoneInfo:
+    return ZoneInfo(get_settings().timezone)
+
+
+def _local_day_start(now: datetime) -> datetime:
+    """Start of the learner's current wall-clock day, as a UTC instant.
+
+    Normalised to UTC so the DB comparison works on SQLite too, where
+    datetimes compare as strings and a non-UTC offset would break ordering.
+    """
+    local_midnight = datetime.combine(now.astimezone(_tz()).date(), time.min, tzinfo=_tz())
+    return local_midnight.astimezone(UTC)
+
+
+def _local_date(ts: datetime | str) -> date:
+    """A review timestamp's date on the learner's wall clock (storage is UTC)."""
+    if isinstance(ts, str):  # SQLite returns ISO strings
+        ts = datetime.fromisoformat(ts)
+    if ts.tzinfo is None:
+        ts = ts.replace(tzinfo=UTC)
+    return ts.astimezone(_tz()).date()
 
 
 @router.get("", response_model=ProgressOut)
@@ -42,7 +63,7 @@ async def progress(
     language: str = "nb",
 ) -> ProgressOut:
     now = datetime.now(UTC)
-    day_start = _utc_day_start(now)
+    day_start = _local_day_start(now)
 
     seen_cards = (
         select(UserCard)
@@ -123,18 +144,17 @@ async def progress(
     )
     new_available = (unseen or 0) + (uncarded or 0) + (prod_unlockable or 0)
 
+    # Local-day bucketing must happen in Python: SQL date() works in UTC, and
+    # the learner's offset shifts with DST. Volume is one row per review.
     rows = await session.execute(
-        select(func.date(ReviewEvent.reviewed_at).label("day"))
+        select(ReviewEvent.reviewed_at)
         .where(ReviewEvent.user_id == user.id)
-        .distinct()
-        .order_by(func.date(ReviewEvent.reviewed_at).desc())
+        .order_by(ReviewEvent.reviewed_at.desc())
     )
-    review_dates = [
-        d if not isinstance(d, str) else datetime.fromisoformat(d).date() for (d,) in rows
-    ]
-    # Consecutive UTC days ending today; no review yet today keeps yesterday's streak.
+    review_dates = sorted({_local_date(ts) for (ts,) in rows}, reverse=True)
+    # Consecutive local days ending today; no review yet today keeps yesterday's streak.
     streak = 0
-    expected = now.date()
+    expected = now.astimezone(_tz()).date()
     for d in review_dates:
         if streak == 0 and d == expected - timedelta(days=1):
             expected = d

@@ -10,6 +10,8 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="LANGKEY_", env_file=".env", extra="ignore")
 
     environment: str = "dev"  # "dev" | "prod"
+    # Day boundaries for streaks / "reviewed today" (the learner's wall clock).
+    timezone: str = "Australia/Sydney"
     database_url: str = "postgresql+asyncpg://langkey:langkey@localhost:5433/langkey"
     jwt_secret: str = DEV_JWT_SECRET
 
