@@ -67,3 +67,56 @@ async def test_skills_breakdown_shape_and_counts(client: AsyncClient) -> None:
     body = (await client.get("/api/v1/progress/skills", headers=headers)).json()
     v = body["vocabulary"]
     assert v["learning"] + v["established"] == 1
+
+
+async def test_example_gloss_excludes_headword_and_established(client: AsyncClient) -> None:
+    import uuid as uuid_mod
+
+    from sqlalchemy import select
+
+    import app.db as db
+    from app.models import FSRS_REVIEW_STATE, RECOGNITION, Item, User, UserCard
+
+    headers = await login(client)
+    queue = (await client.get("/api/v1/reviews/queue", headers=headers)).json()
+
+    glossed = [
+        (card, ex)
+        for card in queue["cards"]
+        for ex in card["item"]["examples"]
+        if ex["gloss"]
+    ]
+    assert glossed, "expected at least one example with gloss entries"
+    card, ex = glossed[0]
+    words = [g["word"] for g in ex["gloss"]]
+    assert card["item"]["source_text"] not in words  # headword never glossed
+    assert all(g["translation"] for g in ex["gloss"])
+
+    # Establish one glossed word's recognition card: it must drop out.
+    target_word = words[0]
+    async with db.session_factory() as session:
+        user_id = (await session.scalars(select(User.id))).first()
+        item_id = (
+            await session.scalars(select(Item.id).where(Item.source_text == target_word))
+        ).first()
+        existing = (
+            await session.scalars(
+                select(UserCard).where(
+                    UserCard.user_id == user_id,
+                    UserCard.item_id == item_id,
+                    UserCard.direction == RECOGNITION,
+                )
+            )
+        ).first()
+        if existing is None:
+            existing = UserCard(
+                id=uuid_mod.uuid4(), user_id=user_id, item_id=item_id, direction=RECOGNITION
+            )
+            session.add(existing)
+        existing.fsrs_state = FSRS_REVIEW_STATE
+        await session.commit()
+
+    queue = (await client.get("/api/v1/reviews/queue", headers=headers)).json()
+    for c in queue["cards"]:
+        for e in c["item"]["examples"]:
+            assert target_word not in [g["word"] for g in e["gloss"]]

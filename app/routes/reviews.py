@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.audio import audio_url
 from app.auth import get_current_user
 from app.db import get_session
-from app.glossary import record_encounters
+from app.glossary import _form_index, record_encounters
 from app.models import FSRS_REVIEW_STATE, PRODUCTION, RECOGNITION, Item, User, UserCard
 from app.scheduling import NEW_CARDS_PER_SESSION, apply_review
 
@@ -20,10 +20,18 @@ router = APIRouter(prefix="/api/v1/reviews", tags=["reviews"])
 QUEUE_HORIZON = timedelta(minutes=15)
 
 
+class GlossOut(BaseModel):
+    word: str  # deck lemma, e.g. "å hete"
+    translation: str
+
+
 class ExampleOut(BaseModel):
     sentence: str
     translation: str
     audio_url: str
+    # Deck words in the sentence the learner hasn't established yet (the
+    # card's own headword excluded) — a helper glossary for the examples.
+    gloss: list[GlossOut] = []
 
 
 class ItemOut(BaseModel):
@@ -165,7 +173,47 @@ async def _introduce_new_cards(
     return picked
 
 
-def _card_out(uc: UserCard) -> CardOut:
+async def _gloss_helper(session: AsyncSession, user_id, language: str, cards: list[UserCard]):
+    """Build a lookup of unestablished deck words per example sentence.
+
+    The learner reads example sentences full of words beyond the card itself;
+    this glosses the ones the deck knows about but they haven't established.
+    """
+    index = await _form_index(session, language)
+    established = set(
+        await session.scalars(
+            select(UserCard.item_id).where(
+                UserCard.user_id == user_id,
+                UserCard.direction == RECOGNITION,
+                UserCard.fsrs_state == FSRS_REVIEW_STATE,
+            )
+        )
+    )
+    matches: dict[str, set[int]] = {}
+    needed: set[int] = set()
+    for uc in cards:
+        for ex in uc.item.examples:
+            if ex.sentence not in matches:
+                matches[ex.sentence] = index.match(ex.sentence)
+            needed |= matches[ex.sentence]
+    info: dict[int, tuple[str, str, int]] = {}
+    if needed:
+        rows = await session.execute(
+            select(Item.id, Item.source_text, Item.translation, Item.frequency_rank).where(
+                Item.id.in_(needed)
+            )
+        )
+        info = {i: (word, translation, rank) for i, word, translation, rank in rows}
+
+    def gloss_for(sentence: str, own_item_id: int) -> list[GlossOut]:
+        ids = matches.get(sentence, set()) - established - {own_item_id}
+        entries = sorted((info[i] for i in ids if i in info), key=lambda e: e[2])
+        return [GlossOut(word=word, translation=translation) for word, translation, _ in entries]
+
+    return gloss_for
+
+
+def _card_out(uc: UserCard, gloss_for=None) -> CardOut:
     item = uc.item
     lang = item.language_code
     return CardOut(
@@ -186,6 +234,7 @@ def _card_out(uc: UserCard) -> CardOut:
                     sentence=ex.sentence,
                     translation=ex.translation,
                     audio_url=audio_url(lang, ex.sentence),
+                    gloss=gloss_for(ex.sentence, item.id) if gloss_for else [],
                 )
                 for ex in item.examples
             ],
@@ -226,7 +275,10 @@ async def queue(
                 .limit(limit)
             )
         )
-        return QueueOut(cards=[_card_out(c) for c in tricky], due_count=len(tricky), new_count=0)
+        gloss_for = await _gloss_helper(session, user.id, language, tricky)
+        return QueueOut(
+            cards=[_card_out(c, gloss_for) for c in tricky], due_count=len(tricky), new_count=0
+        )
 
     due_filters = [
         UserCard.user_id == user.id,
@@ -248,8 +300,9 @@ async def queue(
     allowance = min(NEW_CARDS_PER_SESSION, limit - len(due_cards))
     new_cards = await _introduce_new_cards(session, user, language, allowance, focus, direction)
 
+    gloss_for = await _gloss_helper(session, user.id, language, due_cards + new_cards)
     return QueueOut(
-        cards=[_card_out(c) for c in due_cards + new_cards],
+        cards=[_card_out(c, gloss_for) for c in due_cards + new_cards],
         due_count=len(due_cards),
         new_count=len(new_cards),
     )
