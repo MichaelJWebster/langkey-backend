@@ -21,7 +21,7 @@ from app.models import (
     User,
     UserCard,
 )
-from app.models.reading import ReadingText, UserReadingPosition
+from app.models.reading import ReadingText, Sentence, UserReadingPosition
 from app.routes.exercises import _attempt_score
 
 router = APIRouter(prefix="/api/v1/progress", tags=["progress"])
@@ -175,6 +175,137 @@ async def progress(
         cards_established=established or 0,
         total_items=total_items or 0,
         streak_days=streak,
+    )
+
+
+class CardBreakdown(BaseModel):
+    unseen: int
+    learning: int  # seen, still in learning steps
+    relearning: int  # lapsed and being relearned
+    established: int  # graduated to FSRS Review state
+
+
+class ListeningBreakdown(BaseModel):
+    clean: int  # full marks, no hints
+    helped: int  # right with hints / partial credit
+    missed: int
+    total: int  # attempts considered (recent window)
+
+
+class ReadingBreakdown(BaseModel):
+    sentences_read: int
+    sentences_total: int
+
+
+class SkillsBreakdownOut(BaseModel):
+    vocabulary: CardBreakdown  # recognition cards over the whole deck
+    writing: CardBreakdown  # production cards over unlocked items
+    listening: ListeningBreakdown
+    reading: ReadingBreakdown
+
+
+async def _card_breakdown(
+    session: AsyncSession, user_id, language: str, direction: str, total_pool: int
+) -> CardBreakdown:
+    rows = (
+        await session.execute(
+            select(UserCard.fsrs_state, func.count())
+            .join(Item)
+            .where(
+                UserCard.user_id == user_id,
+                UserCard.direction == direction,
+                UserCard.last_review.is_not(None),
+                Item.language_code == language,
+            )
+            .group_by(UserCard.fsrs_state)
+        )
+    ).all()
+    by_state = dict(rows)
+    seen = sum(by_state.values())
+    return CardBreakdown(
+        unseen=max(0, total_pool - seen),
+        learning=sum(n for s, n in by_state.items() if s not in (FSRS_REVIEW_STATE, 3)),
+        relearning=by_state.get(3, 0),
+        established=by_state.get(FSRS_REVIEW_STATE, 0),
+    )
+
+
+@router.get("/skills", response_model=SkillsBreakdownOut)
+async def skills_breakdown(
+    user: Annotated[User, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_session)],
+    language: str = "nb",
+) -> SkillsBreakdownOut:
+    """Per-skill state counts for the practice screens' progress graphics."""
+    total_items = (
+        await session.scalar(
+            select(func.count()).select_from(Item).where(Item.language_code == language)
+        )
+    ) or 0
+    # Production cards unlock when the recognition card graduates.
+    unlocked = (
+        await session.scalar(
+            select(func.count())
+            .select_from(UserCard)
+            .join(Item)
+            .where(
+                UserCard.user_id == user.id,
+                UserCard.direction == RECOGNITION,
+                UserCard.fsrs_state == FSRS_REVIEW_STATE,
+                Item.language_code == language,
+            )
+        )
+    ) or 0
+
+    vocabulary = await _card_breakdown(session, user.id, language, RECOGNITION, total_items)
+    writing = await _card_breakdown(session, user.id, language, PRODUCTION, unlocked)
+
+    recent = (
+        await session.execute(
+            select(ExerciseAttempt.correct, ExerciseAttempt.hints, ExerciseAttempt.score)
+            .where(
+                ExerciseAttempt.user_id == user.id,
+                ExerciseAttempt.exercise_type == "dictation",
+            )
+            .order_by(ExerciseAttempt.created_at.desc())
+            .limit(30)
+        )
+    ).all()
+    clean = helped = missed = 0
+    for c, h, s in recent:
+        mark = _attempt_score(c, h, s)
+        if mark >= 1:
+            clean += 1
+        elif mark > 0:
+            helped += 1
+        else:
+            missed += 1
+
+    sentences_total = (
+        await session.scalar(
+            select(func.count())
+            .select_from(Sentence)
+            .join(ReadingText, Sentence.text_id == ReadingText.id)
+            .where(ReadingText.language_code == language)
+        )
+    ) or 0
+    sentences_read = (
+        await session.scalar(
+            select(func.coalesce(func.sum(UserReadingPosition.seq), 0))
+            .select_from(UserReadingPosition)
+            .join(ReadingText, UserReadingPosition.text_id == ReadingText.id)
+            .where(
+                UserReadingPosition.user_id == user.id,
+                ReadingText.language_code == language,
+            )
+        )
+    ) or 0
+
+    return SkillsBreakdownOut(
+        vocabulary=vocabulary,
+        writing=writing,
+        listening=ListeningBreakdown(clean=clean, helped=helped, missed=missed, total=len(recent)),
+        reading=ReadingBreakdown(sentences_read=sentences_read, sentences_total=sentences_total),
     )
 
 

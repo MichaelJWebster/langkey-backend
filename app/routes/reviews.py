@@ -63,7 +63,12 @@ class ReviewOut(BaseModel):
 
 
 async def _introduce_new_cards(
-    session: AsyncSession, user: User, language: str, allowance: int, focus: str | None
+    session: AsyncSession,
+    user: User,
+    language: str,
+    allowance: int,
+    focus: str | None,
+    direction: str | None = None,
 ) -> list[UserCard]:
     """Pick unseen cards up to `allowance`, merging existing unseen rows and
     yet-uncarded items under one ordering, so a focus topic wins even over
@@ -78,15 +83,18 @@ async def _introduce_new_cards(
         return []
     focus_order = (Item.topic != focus) if focus else Item.frequency_rank
 
+    unseen_filters = [
+        UserCard.user_id == user.id,
+        UserCard.last_review.is_(None),
+        Item.language_code == language,
+    ]
+    if direction:
+        unseen_filters.append(UserCard.direction == direction)
     unseen = list(
         await session.scalars(
             select(UserCard)
             .join(Item)
-            .where(
-                UserCard.user_id == user.id,
-                UserCard.last_review.is_(None),
-                Item.language_code == language,
-            )
+            .where(*unseen_filters)
             .order_by(focus_order, Item.frequency_rank)
             .limit(allowance)
         )
@@ -135,8 +143,10 @@ async def _introduce_new_cards(
     pool: list[tuple[tuple, str, object]] = [
         (key(uc.item.topic, uc.item.frequency_rank, 0), "unseen", uc) for uc in unseen
     ]
-    pool += [(key(t, r, 1), RECOGNITION, i) for i, r, t in rec_rows]
-    pool += [(key(t, r, 2), PRODUCTION, i) for i, r, t in prod_rows]
+    if direction in (None, RECOGNITION):
+        pool += [(key(t, r, 1), RECOGNITION, i) for i, r, t in rec_rows]
+    if direction in (None, PRODUCTION):
+        pool += [(key(t, r, 2), PRODUCTION, i) for i, r, t in prod_rows]
     pool.sort(key=lambda entry: entry[0])
 
     picked: list[UserCard] = []
@@ -188,26 +198,55 @@ async def queue(
     user: Annotated[User, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_session)],
     language: str = "nb",
-    limit: int = 30,
+    limit: int = 15,
     focus: str | None = None,
+    direction: str | None = None,
+    mode: str | None = None,
 ) -> QueueOut:
     now = datetime.now(UTC)
+
+    if mode == "tricky":
+        # Extra practice on words not yet established, strongest first: the
+        # ones closest to graduating repeat before the barely-met ones, and
+        # scheduling due dates are ignored (reviews still feed FSRS).
+        filters = [
+            UserCard.user_id == user.id,
+            UserCard.last_review.is_not(None),
+            UserCard.fsrs_state != FSRS_REVIEW_STATE,
+            Item.language_code == language,
+        ]
+        if direction:
+            filters.append(UserCard.direction == direction)
+        tricky = list(
+            await session.scalars(
+                select(UserCard)
+                .join(Item)
+                .where(*filters)
+                .order_by(UserCard.stability.desc().nullslast(), UserCard.due)
+                .limit(limit)
+            )
+        )
+        return QueueOut(cards=[_card_out(c) for c in tricky], due_count=len(tricky), new_count=0)
+
+    due_filters = [
+        UserCard.user_id == user.id,
+        UserCard.last_review.is_not(None),
+        UserCard.due <= now + QUEUE_HORIZON,
+        Item.language_code == language,
+    ]
+    if direction:
+        due_filters.append(UserCard.direction == direction)
     due_cards = list(
         await session.scalars(
             select(UserCard)
             .join(Item)
-            .where(
-                UserCard.user_id == user.id,
-                UserCard.last_review.is_not(None),
-                UserCard.due <= now + QUEUE_HORIZON,
-                Item.language_code == language,
-            )
+            .where(*due_filters)
             .order_by(UserCard.due)
             .limit(limit)
         )
     )
     allowance = min(NEW_CARDS_PER_SESSION, limit - len(due_cards))
-    new_cards = await _introduce_new_cards(session, user, language, allowance, focus)
+    new_cards = await _introduce_new_cards(session, user, language, allowance, focus, direction)
 
     return QueueOut(
         cards=[_card_out(c) for c in due_cards + new_cards],
