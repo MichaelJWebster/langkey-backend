@@ -8,17 +8,21 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_current_user
+from app.cefr import estimate
 from app.config import get_settings
 from app.db import get_session
 from app.models import (
     FSRS_REVIEW_STATE,
     PRODUCTION,
     RECOGNITION,
+    ExerciseAttempt,
     Item,
     ReviewEvent,
     User,
     UserCard,
 )
+from app.models.reading import ReadingText, UserReadingPosition
+from app.routes.exercises import _attempt_score
 
 router = APIRouter(prefix="/api/v1/progress", tags=["progress"])
 
@@ -171,4 +175,146 @@ async def progress(
         cards_established=established or 0,
         total_items=total_items or 0,
         streak_days=streak,
+    )
+
+
+class SkillOut(BaseModel):
+    skill: str  # vocabulary | listening | reading | writing | speaking
+    practised: bool
+    level: str | None  # highest band cleared; None = pre-A1
+    next_level: str | None
+    progress: float  # 0..1 toward next_level
+    detail: str
+
+
+class CefrOut(BaseModel):
+    overall_level: str | None  # weakest practised skill — CEFR needs them all
+    overall_next: str | None
+    overall_progress: float
+    skills: list[SkillOut]
+    note: str
+
+
+async def _established(session: AsyncSession, user_id, language: str, direction: str) -> int:
+    return (
+        await session.scalar(
+            select(func.count())
+            .select_from(UserCard)
+            .join(Item)
+            .where(
+                UserCard.user_id == user_id,
+                UserCard.direction == direction,
+                UserCard.fsrs_state == FSRS_REVIEW_STATE,
+                Item.language_code == language,
+            )
+        )
+    ) or 0
+
+
+@router.get("/cefr", response_model=CefrOut)
+async def cefr_progress(
+    user: Annotated[User, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_session)],
+    language: str = "nb",
+) -> CefrOut:
+    """Estimate CEFR progress per skill from an "effective vocabulary".
+
+    Established recognition cards anchor the estimate; comprehension skills
+    discount that vocabulary by how well it holds up in actual listening and
+    how much connected text has been read. See app.cefr for the ladder.
+    """
+    vocab = await _established(session, user.id, language, RECOGNITION)
+    prod_vocab = await _established(session, user.id, language, PRODUCTION)
+
+    recent = (
+        await session.execute(
+            select(ExerciseAttempt.correct, ExerciseAttempt.hints, ExerciseAttempt.score)
+            .where(
+                ExerciseAttempt.user_id == user.id,
+                ExerciseAttempt.exercise_type == "dictation",
+            )
+            .order_by(ExerciseAttempt.created_at.desc())
+            .limit(20)
+        )
+    ).all()
+    listen_mark = (
+        sum(_attempt_score(c, h, s) for c, h, s in recent) / len(recent) if recent else 0.0
+    )
+
+    sentences_read = (
+        await session.scalar(
+            select(func.coalesce(func.sum(UserReadingPosition.seq), 0))
+            .select_from(UserReadingPosition)
+            .join(ReadingText, UserReadingPosition.text_id == ReadingText.id)
+            .where(
+                UserReadingPosition.user_id == user.id,
+                ReadingText.language_code == language,
+            )
+        )
+    ) or 0
+    # Reading comfort saturates once a few hundred sentences of connected
+    # text have been read; below that it discounts the vocabulary estimate.
+    reading_factor = min(1.0, sentences_read / 300)
+
+    effectives: dict[str, tuple[float, bool, str]] = {
+        "vocabulary": (vocab, vocab > 0, f"{vocab} words established"),
+        "listening": (
+            vocab * listen_mark,
+            bool(recent),
+            f"{len(recent)} recent dictations at {round(listen_mark * 100)}%"
+            if recent
+            else "no listening practice yet",
+        ),
+        "reading": (
+            vocab * reading_factor,
+            sentences_read > 0,
+            f"{sentences_read} sentences of connected text read"
+            if sentences_read
+            else "no reading yet",
+        ),
+        "writing": (
+            prod_vocab,
+            prod_vocab > 0,
+            f"{prod_vocab} words produced from English",
+        ),
+    }
+
+    skills = []
+    for name, (effective, practised, detail) in effectives.items():
+        level, next_level, progress = estimate(effective)
+        skills.append(
+            SkillOut(
+                skill=name,
+                practised=practised,
+                level=level,
+                next_level=next_level,
+                progress=round(progress, 3),
+                detail=detail,
+            )
+        )
+    skills.append(
+        SkillOut(
+            skill="speaking",
+            practised=False,
+            level=None,
+            next_level="A1",
+            progress=0.0,
+            detail="not trained in LangKey yet",
+        )
+    )
+
+    # A CEFR level requires every skill, so the overall estimate follows the
+    # weakest practised skill (speaking excluded until the app trains it).
+    weakest = min((effectives[n][0] for n in effectives), default=0.0)
+    overall_level, overall_next, overall_progress = estimate(weakest)
+
+    return CefrOut(
+        overall_level=overall_level,
+        overall_next=overall_next,
+        overall_progress=round(overall_progress, 3),
+        skills=skills,
+        note=(
+            "Estimated from vocabulary research (Milton & Alexiou), not a "
+            "certification — the official test is Norskprøven (prove.hkdir.no)."
+        ),
     )
