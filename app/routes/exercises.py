@@ -50,7 +50,9 @@ class ListeningSessionOut(BaseModel):
 
 
 class AttemptIn(BaseModel):
-    exercise_type: Literal["dictation", "listen_choose"]
+    # vocab_recall: a typed flashcard answer (the review itself is a ReviewEvent;
+    # this logs how close the guess was).
+    exercise_type: Literal["dictation", "listen_choose", "vocab_recall"]
     item_id: int | None = None
     example_id: int | None = None
     correct: bool
