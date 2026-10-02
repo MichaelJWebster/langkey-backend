@@ -61,3 +61,23 @@ class ReviewEvent(Base):
     due_after: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     stability_after: Mapped[float | None] = mapped_column(Float)
     difficulty_after: Mapped[float | None] = mapped_column(Float)
+
+
+class UserAnswerAlternative(Base):
+    """An answer the learner vouched for after the checker marked it wrong.
+
+    Typed recall can only compare against the deck's own wording, so a correct
+    synonym gets marked down. Pressing "that should have counted" records the
+    answer here and it is accepted for that card from then on.
+    """
+
+    __tablename__ = "user_answer_alternatives"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), index=True)
+    item_id: Mapped[int] = mapped_column(ForeignKey("items.id"))
+    direction: Mapped[str] = mapped_column(String(16))
+    answer: Mapped[str] = mapped_column(String(256))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+    __table_args__ = (UniqueConstraint("user_id", "item_id", "direction", "answer"),)

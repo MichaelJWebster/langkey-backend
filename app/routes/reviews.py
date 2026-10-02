@@ -11,7 +11,15 @@ from app.audio import audio_url
 from app.auth import get_current_user
 from app.db import get_session
 from app.glossary import _form_index, record_encounters
-from app.models import FSRS_REVIEW_STATE, PRODUCTION, RECOGNITION, Item, User, UserCard
+from app.models import (
+    FSRS_REVIEW_STATE,
+    PRODUCTION,
+    RECOGNITION,
+    Item,
+    User,
+    UserAnswerAlternative,
+    UserCard,
+)
 from app.scheduling import NEW_CARDS_PER_SESSION, apply_review
 
 router = APIRouter(prefix="/api/v1/reviews", tags=["reviews"])
@@ -51,6 +59,9 @@ class CardOut(BaseModel):
     is_new: bool
     due: datetime
     item: ItemOut
+    # Answers the learner has vouched for on this card; accepted alongside the
+    # deck's own wording when their typed answer is checked.
+    alternatives: list[str] = []
 
 
 class QueueOut(BaseModel):
@@ -213,7 +224,21 @@ async def _gloss_helper(session: AsyncSession, user_id, language: str, cards: li
     return gloss_for
 
 
-def _card_out(uc: UserCard, gloss_for=None) -> CardOut:
+async def _alternatives(session: AsyncSession, user_id) -> dict[tuple[int, str], list[str]]:
+    rows = await session.execute(
+        select(
+            UserAnswerAlternative.item_id,
+            UserAnswerAlternative.direction,
+            UserAnswerAlternative.answer,
+        ).where(UserAnswerAlternative.user_id == user_id)
+    )
+    out: dict[tuple[int, str], list[str]] = {}
+    for item_id, direction, answer in rows:
+        out.setdefault((item_id, direction), []).append(answer)
+    return out
+
+
+def _card_out(uc: UserCard, gloss_for=None, alternatives=None) -> CardOut:
     item = uc.item
     lang = item.language_code
     return CardOut(
@@ -221,6 +246,7 @@ def _card_out(uc: UserCard, gloss_for=None) -> CardOut:
         direction=uc.direction,
         is_new=uc.last_review is None,
         due=uc.due,
+        alternatives=(alternatives or {}).get((item.id, uc.direction), []),
         item=ItemOut(
             id=item.id,
             item_type=item.item_type,
@@ -276,8 +302,11 @@ async def queue(
             )
         )
         gloss_for = await _gloss_helper(session, user.id, language, tricky)
+        alts = await _alternatives(session, user.id)
         return QueueOut(
-            cards=[_card_out(c, gloss_for) for c in tricky], due_count=len(tricky), new_count=0
+            cards=[_card_out(c, gloss_for, alts) for c in tricky],
+            due_count=len(tricky),
+            new_count=0,
         )
 
     due_filters = [
@@ -301,11 +330,50 @@ async def queue(
     new_cards = await _introduce_new_cards(session, user, language, allowance, focus, direction)
 
     gloss_for = await _gloss_helper(session, user.id, language, due_cards + new_cards)
+    alts = await _alternatives(session, user.id)
     return QueueOut(
-        cards=[_card_out(c, gloss_for) for c in due_cards + new_cards],
+        cards=[_card_out(c, gloss_for, alts) for c in due_cards + new_cards],
         due_count=len(due_cards),
         new_count=len(new_cards),
     )
+
+
+class AlternativeIn(BaseModel):
+    card_id: UUID
+    answer: str = Field(min_length=1, max_length=256)
+
+
+@router.post("/alternatives", status_code=201)
+async def add_alternative(
+    body: AlternativeIn,
+    user: Annotated[User, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_session)],
+) -> dict[str, str]:
+    """Accept an answer the checker marked wrong, for this card from now on."""
+    uc = await session.get(UserCard, body.card_id)
+    if uc is None or uc.user_id != user.id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Card not found")
+
+    answer = body.answer.strip()
+    existing = await session.scalar(
+        select(UserAnswerAlternative).where(
+            UserAnswerAlternative.user_id == user.id,
+            UserAnswerAlternative.item_id == uc.item_id,
+            UserAnswerAlternative.direction == uc.direction,
+            UserAnswerAlternative.answer == answer,
+        )
+    )
+    if existing is None:
+        session.add(
+            UserAnswerAlternative(
+                user_id=user.id,
+                item_id=uc.item_id,
+                direction=uc.direction,
+                answer=answer,
+            )
+        )
+        await session.commit()
+    return {"status": "accepted"}
 
 
 @router.post("", response_model=ReviewOut)

@@ -120,3 +120,39 @@ async def test_example_gloss_excludes_headword_and_established(client: AsyncClie
     for c in queue["cards"]:
         for e in c["item"]["examples"]:
             assert target_word not in [g["word"] for g in e["gloss"]]
+
+
+async def test_answer_alternatives_round_trip(client: AsyncClient) -> None:
+    headers = await login(client)
+    queue = (await client.get("/api/v1/reviews/queue", headers=headers)).json()
+    card = queue["cards"][0]
+    assert card["alternatives"] == []
+
+    resp = await client.post(
+        "/api/v1/reviews/alternatives",
+        json={"card_id": card["card_id"], "answer": "  my own wording  "},
+        headers=headers,
+    )
+    assert resp.status_code == 201
+
+    # Recording the same answer twice is harmless.
+    resp = await client.post(
+        "/api/v1/reviews/alternatives",
+        json={"card_id": card["card_id"], "answer": "my own wording"},
+        headers=headers,
+    )
+    assert resp.status_code == 201
+
+    queue = (await client.get("/api/v1/reviews/queue", headers=headers)).json()
+    same = next(c for c in queue["cards"] if c["card_id"] == card["card_id"])
+    assert same["alternatives"] == ["my own wording"]
+
+
+async def test_alternative_rejects_another_users_card(client: AsyncClient) -> None:
+    headers = await login(client)
+    resp = await client.post(
+        "/api/v1/reviews/alternatives",
+        json={"card_id": "00000000-0000-0000-0000-000000000000", "answer": "x"},
+        headers=headers,
+    )
+    assert resp.status_code == 404

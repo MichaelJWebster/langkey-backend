@@ -12,6 +12,7 @@ from app.models.learning import (
     PRODUCTION,
     RECOGNITION,
     ReviewEvent,
+    UserAnswerAlternative,
     UserCard,
 )
 from app.models.glossary import UserGlossaryEntry
@@ -40,6 +41,7 @@ __all__ = [
     "SentenceTranslation",
     "TextSection",
     "User",
+    "UserAnswerAlternative",
     "UserCard",
     "UserGlossaryEntry",
     "UserReadingPosition",
