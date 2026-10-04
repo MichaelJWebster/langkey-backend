@@ -11,6 +11,7 @@ Audio() never send our bearer token, the client fetches the bytes with the
 token and plays them from a blob URL rather than pointing a player at the URL.
 """
 
+import logging
 import uuid
 from typing import Annotated
 
@@ -25,6 +26,8 @@ from app.config import get_settings
 from app.content import _s3_client
 from app.db import get_session
 from app.models import Item, ItemExample, User, UserRecording
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/recordings", tags=["recordings"])
 
@@ -116,8 +119,12 @@ async def create_recording(
             Body=data,
             ContentType=base_type,
         )
-    except (ClientError, BotoCoreError):
-        raise HTTPException(502, "Could not store the recording")
+    except (ClientError, BotoCoreError) as exc:
+        # Nearly always the object store being unreachable (MinIO not running
+        # in dev). Say so: the learner's microphone is fine and retrying once
+        # it is back will work, which "could not store" does not convey.
+        logger.exception("Storing recording %s failed", recording.object_key)
+        raise HTTPException(502, f"Audio storage unavailable — recording not saved ({type(exc).__name__})")
 
     session.add(recording)
     await session.commit()
