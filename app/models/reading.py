@@ -7,6 +7,7 @@ draft (e.g. gemma3) can later be replaced by a better one without touching
 the text itself.
 """
 
+import uuid
 from datetime import datetime
 
 from sqlalchemy import (
@@ -114,7 +115,7 @@ class UserReadingPosition(Base):
 
     __tablename__ = "user_reading_positions"
 
-    user_id: Mapped[int] = mapped_column(
+    user_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
     )
     text_id: Mapped[int] = mapped_column(
