@@ -115,3 +115,31 @@ async def test_malformed_range_is_ignored_and_serves_the_whole_clip(client):
 async def test_missing_clip_is_404(client):
     resp = await client.get("/api/v1/audio/nb/doesnotexist.wav")
     assert resp.status_code == 404
+
+
+async def test_unreachable_store_is_503_not_404(client, monkeypatch):
+    """A dead object store must not look like missing content.
+
+    Collapsing both into 404 is what let a stopped MinIO masquerade as
+    ungenerated clips, with the UI quietly substituting a browser voice.
+    """
+    from botocore.exceptions import EndpointConnectionError
+
+    class _Unreachable:
+        def get_object(self, **kw):
+            raise EndpointConnectionError(endpoint_url="http://localhost:9000")
+
+    monkeypatch.setattr(audio, "_s3_client", lambda **kw: _Unreachable())
+    resp = await client.get("/api/v1/audio/nb/abc123.wav")
+    assert resp.status_code == 503
+    assert "storage" in resp.json()["detail"].lower()
+
+
+async def test_store_error_other_than_missing_is_503(client, monkeypatch):
+    class _Broken:
+        def get_object(self, **kw):
+            raise _error("InternalError")
+
+    monkeypatch.setattr(audio, "_s3_client", lambda **kw: _Broken())
+    resp = await client.get("/api/v1/audio/nb/abc123.wav")
+    assert resp.status_code == 503

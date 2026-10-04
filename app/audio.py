@@ -9,6 +9,7 @@ data, and <audio>/Audio() requests don't send our bearer token.
 """
 
 import hashlib
+import logging
 import re
 
 from botocore.exceptions import BotoCoreError, ClientError
@@ -18,7 +19,15 @@ from fastapi.responses import StreamingResponse
 from app.config import get_settings
 from app.content import _s3_client
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/api/v1/audio", tags=["audio"])
+
+# S3 error codes meaning "the object is genuinely not there", as opposed to
+# "the store could not be reached". The difference matters to the client: a
+# missing clip is a content gap, an unreachable store is an outage, and
+# collapsing both into 404 is what let a dead MinIO go unnoticed for a session.
+MISSING_CODES = {"NoSuchKey", "NoSuchBucket", "404", "NotFound"}
 
 
 # ≈80% speaking speed for learners. Piper's length_scale is severely
@@ -97,7 +106,8 @@ async def stream_audio(language: str, filename: str, request: Request) -> Stream
     try:
         obj = client.get_object(**{"Bucket": bucket, "Key": key, **({"Range": wanted} if wanted else {})})
     except ClientError as exc:
-        if exc.response.get("Error", {}).get("Code") in ("InvalidRange", "416"):
+        code = exc.response.get("Error", {}).get("Code")
+        if code in ("InvalidRange", "416"):
             # 416 must carry the real length so the client can ask again.
             try:
                 total = client.head_object(Bucket=bucket, Key=key)["ContentLength"]
@@ -108,9 +118,15 @@ async def stream_audio(language: str, filename: str, request: Request) -> Stream
                 "Requested range not satisfiable",
                 headers={"Content-Range": f"bytes */{total}", "Accept-Ranges": "bytes"},
             )
-        raise HTTPException(404, "Audio not generated for this text")
-    except BotoCoreError:
-        raise HTTPException(404, "Audio not generated for this text")
+        if code in MISSING_CODES:
+            logger.warning("Audio clip not generated: %s", key)
+            raise HTTPException(404, "Audio not generated for this text")
+        logger.error("Audio store rejected %s: %s", key, code)
+        raise HTTPException(503, "Audio storage unavailable")
+    except BotoCoreError as exc:
+        # Connection, timeout or credential failure: the store is unreachable.
+        logger.error("Audio store unreachable for %s: %s", key, type(exc).__name__)
+        raise HTTPException(503, "Audio storage unavailable")
 
     headers = {
         # Content-addressed, so safe to cache forever.
