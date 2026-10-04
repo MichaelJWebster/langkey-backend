@@ -34,6 +34,7 @@ class GlossOut(BaseModel):
 
 
 class ExampleOut(BaseModel):
+    id: int  # lets the client attach voice recordings to this sentence
     sentence: str
     translation: str
     audio_url: str
@@ -257,6 +258,7 @@ def _card_out(uc: UserCard, gloss_for=None, alternatives=None) -> CardOut:
             audio_url=audio_url(lang, item.source_text, primary=True),
             examples=[
                 ExampleOut(
+                    id=ex.id,
                     sentence=ex.sentence,
                     translation=ex.translation,
                     audio_url=audio_url(lang, ex.sentence),
