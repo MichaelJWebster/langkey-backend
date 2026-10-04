@@ -9,9 +9,10 @@ data, and <audio>/Audio() requests don't send our bearer token.
 """
 
 import hashlib
+import re
 
 from botocore.exceptions import BotoCoreError, ClientError
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
 
 from app.config import get_settings
@@ -57,18 +58,73 @@ def audio_url(
     return f"/api/v1/{audio_object_key(language, text, primary, scale)}"
 
 
+# A single `bytes=a-b` range, either end optional ("bytes=0-", "bytes=-500").
+_RANGE_RE = re.compile(r"^bytes=(\d*)-(\d*)$")
+
+
+def _parse_range(header: str | None) -> str | None:
+    """Normalise a single byte range, or None to serve the whole object.
+
+    Multi-range and malformed headers return None: a server may always ignore
+    Range and reply 200, and media elements never ask for multiple ranges.
+    """
+    if not header:
+        return None
+    match = _RANGE_RE.match(header.strip())
+    if not match:
+        return None
+    start, end = match.group(1), match.group(2)
+    if not start and not end:
+        return None
+    return f"bytes={start}-{end}"
+
+
 @router.get("/{language}/{filename}")
-async def stream_audio(language: str, filename: str) -> StreamingResponse:
+async def stream_audio(language: str, filename: str, request: Request) -> StreamingResponse:
+    """Stream a clip, honouring byte ranges.
+
+    Safari and iOS refuse to play an <audio> source that does not advertise
+    Accept-Ranges and answer 206, so the range is forwarded to S3/R2 and its
+    reply mirrored rather than being served by slicing here.
+    """
     if not filename.endswith(".wav") or "/" in language:
         raise HTTPException(404)
     key = f"audio/{language}/{filename}"
+    bucket = get_settings().s3_bucket
+    wanted = _parse_range(request.headers.get("range"))
+
+    client = _s3_client()
     try:
-        obj = _s3_client().get_object(Bucket=get_settings().s3_bucket, Key=key)
-    except (ClientError, BotoCoreError):
+        obj = client.get_object(**{"Bucket": bucket, "Key": key, **({"Range": wanted} if wanted else {})})
+    except ClientError as exc:
+        if exc.response.get("Error", {}).get("Code") in ("InvalidRange", "416"):
+            # 416 must carry the real length so the client can ask again.
+            try:
+                total = client.head_object(Bucket=bucket, Key=key)["ContentLength"]
+            except (ClientError, BotoCoreError):
+                total = "*"
+            raise HTTPException(
+                416,
+                "Requested range not satisfiable",
+                headers={"Content-Range": f"bytes */{total}", "Accept-Ranges": "bytes"},
+            )
         raise HTTPException(404, "Audio not generated for this text")
+    except BotoCoreError:
+        raise HTTPException(404, "Audio not generated for this text")
+
+    headers = {
+        # Content-addressed, so safe to cache forever.
+        "Cache-Control": "public, max-age=31536000, immutable",
+        "Accept-Ranges": "bytes",
+        "Content-Length": str(obj["ContentLength"]),
+    }
+    status = 200
+    if obj.get("ContentRange"):
+        headers["Content-Range"] = obj["ContentRange"]
+        status = 206
     return StreamingResponse(
         obj["Body"].iter_chunks(),
+        status_code=status,
         media_type="audio/wav",
-        # Content-addressed, so safe to cache forever.
-        headers={"Cache-Control": "public, max-age=31536000, immutable"},
+        headers=headers,
     )
