@@ -59,7 +59,7 @@ APPARATUS_RE = re.compile(r'<span class="origPage">.*?</span>', re.S)
 # apparatus. Dano-Norwegian ordinals ("den 12te Juni", "1ste Gang") look the
 # same, so those suffixes are excluded or the check cries wolf on every date.
 GLUED_NUMBER_RE = re.compile(
-    r"(?:^|\s)\d+(?!(?:ste|den|die|dre|de|te|nde|re)\b)(?=[A-Za-zÆØÅæøå])"
+    r"(?:^|\s)\d+(?!(?:ste|den|die|dre|de|te|nde|re)\b)(?=[A-Za-zÆØÅæøå«\"'(\[])"
 )
 
 
