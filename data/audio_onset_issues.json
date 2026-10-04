@@ -1,0 +1,543 @@
+{
+  "note": "Clips whose opening word Piper swallowed. The audio is NOT truncated -- the word is mumbled, quiet against the rest of the clip. Recorded as a to-do for the existing corpus; fixing means regenerating them on a different voice. Refresh with: uv run python -m scripts.check_audio_onsets --update",
+  "checked": "2026-10-04",
+  "metric": "loudest 20ms within 200ms of speech onset, over the clip peak; flagged below 0.6",
+  "clips": [
+    {
+      "text": "Si fra hvis du trenger noe.",
+      "voice": "nvcc:4",
+      "primary": false,
+      "scale": 1.6,
+      "key": "audio/nb/82f2aa5b11e246d41b5d.wav",
+      "onset_strength": 0.195
+    },
+    {
+      "text": "Det står en mann ved døra.",
+      "voice": "nvcc:4",
+      "primary": false,
+      "scale": 1.6,
+      "key": "audio/nb/340a50b64af0e3f0b9f9.wav",
+      "onset_strength": 0.233
+    },
+    {
+      "text": "Svaret ditt er riktig.",
+      "voice": "nvcc:4",
+      "primary": false,
+      "scale": 1.6,
+      "key": "audio/nb/dcf11ba45a517039a4b2.wav",
+      "onset_strength": 0.271
+    },
+    {
+      "text": "En kaffe og en bolle, takk.",
+      "voice": "nvcc:7",
+      "primary": false,
+      "scale": 1.6,
+      "key": "audio/nb/8f8c965730c37cd70079.wav",
+      "onset_strength": 0.276
+    },
+    {
+      "text": "Toget går om fem minutter.",
+      "voice": "nvcc:4",
+      "primary": false,
+      "scale": 1.6,
+      "key": "audio/nb/92a7068f96f8fd6b0c96.wav",
+      "onset_strength": 0.305
+    },
+    {
+      "text": "Om sommeren bader vi på stranda.",
+      "voice": "nvcc:7",
+      "primary": false,
+      "scale": 1.6,
+      "key": "audio/nb/c764b6d51736660d2bfd.wav",
+      "onset_strength": 0.307
+    },
+    {
+      "text": "Unnskyld, hva heter du igjen?",
+      "voice": "nvcc:4",
+      "primary": false,
+      "scale": 1.6,
+      "key": "audio/nb/118f599f6bd132d21b8d.wav",
+      "onset_strength": 0.315
+    },
+    {
+      "text": "Om vinteren går vi på ski i marka.",
+      "voice": "nvcc:4",
+      "primary": false,
+      "scale": 1.6,
+      "key": "audio/nb/35882ffd8a85a0c37d19.wav",
+      "onset_strength": 0.34
+    },
+    {
+      "text": "Vi drar på hytta i påsken.",
+      "voice": "nvcc:4",
+      "primary": false,
+      "scale": 1.6,
+      "key": "audio/nb/e42db6ed9e56017909fd.wav",
+      "onset_strength": 0.343
+    },
+    {
+      "text": "Om sommeren sykler jeg overalt.",
+      "voice": "nvcc:5",
+      "primary": false,
+      "scale": 1.6,
+      "key": "audio/nb/eb9c4e4730b24febe12a.wav",
+      "onset_strength": 0.348
+    },
+    {
+      "text": "Vi går tur i parken.",
+      "voice": "nvcc:4",
+      "primary": false,
+      "scale": 1.6,
+      "key": "audio/nb/723dd3e176a3007f01fa.wav",
+      "onset_strength": 0.382
+    },
+    {
+      "text": "Jeg skriver en e-post.",
+      "voice": "nvcc:1",
+      "primary": false,
+      "scale": 1.6,
+      "key": "audio/nb/852798ae93ae966f99ba.wav",
+      "onset_strength": 0.407
+    },
+    {
+      "text": "Jeg kommer fra en liten by.",
+      "voice": "nvcc:7",
+      "primary": false,
+      "scale": 1.6,
+      "key": "audio/nb/e1b377eeafa4864797bb.wav",
+      "onset_strength": 0.409
+    },
+    {
+      "text": "Vi spiser lunsj sammen på jobben.",
+      "voice": "nvcc:4",
+      "primary": false,
+      "scale": 1.6,
+      "key": "audio/nb/13f65622010dfc5b713a.wav",
+      "onset_strength": 0.412
+    },
+    {
+      "text": "Jeg snakker litt norsk.",
+      "voice": "nvcc:4",
+      "primary": false,
+      "scale": 1.6,
+      "key": "audio/nb/423fe0c3a7bc0df39720.wav",
+      "onset_strength": 0.412
+    },
+    {
+      "text": "Jeg forstår ikke. Kan du forklare?",
+      "voice": "nvcc:0",
+      "primary": false,
+      "scale": 1.6,
+      "key": "audio/nb/65e6ed7a5dde51b0ea35.wav",
+      "onset_strength": 0.414
+    },
+    {
+      "text": "Selvfølgelig kan jeg hjelpe deg.",
+      "voice": "nvcc:4",
+      "primary": false,
+      "scale": 1.6,
+      "key": "audio/nb/c4e95cd0520cc6b5cb29.wav",
+      "onset_strength": 0.416
+    },
+    {
+      "text": "Jeg tenker på deg.",
+      "voice": "nvcc:3",
+      "primary": false,
+      "scale": 1.6,
+      "key": "audio/nb/3c33dcde897e96fc6d07.wav",
+      "onset_strength": 0.417
+    },
+    {
+      "text": "Kan du sende meg en melding?",
+      "voice": "nvcc:4",
+      "primary": false,
+      "scale": 1.6,
+      "key": "audio/nb/e0fc3406cfcaba1ec563.wav",
+      "onset_strength": 0.42
+    },
+    {
+      "text": "Jeg finner ikke nøklene mine.",
+      "voice": "nvcc:0",
+      "primary": false,
+      "scale": 1.6,
+      "key": "audio/nb/b56902653f321900721a.wav",
+      "onset_strength": 0.427
+    },
+    {
+      "text": "Jeg tar med matpakke på jobben.",
+      "voice": "nvcc:1",
+      "primary": false,
+      "scale": 1.6,
+      "key": "audio/nb/6463dd88650ea0e50a12.wav",
+      "onset_strength": 0.431
+    },
+    {
+      "text": "Bestemor baker boller.",
+      "voice": "nvcc:5",
+      "primary": false,
+      "scale": 1.6,
+      "key": "audio/nb/a02886d4e413be4d11b2.wav",
+      "onset_strength": 0.446
+    },
+    {
+      "text": "Har du brødre eller søstre?",
+      "voice": "nvcc:4",
+      "primary": false,
+      "scale": 1.6,
+      "key": "audio/nb/33f721e6654298991bcf.wav",
+      "onset_strength": 0.447
+    },
+    {
+      "text": "Så hyggelig å se deg igjen!",
+      "voice": "nvcc:4",
+      "primary": false,
+      "scale": 1.6,
+      "key": "audio/nb/9443ee2c752bc20fc87c.wav",
+      "onset_strength": 0.46
+    },
+    {
+      "text": "Du kan kjøpe medisin på apoteket.",
+      "voice": "nvcc:4",
+      "primary": false,
+      "scale": 1.6,
+      "key": "audio/nb/57b40dabf3c256d32856.wav",
+      "onset_strength": 0.462
+    },
+    {
+      "text": "Jeg ser på TV om kvelden.",
+      "voice": "nvcc:2",
+      "primary": false,
+      "scale": 1.6,
+      "key": "audio/nb/8ec0d9ac08292d8cd38b.wav",
+      "onset_strength": 0.469
+    },
+    {
+      "text": "Kylling med ris er enkelt og godt.",
+      "voice": "nvcc:4",
+      "primary": false,
+      "scale": 1.6,
+      "key": "audio/nb/5381dca47ad6dc2a8700.wav",
+      "onset_strength": 0.47
+    },
+    {
+      "text": "Det tar bare fem minutter.",
+      "voice": "nvcc:3",
+      "primary": false,
+      "scale": 1.6,
+      "key": "audio/nb/44cc7f901f9cc5e830fc.wav",
+      "onset_strength": 0.474
+    },
+    {
+      "text": "Jeg tok feil buss.",
+      "voice": "nvcc:5",
+      "primary": false,
+      "scale": 1.6,
+      "key": "audio/nb/fdb89a8986b35da0e41b.wav",
+      "onset_strength": 0.476
+    },
+    {
+      "text": "Eplet er søtt og godt.",
+      "voice": "nvcc:4",
+      "primary": false,
+      "scale": 1.6,
+      "key": "audio/nb/8e1a43d583622657d37e.wav",
+      "onset_strength": 0.479
+    },
+    {
+      "text": "Tre kaffe, takk.",
+      "voice": "nvcc:4",
+      "primary": false,
+      "scale": 1.6,
+      "key": "audio/nb/fdfbff9ae6f5c15d5e65.wav",
+      "onset_strength": 0.485
+    },
+    {
+      "text": "Gratulerer med den nye jobben!",
+      "voice": "nvcc:4",
+      "primary": false,
+      "scale": 1.6,
+      "key": "audio/nb/f09eb16e191d9affbe96.wav",
+      "onset_strength": 0.485
+    },
+    {
+      "text": "Jeg står opp tidlig.",
+      "voice": "nvcc:2",
+      "primary": false,
+      "scale": 1.6,
+      "key": "audio/nb/4d08ac6292e2f0dfa749.wav",
+      "onset_strength": 0.491
+    },
+    {
+      "text": "Jeg hører på musikk.",
+      "voice": "nvcc:3",
+      "primary": false,
+      "scale": 1.6,
+      "key": "audio/nb/ef0056d4b4112491352f.wav",
+      "onset_strength": 0.492
+    },
+    {
+      "text": "Kan jeg få en kaffe, takk?",
+      "voice": "nvcc:9",
+      "primary": false,
+      "scale": 1.6,
+      "key": "audio/nb/c1f24056a2a7453fb57e.wav",
+      "onset_strength": 0.493
+    },
+    {
+      "text": "Jeg sykler til jobben på sykkelen min.",
+      "voice": "nvcc:7",
+      "primary": false,
+      "scale": 1.6,
+      "key": "audio/nb/3065db882702f3f84b77.wav",
+      "onset_strength": 0.497
+    },
+    {
+      "text": "Hvorfor lærer du norsk?",
+      "voice": "nvcc:3",
+      "primary": false,
+      "scale": 1.6,
+      "key": "audio/nb/e252d6c87cd5ad3abc6c.wav",
+      "onset_strength": 0.508
+    },
+    {
+      "text": "Unnskyld, hvor er toalettet?",
+      "voice": "nvcc:9",
+      "primary": false,
+      "scale": 1.6,
+      "key": "audio/nb/4aa372dbd4a42ac05623.wav",
+      "onset_strength": 0.509
+    },
+    {
+      "text": "Kan jeg få se menyen?",
+      "voice": "nvcc:1",
+      "primary": false,
+      "scale": 1.6,
+      "key": "audio/nb/d805cfb755b442fa4a65.wav",
+      "onset_strength": 0.515
+    },
+    {
+      "text": "Jeg slutter på jobb klokka fire.",
+      "voice": "nvcc:0",
+      "primary": false,
+      "scale": 1.6,
+      "key": "audio/nb/17e41930b13382df86b9.wav",
+      "onset_strength": 0.516
+    },
+    {
+      "text": "Jeg kjøper en gave til søsteren min.",
+      "voice": "nvcc:0",
+      "primary": false,
+      "scale": 1.6,
+      "key": "audio/nb/3c5f138c68561a33062e.wav",
+      "onset_strength": 0.519
+    },
+    {
+      "text": "Når står du opp?",
+      "voice": "nvcc:1",
+      "primary": false,
+      "scale": 1.6,
+      "key": "audio/nb/5a2fe4dc8ab277ff0462.wav",
+      "onset_strength": 0.521
+    },
+    {
+      "text": "Han leser avisen til frokosten.",
+      "voice": "nvcc:4",
+      "primary": false,
+      "scale": 1.6,
+      "key": "audio/nb/78199241cab35cb0ca17.wav",
+      "onset_strength": 0.522
+    },
+    {
+      "text": "Jeg står opp klokka sju.",
+      "voice": "nvcc:8",
+      "primary": false,
+      "scale": 1.6,
+      "key": "audio/nb/b48964d3c50fbda84a06.wav",
+      "onset_strength": 0.522
+    },
+    {
+      "text": "Jeg føler meg bedre i dag.",
+      "voice": "nvcc:2",
+      "primary": false,
+      "scale": 1.6,
+      "key": "audio/nb/3e37e3c4d004d6a9a4b4.wav",
+      "onset_strength": 0.529
+    },
+    {
+      "text": "Kan du kjøpe et brød?",
+      "voice": "nvcc:0",
+      "primary": false,
+      "scale": 1.6,
+      "key": "audio/nb/9bee65abb8acc6bab511.wav",
+      "onset_strength": 0.532
+    },
+    {
+      "text": "Suppe passer bra på kalde dager.",
+      "voice": "nvcc:1",
+      "primary": false,
+      "scale": 1.6,
+      "key": "audio/nb/107e548154911e2f5560.wav",
+      "onset_strength": 0.537
+    },
+    {
+      "text": "Jeg vil ha en kaffe.",
+      "voice": "nvcc:4",
+      "primary": false,
+      "scale": 1.6,
+      "key": "audio/nb/b3ac6e6cd6ff755a3fb8.wav",
+      "onset_strength": 0.539
+    },
+    {
+      "text": "Jeg begynte for en måned siden.",
+      "voice": "nvcc:1",
+      "primary": false,
+      "scale": 1.6,
+      "key": "audio/nb/56b1c2af487f0cab7dc4.wav",
+      "onset_strength": 0.539
+    },
+    {
+      "text": "Jeg lager middag i kveld.",
+      "voice": "nvcc:4",
+      "primary": false,
+      "scale": 1.6,
+      "key": "audio/nb/449922920c81cfec4264.wav",
+      "onset_strength": 0.55
+    },
+    {
+      "text": "Vi bor i Oslo.",
+      "voice": "nvcc:3",
+      "primary": false,
+      "scale": 1.6,
+      "key": "audio/nb/dbec9dfa2901c1c49348.wav",
+      "onset_strength": 0.551
+    },
+    {
+      "text": "Jeg kjøper frukt hver uke.",
+      "voice": "nvcc:0",
+      "primary": false,
+      "scale": 1.6,
+      "key": "audio/nb/73170ddc4ee0d934c5a1.wav",
+      "onset_strength": 0.551
+    },
+    {
+      "text": "Jeg skal lage middag.",
+      "voice": "nvcc:3",
+      "primary": false,
+      "scale": 1.6,
+      "key": "audio/nb/c6a4b911da271264db01.wav",
+      "onset_strength": 0.555
+    },
+    {
+      "text": "Vi ses på mandag!",
+      "voice": "nvcc:3",
+      "primary": false,
+      "scale": 1.6,
+      "key": "audio/nb/a016d56b1ad978690e39.wav",
+      "onset_strength": 0.57
+    },
+    {
+      "text": "Vi går ofte på tur.",
+      "voice": "nvcc:8",
+      "primary": false,
+      "scale": 1.6,
+      "key": "audio/nb/d2d53b5f04f668e77733.wav",
+      "onset_strength": 0.571
+    },
+    {
+      "text": "Vi ses senere!",
+      "voice": "nvcc:0",
+      "primary": false,
+      "scale": 1.6,
+      "key": "audio/nb/bd4bf85c227a6a5ebcca.wav",
+      "onset_strength": 0.575
+    },
+    {
+      "text": "Kan du åpne vinduet?",
+      "voice": "nvcc:8",
+      "primary": false,
+      "scale": 1.6,
+      "key": "audio/nb/ed63c126f112aad92157.wav",
+      "onset_strength": 0.576
+    },
+    {
+      "text": "Jeg dusjer om morgenen.",
+      "voice": "nvcc:1",
+      "primary": false,
+      "scale": 1.6,
+      "key": "audio/nb/a25929878fee78572369.wav",
+      "onset_strength": 0.578
+    },
+    {
+      "text": "Beklager, jeg forstår ikke.",
+      "voice": "nvcc:8",
+      "primary": false,
+      "scale": 1.6,
+      "key": "audio/nb/2f2f9c5140989eb384f1.wav",
+      "onset_strength": 0.587
+    },
+    {
+      "text": "Han svarer ikke på telefonen.",
+      "voice": "nvcc:0",
+      "primary": false,
+      "scale": 1.6,
+      "key": "audio/nb/ad8b83226d8fa5b9837b.wav",
+      "onset_strength": 0.588
+    },
+    {
+      "text": "Jeg skal møte en venn i byen.",
+      "voice": "nvcc:2",
+      "primary": false,
+      "scale": 1.6,
+      "key": "audio/nb/86d72d168b1b7b6e228a.wav",
+      "onset_strength": 0.59
+    },
+    {
+      "text": "Jeg trenger nye klær til vinteren.",
+      "voice": "nvcc:9",
+      "primary": false,
+      "scale": 1.6,
+      "key": "audio/nb/2979feb472edcc390483.wav",
+      "onset_strength": 0.594
+    },
+    {
+      "text": "Vi tar av oss skoene inne.",
+      "voice": "nvcc:1",
+      "primary": false,
+      "scale": 1.6,
+      "key": "audio/nb/aca5846cd802fd872a9b.wav",
+      "onset_strength": 0.596
+    },
+    {
+      "text": "Kan jeg låne pennen din?",
+      "voice": "nvcc:3",
+      "primary": false,
+      "scale": 1.6,
+      "key": "audio/nb/3ab801100162cfbca148.wav",
+      "onset_strength": 0.596
+    },
+    {
+      "text": "Det koster to tusen kroner.",
+      "voice": "nvcc:4",
+      "primary": false,
+      "scale": 1.6,
+      "key": "audio/nb/a3b86c458356f7113f30.wav",
+      "onset_strength": 0.597
+    },
+    {
+      "text": "Jeg har ikke nok penger.",
+      "voice": "nvcc:7",
+      "primary": false,
+      "scale": 1.6,
+      "key": "audio/nb/aaae3be6a6755b61aa44.wav",
+      "onset_strength": 0.597
+    },
+    {
+      "text": "Beklager, jeg er sen.",
+      "voice": "nvcc:0",
+      "primary": false,
+      "scale": 1.6,
+      "key": "audio/nb/9a317c46c61145da4c04.wav",
+      "onset_strength": 0.599
+    }
+  ]
+}
