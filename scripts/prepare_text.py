@@ -22,8 +22,13 @@ import re
 import sys
 import time
 import urllib.request
+from collections import Counter
 from datetime import UTC, datetime
 from pathlib import Path
+
+# The gate module owns the shared patterns and the quality checks; the
+# extractor warns about the same faults before they reach a translation.
+from scripts.translation_gates import GLUED_NUMBER_RE, check_all, looks_untranslated
 
 STAGING_DIR = Path(__file__).parent.parent / "data" / "texts_staging"
 OLLAMA_URL = "http://127.0.0.1:11434"
@@ -55,12 +60,6 @@ def fetch(url: str) -> str:
 # boundary, so the whole span has to go, not just its markup.
 APPARATUS_RE = re.compile(r'<span class="origPage">.*?</span>', re.S)
 
-# A bare number stuck to the front of a word is the signature of leaked print
-# apparatus. Dano-Norwegian ordinals ("den 12te Juni", "1ste Gang") look the
-# same, so those suffixes are excluded or the check cries wolf on every date.
-GLUED_NUMBER_RE = re.compile(
-    r"(?:^|\s)\d+(?!(?:ste|den|die|dre|de|te|nde|re)\b)(?=[A-Za-zÆØÅæøå«\"'(\[])"
-)
 
 
 def strip_tags(fragment: str) -> str:
@@ -118,16 +117,6 @@ def ollama(model: str, prompt: str) -> str:
     )
     with urllib.request.urlopen(req, timeout=1800) as r:
         return json.loads(r.read())["response"].strip()
-
-
-def looks_untranslated(no: str, en: str) -> bool:
-    """Catch the model echoing the Norwegian back instead of translating."""
-    no_words = set(re.findall(r"[a-zæøåA-ZÆØÅ]+", no.lower()))
-    en_words = set(re.findall(r"[a-zæøåA-ZÆØÅ]+", en.lower()))
-    if not no_words or not en_words:
-        return False
-    overlap = len(no_words & en_words) / len(en_words)
-    return overlap > 0.5
 
 
 def translate_paragraph(model: str, sents: list[str]) -> list[str]:
@@ -249,7 +238,22 @@ def main() -> None:
             indent=1,
         )
     )
-    print(f"Wrote {out} — review it, then: uv run python -m scripts.import_text {out}")
+    print(f"Wrote {out}")
+
+    # Run the gates now, while the translation is fresh and the staging file is
+    # still the only copy. Reporting here is not a substitute for
+    # check_translation: that one can also repair, and import_text refuses a
+    # file with unresolved findings.
+    findings = check_all(flat)
+    if findings:
+        counts = Counter(f.gate for f in findings)
+        print(f"  {len(findings)} quality findings:")
+        for name, n in counts.most_common():
+            print(f"    {n:4} {name}")
+        print(f"  uv run python -m scripts.check_translation {out} --repair")
+    else:
+        print("  quality gates: clean")
+    print(f"Then: uv run python -m scripts.import_text {out}")
 
 
 if __name__ == "__main__":

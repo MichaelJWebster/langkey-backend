@@ -14,11 +14,13 @@ import argparse
 import asyncio
 import json
 import sys
+from collections import Counter
 from pathlib import Path
 
 from sqlalchemy import delete, select
 
 from app.db import session_factory
+from scripts.translation_gates import check_all
 from app.models import (
     Language,
     ReadingText,
@@ -28,11 +30,47 @@ from app.models import (
 )
 
 
-async def import_text(path: Path, replace: bool) -> None:
+def check_quality(path: Path, sentences: list[dict], force: bool) -> None:
+    """Refuse an import the gates say is fixable.
+
+    Translation-side findings have an obvious next step, so they block:
+    check_translation --repair clears most of them. Source-side findings mean
+    the Norwegian itself is wrong and the fix is upstream in extraction, and
+    those checks have known false positives, so they warn rather than block --
+    a gate that forces --force every time teaches you to ignore it.
+    """
+    findings = check_all(sentences)
+    fixable = [f for f in findings if f.repairable]
+    other = [f for f in findings if not f.repairable]
+
+    if other:
+        counts = Counter(f.gate for f in other)
+        print(f"NOTE: {len(other)} source-side findings "
+              f"({', '.join(f'{n} {g}' for g, n in counts.most_common())})")
+        print("  These need a human; see check_translation --show <gate>.")
+
+    if not fixable:
+        return
+    counts = Counter(f.gate for f in fixable)
+    s = "" if len(fixable) == 1 else "s"
+    print(f"{len(fixable)} fixable finding{s}: "
+          f"{', '.join(f'{n} {g}' for g, n in counts.most_common())}")
+    for f in fixable[:5]:
+        print(f"  #{f.seq} {f.detail}")
+        print(f"    {f.en[:90]}")
+    if force:
+        print("--force given: importing anyway.")
+        return
+    sys.exit(
+        "Refusing to import. Either fix them:\n"
+        f"  uv run python -m scripts.check_translation {path} --repair\n"
+        "or import as-is with --force."
+    )
+
+
+async def import_text(path: Path, replace: bool, force: bool = False) -> None:
     data = json.loads(path.read_text())
-    missing = [s["seq"] for s in data["sentences"] if not s.get("en")]
-    if missing:
-        sys.exit(f"Refusing to import: {len(missing)} sentences lack translations, e.g. seq {missing[:5]}")
+    check_quality(path, data["sentences"], force)
 
     async with session_factory() as session:
         if not await session.get(Language, data["language"]):
@@ -93,8 +131,11 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("file", type=Path)
     ap.add_argument("--replace", action="store_true")
+    ap.add_argument(
+        "--force", action="store_true", help="import even though the gates found faults"
+    )
     args = ap.parse_args()
-    asyncio.run(import_text(args.file, args.replace))
+    asyncio.run(import_text(args.file, args.replace, args.force))
 
 
 if __name__ == "__main__":
