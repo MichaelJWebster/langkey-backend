@@ -13,6 +13,7 @@ import hashlib
 import json
 import logging
 import tempfile
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
@@ -72,8 +73,16 @@ def merge_local_deck(language: str = "nb") -> list[DeckEntry]:
     return entries
 
 
-def _s3_client():
+def _s3_client(*, fail_fast: bool = False):
+    """Shared S3/R2 client.
+
+    `fail_fast` is for callers that have a fallback and would rather give up
+    than wait: botocore's defaults spend ~8s retrying an unreachable endpoint,
+    which is pure cost when the local deck files are right there. Callers
+    without a fallback (audio streaming) keep the default retry behaviour.
+    """
     import boto3
+    from botocore.config import Config
 
     settings = get_settings()
     return boto3.client(
@@ -84,6 +93,9 @@ def _s3_client():
         # Pin the region: R2 requires "auto", MinIO ignores it, and without
         # this an ambient ~/.aws/config region leaks in and breaks R2.
         region_name=settings.s3_region,
+        config=Config(connect_timeout=1, read_timeout=2, retries={"max_attempts": 1})
+        if fail_fast
+        else None,
     )
 
 
@@ -97,7 +109,9 @@ def load_from_minio(language: str = "nb") -> list[DeckEntry]:
 
     settings = get_settings()
     with tempfile.NamedTemporaryFile(suffix=".parquet") as tmp:
-        _s3_client().download_fileobj(settings.s3_bucket, deck_object_key(language), tmp)
+        _s3_client(fail_fast=True).download_fileobj(
+            settings.s3_bucket, deck_object_key(language), tmp
+        )
         tmp.flush()
         rows = duckdb.sql(
             f"SELECT no, en, pos, cefr, type, topic, examples FROM read_parquet('{tmp.name}') "
@@ -109,8 +123,14 @@ def load_from_minio(language: str = "nb") -> list[DeckEntry]:
     ]
 
 
+@lru_cache(maxsize=None)
 def load_deck(language: str = "nb") -> tuple[list[DeckEntry], str]:
-    """Return (entries, source) preferring the MinIO snapshot over local files."""
+    """Return (entries, source) preferring the MinIO snapshot over local files.
+
+    Cached for the process lifetime: deck content is immutable while the app
+    runs (the sync happens once at startup), and the test suite otherwise
+    reloads it once per test. Callers treat the result as read-only.
+    """
     try:
         entries = load_from_minio(language)
         return entries, "minio"
