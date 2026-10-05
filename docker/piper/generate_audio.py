@@ -25,7 +25,7 @@ BUCKET = os.environ.get("LANGKEY_S3_BUCKET", "langkey-content")
 # sync with app/audio.py).
 LENGTH_SCALE = 1.6
 DICTATION_SCALES = [2.8, 2.2, 1.6]  # slow primary-voice dictation ladder
-PRONUNCIATION_SCALE = 3.4  # imitation targets, primary voice only (ADR-033)
+PRONUNCIATION_SCALES = [4.0, 3.4, 2.8, 2.2, 1.6]  # imitation ladder, primary voice (ADR-033)
 PRIMARY_VOICE = "talesyntese"
 VOICE_POOL = [PRIMARY_VOICE] + [f"nvcc:{n}" for n in range(10)]
 
@@ -59,10 +59,10 @@ def audio_object_key(language: str, text: str, primary: bool = False, scale: flo
 def deck_variants() -> dict[tuple[str, bool, float], None]:
     """(text, primary, scale) variants.
 
-    Headwords get the normal primary clip plus a slow one to copy; example
-    sentences get a pool-voice flashcard clip, the primary-voice dictation
-    ladder, and the imitation target. The imitation scale is slower than the
-    whole dictation ladder, so it is always its own synthesis.
+    Headwords get the normal primary clip; example sentences get a pool-voice
+    flashcard clip and the primary-voice dictation ladder. Both then get the
+    whole imitation ladder, which overlaps the dictation scales by coincidence
+    rather than by design -- the dict below deduplicates the overlap.
     """
     with tempfile.NamedTemporaryFile(suffix=".parquet") as tmp:
         s3.download_fileobj(BUCKET, f"decks/{LANGUAGE}.parquet", tmp)
@@ -71,11 +71,13 @@ def deck_variants() -> dict[tuple[str, bool, float], None]:
     variants: dict[tuple[str, bool, float], None] = {}
     for word, examples in rows:
         variants[(word, True, LENGTH_SCALE)] = None
-        variants.setdefault((word, True, PRONUNCIATION_SCALE), None)
+        for scale in PRONUNCIATION_SCALES:
+            variants.setdefault((word, True, scale), None)
         for ex in examples:
             variants.setdefault((ex["no"], False, LENGTH_SCALE), None)
-            variants.setdefault((ex["no"], True, PRONUNCIATION_SCALE), None)
             for scale in DICTATION_SCALES:
+                variants.setdefault((ex["no"], True, scale), None)
+            for scale in PRONUNCIATION_SCALES:
                 variants.setdefault((ex["no"], True, scale), None)
     return variants
 

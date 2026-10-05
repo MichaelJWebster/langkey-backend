@@ -13,6 +13,7 @@ from app.audio import (
     DICTATION_SCALES,
     LENGTH_SCALE,
     PRONUNCIATION_SCALE,
+    PRONUNCIATION_SCALES,
     PRIMARY_VOICE,
     VOICE_POOL,
     audio_object_key,
@@ -45,12 +46,23 @@ def test_imitation_is_slower_than_every_listening_clip():
     assert PRONUNCIATION_SCALE > LENGTH_SCALE
 
 
-def test_imitation_is_slower_than_the_whole_dictation_ladder():
+def test_imitation_ladder_reaches_slower_than_dictation():
     # Dictation is comprehension practice and wants a pace you have to keep up
-    # with; imitation wants one you can reproduce. The two ladders separated
-    # when the learner asked for "at least 50%" slower, so this is the line
-    # that stops a later retune quietly merging them again.
-    assert PRONUNCIATION_SCALE > max(DICTATION_SCALES)
+    # with; imitation wants one you can reproduce. The two ladders overlap at
+    # the fast end by coincidence, but imitation must be able to go slower
+    # than dictation ever does.
+    assert max(PRONUNCIATION_SCALES) > max(DICTATION_SCALES)
+
+
+def test_default_rung_is_on_the_ladder():
+    assert PRONUNCIATION_SCALE in PRONUNCIATION_SCALES
+
+
+def test_ladder_is_slowest_first_and_has_no_duplicates():
+    # The UI renders it in order and labels rungs by position, so a resort
+    # would silently relabel every chip.
+    assert PRONUNCIATION_SCALES == sorted(PRONUNCIATION_SCALES, reverse=True)
+    assert len(set(PRONUNCIATION_SCALES)) == len(PRONUNCIATION_SCALES)
 
 
 @pytest.mark.parametrize("sentence", POOL_SENTENCES)
@@ -83,8 +95,14 @@ async def test_review_queue_serves_both_urls(client: AsyncClient) -> None:
         item = card["item"]
         assert item["copy_audio_url"].startswith("/api/v1/audio/")
         assert item["copy_audio_url"] != "", item
+        assert [s["scale"] for s in item["copy_speeds"]] == PRONUNCIATION_SCALES
         for ex in item["examples"]:
             assert ex["copy_audio_url"].startswith("/api/v1/audio/")
+            # Every rung resolvable, and the default among them.
+            urls = {s["scale"]: s["url"] for s in ex["copy_speeds"]}
+            assert list(urls) == PRONUNCIATION_SCALES
+            assert urls[PRONUNCIATION_SCALE] == ex["copy_audio_url"]
+            assert len(set(urls.values())) == len(urls), "two rungs share a clip"
             # The listening clip may legitimately equal the copy clip when the
             # hash happens to pick the primary voice -- but only then.
             if voice_for_text(ex["sentence"]) != PRIMARY_VOICE:

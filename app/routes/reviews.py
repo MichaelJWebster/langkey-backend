@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.audio import PRONUNCIATION_SCALE, audio_url
+from app.audio import PRONUNCIATION_SCALE, PRONUNCIATION_SCALES, audio_url
 from app.auth import get_current_user
 from app.db import get_session
 from app.glossary import _form_index, record_encounters
@@ -28,6 +28,13 @@ router = APIRouter(prefix="/api/v1/reviews", tags=["reviews"])
 QUEUE_HORIZON = timedelta(minutes=15)
 
 
+class CopySpeedOut(BaseModel):
+    """One rung of the imitation ladder, slowest first."""
+
+    scale: float
+    url: str
+
+
 class GlossOut(BaseModel):
     word: str  # deck lemma, e.g. "å hete"
     translation: str
@@ -41,8 +48,10 @@ class ExampleOut(BaseModel):
     # What the learner records against. A different clip from audio_url on
     # purpose: that one varies the speaker for listening practice, this one
     # is always the clearest voice, slowed to a rate a learner can copy
-    # (ADR-033).
+    # (ADR-033). copy_audio_url is the default rung of copy_speeds, kept as
+    # its own field so a client that does not offer the chooser still works.
     copy_audio_url: str
+    copy_speeds: list[CopySpeedOut]
     # Deck words in the sentence the learner hasn't established yet (the
     # card's own headword excluded) — a helper glossary for the examples.
     gloss: list[GlossOut] = []
@@ -57,6 +66,7 @@ class ItemOut(BaseModel):
     cefr_level: str
     audio_url: str
     copy_audio_url: str
+    copy_speeds: list[CopySpeedOut]
     examples: list[ExampleOut]
 
 
@@ -245,6 +255,16 @@ async def _alternatives(session: AsyncSession, user_id) -> dict[tuple[int, str],
     return out
 
 
+def _copy_speeds(language: str, text: str) -> list[CopySpeedOut]:
+    return [
+        CopySpeedOut(
+            scale=scale,
+            url=audio_url(language, text, primary=True, scale=scale),
+        )
+        for scale in PRONUNCIATION_SCALES
+    ]
+
+
 def _card_out(uc: UserCard, gloss_for=None, alternatives=None) -> CardOut:
     item = uc.item
     lang = item.language_code
@@ -265,6 +285,7 @@ def _card_out(uc: UserCard, gloss_for=None, alternatives=None) -> CardOut:
             copy_audio_url=audio_url(
                 lang, item.source_text, primary=True, scale=PRONUNCIATION_SCALE
             ),
+            copy_speeds=_copy_speeds(lang, item.source_text),
             examples=[
                 ExampleOut(
                     id=ex.id,
@@ -274,6 +295,7 @@ def _card_out(uc: UserCard, gloss_for=None, alternatives=None) -> CardOut:
                     copy_audio_url=audio_url(
                         lang, ex.sentence, primary=True, scale=PRONUNCIATION_SCALE
                     ),
+                    copy_speeds=_copy_speeds(lang, ex.sentence),
                     gloss=gloss_for(ex.sentence, item.id) if gloss_for else [],
                 )
                 for ex in item.examples

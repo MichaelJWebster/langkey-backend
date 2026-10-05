@@ -55,10 +55,16 @@ DICTATION_SCALES = [2.8, 2.2, 1.6]  # very slow / slow / normal
 #
 # 3.4 is the learner's own call: "too fast, and the voices vary too much for
 # me to learn correct pronunciation ... slow down at least 50%". It is the
-# first rung at or past half the old rate. Deliberately *not* one of
-# DICTATION_SCALES -- dictation is comprehension practice and wants a pace you
-# have to keep up with, so the two ladders have separated and every imitation
-# clip is now its own synthesis.
+# first rung at or past half the old rate, and it is the default. The whole
+# ladder is offered, because the right pace is a judgement the learner makes
+# per sentence, not a constant: a word they have met a hundred times does not
+# need 2.2 seconds of vowel.
+#
+# Deliberately *not* the dictation ladder, which shares three of its values by
+# coincidence rather than by design. Dictation is comprehension practice and
+# wants a pace you have to keep up with; these two ladders must be free to
+# move apart.
+PRONUNCIATION_SCALES = [4.0, 3.4, 2.8, 2.2, 1.6]  # slowest first, as the UI shows them
 PRONUNCIATION_SCALE = 3.4
 
 # Primary voice reads headwords; example sentences draw from the pool so the
