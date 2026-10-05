@@ -14,6 +14,8 @@ from speech_service.config import SpeechSettings
 
 log = logging.getLogger(__name__)
 
+SAMPLE_RATE = 16_000
+
 _pipeline = None
 _loaded_model: str | None = None
 
@@ -65,25 +67,48 @@ def load(settings: SpeechSettings):
     return _pipeline
 
 
-def decode(audio: bytes) -> tuple["object", int]:
-    """Browser audio -> 16 kHz mono float array, which is what Whisper wants.
+def decode(audio: bytes) -> "object":
+    """Browser audio -> 16 kHz mono float32, which is what Whisper wants.
 
-    MediaRecorder gives webm/opus on Chrome and Firefox and mp4 on Safari, so
-    the container cannot be assumed. soundfile handles what it can and ffmpeg
-    (via torchaudio's backend) the rest; callers never have to care, which is
+    MediaRecorder gives webm/opus on Chrome and Firefox and mp4/aac on Safari,
+    so the container cannot be assumed; callers never have to care, which is
     the contract app/speech/base.py promises.
-    """
-    import librosa
 
-    # librosa goes through audioread/ffmpeg for compressed containers and
-    # resamples in one step.
-    samples, rate = librosa.load(io.BytesIO(audio), sr=16_000, mono=True)
-    return samples, rate
+    PyAV rather than librosa or soundfile. librosa 1.0 dropped its
+    audioread/ffmpeg fallback and reads through soundfile alone, which cannot
+    open webm/opus at all -- every one of the first real recordings came back
+    "Format not recognised". PyAV bundles the ffmpeg libraries in its wheel,
+    so this needs no system ffmpeg on the Mac and no apt package in the image.
+    """
+    import av
+    import numpy as np
+
+    with av.open(io.BytesIO(audio)) as container:
+        if not container.streams.audio:
+            raise ValueError("No audio stream in the recording")
+        stream = container.streams.audio[0]
+        # Whisper wants 16 kHz mono float; resampling here means the model
+        # never sees whatever the browser happened to capture at.
+        resampler = av.audio.resampler.AudioResampler(
+            format="fltp", layout="mono", rate=SAMPLE_RATE
+        )
+        chunks: list = []
+        for frame in container.decode(stream):
+            for resampled in resampler.resample(frame):
+                chunks.append(resampled.to_ndarray().reshape(-1))
+        # Flush whatever the resampler is still holding, or the tail of short
+        # utterances goes missing -- and these are all short utterances.
+        for resampled in resampler.resample(None):
+            chunks.append(resampled.to_ndarray().reshape(-1))
+
+    if not chunks:
+        raise ValueError("The recording decoded to no audio")
+    return np.concatenate(chunks).astype("float32")
 
 
 def transcribe(audio: bytes, settings: SpeechSettings, language: str = "no") -> dict:
     asr = load(settings)
-    samples, _ = decode(audio)
+    samples = decode(audio)
     started = time.monotonic()
     result = asr(
         samples,

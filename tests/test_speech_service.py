@@ -101,3 +101,4 @@ def test_device_resolution_never_guesses_cuda_on_this_machine():
     # always honoured so a container can force cpu.
     assert transcriber.resolve_device("cpu") == "cpu"
     assert transcriber.resolve_device("mps") == "mps"
+

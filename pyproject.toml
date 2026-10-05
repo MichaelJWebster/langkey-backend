@@ -26,8 +26,10 @@ dependencies = [
 speech = [
     "torch>=2.5",
     "transformers>=4.45",
-    "librosa>=0.10",
-    "soundfile>=0.12",
+    # PyAV, not librosa: librosa 1.0 reads through soundfile alone, which
+    # cannot open the webm/opus the browser records. PyAV bundles the ffmpeg
+    # libraries, so neither the Mac nor the image needs a system ffmpeg.
+    "av>=14",
 ]
 dev = [
     "pytest>=8.3",

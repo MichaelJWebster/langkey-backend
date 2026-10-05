@@ -6,11 +6,8 @@
 #   docker build -f speech_service/Dockerfile -t langkey-speech .
 FROM python:3.12-slim
 
-# ffmpeg decodes what the browser records: webm/opus from Chrome and Firefox,
-# mp4 from Safari. Without it librosa can only read wav.
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends ffmpeg \
-    && rm -rf /var/lib/apt/lists/*
+# No apt ffmpeg: PyAV bundles the ffmpeg libraries in its wheel, which keeps
+# the image smaller and the Mac free of a Homebrew dependency.
 
 WORKDIR /srv/langkey
 

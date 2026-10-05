@@ -72,8 +72,30 @@ each step is useful on its own and makes the next one cheaper.
    `[dependency-groups] speech` for torch/transformers so the API image stays clean,
    lazy model load, `/health` that reports the model without downloading it.
    ADR-031 is enforced in code: `check_model_policy` refuses a generic Whisper outside
-   dev. **Remaining:** download the weights (several GB — `HF_HOME` on the external
-   drive), run it against Michael's own recordings, measure, then wire the frontend.
+   dev.
+
+   **Measured 2026-10-05 on 7 of Michael's own takes (2–3s each, known target
+   sentences). The pipeline works; the accuracy does not yet.** Speed is a non-issue:
+   0.3–0.5s per utterance on `small` and 0.8–1.1s on `medium`, on Metal, after a ~10s
+   model load. Accuracy: `nb-whisper-small` got 1/7 exact, `nb-whisper-medium` 0/7 —
+   bigger was *not* better, though its errors were at least plausible Norwegian
+   (`Bananene er ikke modne ennå` → "Den andre er ikke ute ennå"). Decoding was ruled
+   out first: decoded durations match the recorded ones within a frame and levels are
+   healthy (peak 0.33–1.02, rms ~0.05), so this is the model, the L2 accent, or both.
+   So step 2's condition — "checked against Michael's own voice before it is trusted" —
+   is **not met**, and step 3 must not be built on exact string match.
+
+   Levers not yet tried, in order of expected payoff: `nb-whisper-large` (6 GB, already
+   the obvious next test); decoding parameters and an `initial_prompt`, since Whisper is
+   weak on 2-second clips having trained on 30s windows; checking whether the takes are
+   quiet or noisy enough to matter; and finally accepting that a say-it drill wants
+   phonetic or fuzzy comparison rather than equality.
+
+   Weights live on the external drive: `HF_HOME=/Volumes/nvm_2tb/home/michaelw/work/huggingface`
+   (3.8 GB for small + medium), and the speech service has its own Python 3.12 venv at
+   `/Volumes/nvm_2tb/home/michaelw/work/langkey-speech-venv` (~1 GB with torch) so the
+   API's `.venv` stays free of ML dependencies. **Remaining:** improve accuracy enough
+   to trust, then wire the frontend.
 3. **Say-it drills.** The crudest possible judgement: did the transcript match the target
    sentence? Closes the loop and lights up the Speaking card on the Aurora dashboard
    (ADR-023), which is disabled until this ships.
