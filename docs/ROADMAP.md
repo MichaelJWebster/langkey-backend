@@ -85,15 +85,29 @@ each step is useful on its own and makes the next one cheaper.
    So step 2's condition — "checked against Michael's own voice before it is trusted" —
    is **not met**, and step 3 must not be built on exact string match.
 
-   **Control experiment, same day — the model and the pipeline are cleared.** The same
-   seven sentences as Piper `talesyntese` clips transcribed **7/7 exact** on the same
-   `nb-whisper-small`, against 1/7 for Michael's takes. Re-encoded to webm/opus at
-   MediaRecorder's settings, so the lossy path was identical to his: still **7/7**. And
-   his recordings are technically good — peak −3.3 dBFS, speech −19.7 dBFS, noise floor
-   −60.7 dBFS, **41 dB SNR** (Piper: 48.8 dB), which is clean by any standard Whisper
-   cares about. So the pipeline, the model, the codec and the recording quality are all
-   ruled out in turn. What remains is L2 accent: NB-Whisper is trained on 66,000 hours
-   of *native* Norwegian and does not accommodate a learner.
+   **Control experiment, same day — corrected after Michael listened.** The same seven
+   sentences as Piper `talesyntese` clips transcribed **7/7 exact** on the same
+   `nb-whisper-small`, against 1/7 for Michael's takes. The first write-up concluded
+   from this that "the pipeline, the model, the codec and the recording quality are all
+   ruled out in turn" and that only L2 accent remained. That was overstated in two ways.
+   The Piper files were re-encoded by the same script that measured them, so the control
+   could not have exposed a fault in what MediaRecorder writes or in a particular stored
+   take; and Michael, played all seven back, identified one as audibly corrupted
+   (`Bananene er ikke modne ennå`) while judging the other six usable. **The honest
+   figure is 1/6 on audio he accepts, with one corrupted capture excluded.** What the
+   re-runs do establish: original Piper WAVs and the opus re-encodes give identical
+   transcripts, so the encoder adds nothing; and loudness is not the fault either, since
+   `piper7` peaks above full scale with 6 clipped samples and still transcribes
+   perfectly, as do 9 of the 181 saved takes that exceed full scale.
+
+   **What the error actually is (2026-10-05).** Priming the decoder with the expected
+   sentence via `prompt_ids` left the score unchanged at 1/6, and priming it with a
+   *different* sentence never made it echo that sentence back (0/6) — twice it emitted
+   nothing at all. So the model is neither guessing nor agreeing with whatever it is
+   told: the sounds are genuinely absent from the audio. That is a pronunciation finding,
+   not a recognition one. NB-Whisper is trained on 66,000 hours of *native* Norwegian and
+   does not accommodate a learner — and the learner was copying a reference a third
+   faster than he can speak (ADR-033), which is now fixed.
 
    This is direct evidence for ADR-025's reasoning rather than a setback: an STT model
    repairs wobbly speech into fluent Norwegian instead of reporting what it actually
@@ -106,9 +120,15 @@ each step is useful on its own and makes the next one cheaper.
    medium, but large is a real jump); scoring the audio's *likelihood against the known
    target* instead of free-decoding and comparing strings, which is forced alignment and
    therefore ADR-025's wav2vec2 CTC-GOP path rather than this one; and fuzzy or phonetic
-   comparison if free decoding stays. Prompt-conditioning on the expected sentence would
-   make transcripts match, but it biases the model toward the answer, so it proves
-   nothing about what was said and must not be used for scoring.
+   comparison if free decoding stays. Prompt-conditioning is now tried and rejected on
+   evidence rather than on principle: it did not raise the score, and on two takes it
+   silenced the model entirely.
+
+   **Re-measure before trying anything else.** The 7 takes were all recorded against the
+   old, too-fast pool-voice reference. ADR-033 changed what the record button plays, so
+   the next corpus is recorded against the slowed primary voice — that is the cheapest
+   remaining lever and it has to be pulled before `nb-whisper-large` or alignment work
+   can be judged against anything.
 
    Weights live on the external drive: `HF_HOME=/Volumes/nvm_2tb/home/michaelw/work/huggingface`
    (3.8 GB for small + medium), and the speech service has its own Python 3.12 venv at

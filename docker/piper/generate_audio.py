@@ -25,6 +25,7 @@ BUCKET = os.environ.get("LANGKEY_S3_BUCKET", "langkey-content")
 # sync with app/audio.py).
 LENGTH_SCALE = 1.6
 DICTATION_SCALES = [2.8, 2.2, 1.6]  # slow primary-voice dictation ladder
+PRONUNCIATION_SCALE = 2.2  # imitation targets, primary voice only (ADR-033)
 PRIMARY_VOICE = "talesyntese"
 VOICE_POOL = [PRIMARY_VOICE] + [f"nvcc:{n}" for n in range(10)]
 
@@ -56,8 +57,14 @@ def audio_object_key(language: str, text: str, primary: bool = False, scale: flo
 
 
 def deck_variants() -> dict[tuple[str, bool, float], None]:
-    """(text, primary, scale) variants: headwords once; example sentences get a
-    pool-voice flashcard clip plus a slow primary-voice dictation clip."""
+    """(text, primary, scale) variants.
+
+    Headwords get the normal primary clip plus a slow one to copy; example
+    sentences get a pool-voice flashcard clip, the primary-voice dictation
+    ladder, and the imitation target (which is one of the dictation scales,
+    so it costs no extra clip -- named separately so retuning the ladder
+    cannot silently take it away).
+    """
     with tempfile.NamedTemporaryFile(suffix=".parquet") as tmp:
         s3.download_fileobj(BUCKET, f"decks/{LANGUAGE}.parquet", tmp)
         tmp.flush()
@@ -65,8 +72,10 @@ def deck_variants() -> dict[tuple[str, bool, float], None]:
     variants: dict[tuple[str, bool, float], None] = {}
     for word, examples in rows:
         variants[(word, True, LENGTH_SCALE)] = None
+        variants.setdefault((word, True, PRONUNCIATION_SCALE), None)
         for ex in examples:
             variants.setdefault((ex["no"], False, LENGTH_SCALE), None)
+            variants.setdefault((ex["no"], True, PRONUNCIATION_SCALE), None)
             for scale in DICTATION_SCALES:
                 variants.setdefault((ex["no"], True, scale), None)
     return variants

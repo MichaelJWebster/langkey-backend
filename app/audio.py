@@ -39,6 +39,25 @@ LENGTH_SCALE = 1.6
 # speeds. The server suggests one from recent accuracy; the learner can switch.
 DICTATION_SCALES = [2.8, 2.2, 1.6]  # very slow / slow / normal
 
+# Imitation targets are a different job from listening practice, and need
+# their own voice and speed (ADR-033). To copy a sound you have to hear it
+# separately first, which the flashcard pace does not allow. Measured over
+# seven sentences, voiced seconds only (20 ms frames above -45 dBFS, so
+# lead-in silence does not flatter the rate):
+#
+#   pool voices @1.6   5.26 syl/s   <- what reviews served as the copy target
+#   primary     @1.6   4.58 syl/s   <- same scale, 13% slower voice
+#   primary     @2.2   3.65 syl/s
+#   primary     @2.8   2.99 syl/s
+#   the learner           3.96 syl/s
+#
+# So the old target was a third faster than the learner can speak, on a voice
+# chosen by hash from a pool whose nvcc speakers mumble their first word
+# (ADR-025). Primary at 2.2 lands just under the learner's own pace, which is
+# what copying needs. Keep it inside DICTATION_SCALES or the generator has to
+# produce another clip per sentence for nothing.
+PRONUNCIATION_SCALE = 2.2
+
 # Primary voice reads headwords; example sentences draw from the pool so the
 # learner hears varied speakers. "nvcc:N" = speaker N of no_NO-nvcc-medium.
 PRIMARY_VOICE = "talesyntese"

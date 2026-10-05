@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.audio import audio_url
+from app.audio import PRONUNCIATION_SCALE, audio_url
 from app.auth import get_current_user
 from app.db import get_session
 from app.glossary import _form_index, record_encounters
@@ -38,6 +38,11 @@ class ExampleOut(BaseModel):
     sentence: str
     translation: str
     audio_url: str
+    # What the learner records against. A different clip from audio_url on
+    # purpose: that one varies the speaker for listening practice, this one
+    # is always the clearest voice, slowed to a rate a learner can copy
+    # (ADR-033).
+    copy_audio_url: str
     # Deck words in the sentence the learner hasn't established yet (the
     # card's own headword excluded) — a helper glossary for the examples.
     gloss: list[GlossOut] = []
@@ -51,6 +56,7 @@ class ItemOut(BaseModel):
     pos: str | None
     cefr_level: str
     audio_url: str
+    copy_audio_url: str
     examples: list[ExampleOut]
 
 
@@ -256,12 +262,18 @@ def _card_out(uc: UserCard, gloss_for=None, alternatives=None) -> CardOut:
             pos=item.pos,
             cefr_level=item.cefr_level,
             audio_url=audio_url(lang, item.source_text, primary=True),
+            copy_audio_url=audio_url(
+                lang, item.source_text, primary=True, scale=PRONUNCIATION_SCALE
+            ),
             examples=[
                 ExampleOut(
                     id=ex.id,
                     sentence=ex.sentence,
                     translation=ex.translation,
                     audio_url=audio_url(lang, ex.sentence),
+                    copy_audio_url=audio_url(
+                        lang, ex.sentence, primary=True, scale=PRONUNCIATION_SCALE
+                    ),
                     gloss=gloss_for(ex.sentence, item.id) if gloss_for else [],
                 )
                 for ex in item.examples
