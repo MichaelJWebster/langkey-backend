@@ -26,6 +26,12 @@ from app.config import get_settings
 from app.content import _s3_client
 from app.db import get_session
 from app.models import Item, ItemExample, User, UserRecording
+from app.speech import (
+    SpeechToText,
+    TranscriptionError,
+    TranscriptionUnavailable,
+    get_transcriber,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -181,6 +187,61 @@ async def stream_recording(
         content=body,
         media_type=recording.content_type,
         headers={"Cache-Control": "private, max-age=3600"},
+    )
+
+
+class TranscriptOut(BaseModel):
+    text: str
+    language: str
+    # Which model actually ran. ADR-031 requires it to be Norwegian-trained,
+    # and a claim is only checkable if it is recorded where the answer is.
+    model: str
+    duration_ms: int | None = None
+    confidence: float | None = None
+
+
+@router.post("/{recording_id}/transcribe", response_model=TranscriptOut)
+async def transcribe_recording(
+    recording_id: uuid.UUID,
+    user: Annotated[User, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_session)],
+    transcriber: Annotated[SpeechToText, Depends(get_transcriber)],
+) -> TranscriptOut:
+    """Transcribe a saved take.
+
+    Deliberately against a stored recording rather than a fresh upload: the
+    takes from M3 step 1 are the corpus this is meant to be checked on before
+    it is trusted, and re-running it on the same take is how it gets compared
+    across models.
+    """
+    recording = await _owned(session, user, recording_id)
+    try:
+        obj = _s3_client().get_object(
+            Bucket=get_settings().s3_bucket, Key=recording.object_key
+        )
+        audio = obj["Body"].read()
+    except (ClientError, BotoCoreError):
+        raise HTTPException(404, "Recording audio missing")
+
+    try:
+        transcript = await transcriber.transcribe(
+            audio, content_type=recording.content_type
+        )
+    except TranscriptionUnavailable as exc:
+        # Not the learner's fault and not a failed attempt: nothing should be
+        # scored against them for this.
+        logger.warning("transcription unavailable for %s: %s", recording_id, exc)
+        raise HTTPException(503, str(exc))
+    except TranscriptionError as exc:
+        logger.warning("transcription failed for %s: %s", recording_id, exc)
+        raise HTTPException(502, str(exc))
+
+    return TranscriptOut(
+        text=transcript.text,
+        language=transcript.language,
+        model=transcript.model,
+        duration_ms=transcript.duration_ms or recording.duration_ms,
+        confidence=transcript.confidence,
     )
 
 

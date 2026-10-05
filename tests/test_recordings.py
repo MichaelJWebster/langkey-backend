@@ -139,3 +139,136 @@ async def test_requires_authentication(client, bucket):
         await client.get(f"/api/v1/recordings/{created['id']}/audio"),
     ):
         assert resp.status_code == 401
+
+
+# --- transcription (M3 step 2) ---------------------------------------------
+
+
+class _FakeTranscriber:
+    """Stands in for the speech container. See tests/test_speech_seam.py."""
+
+    name = "fake"
+
+    def __init__(self, result=None, error=None) -> None:
+        self.result, self.error = result, error
+        self.calls: list[tuple[bytes, str]] = []
+
+    async def transcribe(self, audio, *, content_type, language="no"):
+        self.calls.append((audio, content_type))
+        if self.error:
+            raise self.error
+        return self.result
+
+
+def use_transcriber(transcriber):
+    """Override the route's dependency, the way production swaps backends."""
+    from app.main import app as fastapi_app
+    from app.speech import get_transcriber
+
+    fastapi_app.dependency_overrides[get_transcriber] = lambda: transcriber
+    return transcriber
+
+
+@pytest.fixture(autouse=True)
+def _clear_transcriber_override():
+    yield
+    from app.main import app as fastapi_app
+    from app.speech import get_transcriber
+
+    fastapi_app.dependency_overrides.pop(get_transcriber, None)
+
+
+async def test_transcribe_a_saved_take(client, bucket):
+    from app.speech import Transcript
+
+    headers = await login(client)
+    item_id = await _first_item_id(client, headers)
+    created = (await _upload(client, headers, item_id)).json()
+
+    fake = use_transcriber(
+        _FakeTranscriber(
+            Transcript(
+                text="Jeg bor i Oslo.",
+                language="no",
+                model="NbAiLab/nb-whisper-small",
+                duration_ms=380,
+                confidence=-0.21,
+            )
+        )
+    )
+
+    resp = await client.post(
+        f"/api/v1/recordings/{created['id']}/transcribe", headers=headers
+    )
+
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["text"] == "Jeg bor i Oslo."
+    # Which model ran is part of the answer: ADR-031 is only checkable if the
+    # claim is recorded where the result is.
+    assert body["model"] == "NbAiLab/nb-whisper-small"
+    assert body["confidence"] == -0.21
+    # The stored bytes, with the recorded type, reached the transcriber.
+    assert fake.calls == [(AUDIO, "audio/webm")]
+
+
+async def test_transcribe_reports_503_when_no_backend_is_configured(client, bucket):
+    from app.speech import TranscriptionUnavailable
+
+    headers = await login(client)
+    item_id = await _first_item_id(client, headers)
+    created = (await _upload(client, headers, item_id)).json()
+
+    use_transcriber(_FakeTranscriber(error=TranscriptionUnavailable("nothing configured")))
+
+    resp = await client.post(
+        f"/api/v1/recordings/{created['id']}/transcribe", headers=headers
+    )
+
+    # 503, not 502 and not a wrong transcript: the learner must never be
+    # marked down because the service was absent.
+    assert resp.status_code == 503
+    assert "nothing configured" in resp.json()["detail"]
+
+
+async def test_transcribe_reports_502_when_the_model_rejected_the_audio(client, bucket):
+    from app.speech import TranscriptionError
+
+    headers = await login(client)
+    item_id = await _first_item_id(client, headers)
+    created = (await _upload(client, headers, item_id)).json()
+
+    use_transcriber(_FakeTranscriber(error=TranscriptionError("unreadable container")))
+
+    resp = await client.post(
+        f"/api/v1/recordings/{created['id']}/transcribe", headers=headers
+    )
+    assert resp.status_code == 502
+
+
+async def test_transcribe_refuses_someone_elses_recording(client, bucket):
+    from app.speech import Transcript
+
+    headers = await login(client)
+    item_id = await _first_item_id(client, headers)
+    created = (await _upload(client, headers, item_id)).json()
+    use_transcriber(_FakeTranscriber(Transcript(text="x", language="no", model="m")))
+
+    # No token: must not transcribe, and must not say whether it exists.
+    resp = await client.post(f"/api/v1/recordings/{created['id']}/transcribe")
+    assert resp.status_code == 401
+
+
+async def test_transcribe_404s_when_the_audio_is_gone(client, bucket):
+    from app.speech import Transcript
+
+    headers = await login(client)
+    item_id = await _first_item_id(client, headers)
+    created = (await _upload(client, headers, item_id)).json()
+    bucket.objects.clear()
+    use_transcriber(_FakeTranscriber(Transcript(text="x", language="no", model="m")))
+
+    resp = await client.post(
+        f"/api/v1/recordings/{created['id']}/transcribe", headers=headers
+    )
+    assert resp.status_code == 404

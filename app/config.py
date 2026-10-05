@@ -30,6 +30,15 @@ class Settings(BaseSettings):
 
     cors_origins: list[str] = ["http://localhost:5173"]
 
+    # Speech-to-text (M3 step 2, ADR-032). "none" until a service is running;
+    # "http" points at the speech container, or at the same service run by
+    # hand on the Mac during development. The model name is recorded on every
+    # transcript and checked against ADR-031 at startup.
+    stt_backend: str = "none"
+    stt_url: str | None = None
+    stt_model: str = "NbAiLab/nb-whisper-small"
+    stt_timeout_seconds: float = 30.0
+
 
 def check_production_config(settings: Settings) -> None:
     """Refuse to start outside dev with dev-grade security settings."""

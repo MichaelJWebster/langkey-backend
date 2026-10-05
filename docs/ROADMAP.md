@@ -63,9 +63,17 @@ each step is useful on its own and makes the next one cheaper.
    overwrite — they are the test corpus for steps 2–4. `user_recordings` table, keys
    scoped by user, authenticated stream route; the client fetches takes with the bearer
    token and plays them from a blob URL since `<audio>` cannot send one.
-2. **NB-Whisper locally.** Transcription behind an interface (same shape as the existing
-   exercise-generator seam), running on the M2 Max. Checked against Michael's own voice
-   before it is trusted. Not the Cloudflare `basic` container — too small for any size.
+2. **NB-Whisper locally.** *Seam and service shell built 2026-10-05; the model has not
+   been downloaded or run yet.* `app/speech/` holds the `SpeechToText` protocol, a null
+   backend (the default — answers 503 rather than silently marking a drill wrong) and an
+   HTTP backend; `LANGKEY_STT_BACKEND` chooses. `POST /api/v1/recordings/{id}/transcribe`
+   transcribes a *saved* take, so the step-1 corpus is what the model gets judged on.
+   `speech_service/` is the sibling container (ADR-032) — own Dockerfile, own
+   `[dependency-groups] speech` for torch/transformers so the API image stays clean,
+   lazy model load, `/health` that reports the model without downloading it.
+   ADR-031 is enforced in code: `check_model_policy` refuses a generic Whisper outside
+   dev. **Remaining:** download the weights (several GB — `HF_HOME` on the external
+   drive), run it against Michael's own recordings, measure, then wire the frontend.
 3. **Say-it drills.** The crudest possible judgement: did the transcript match the target
    sentence? Closes the loop and lights up the Speaking card on the Aurora dashboard
    (ADR-023), which is disabled until this ships.
