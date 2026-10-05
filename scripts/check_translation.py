@@ -89,7 +89,8 @@ def report(findings: list[Finding], fixed: collections.Counter, examples: int) -
     for f in findings:
         by_gate[f.gate].append(f)
 
-    print(f"\n{'gate':18} {'side':12} {'left':>5} {'fixed':>6}  what it means")
+    if findings or fixed:
+        print(f"\n{'gate':18} {'side':12} {'left':>5} {'fixed':>6}  what it means")
     for gate in GATES:
         if not counts[gate.name] and not fixed[gate.name]:
             continue
@@ -114,6 +115,14 @@ def main() -> int:
     ap.add_argument("--model", default=DEFAULT_MODEL)
     ap.add_argument("--show", help="print every finding for this gate and stop")
     ap.add_argument("--examples", type=int, default=2, help="examples per gate (default 2)")
+    ap.add_argument(
+        "--fail-on",
+        choices=("any", "fixable", "never"),
+        default="any",
+        help="what makes the exit status non-zero. 'fixable' ignores source-side "
+        "findings, which need a human and no amount of retranslating will clear "
+        "(use this in a batch run); 'never' reports only (default: any)",
+    )
     args = ap.parse_args()
 
     if args.show and args.show not in BY_NAME:
@@ -151,6 +160,11 @@ def main() -> int:
         print("\nEverything left is source-side: the Norwegian itself is wrong, so the")
         print("fix belongs in extraction (scripts/prepare_text.py), not in translation.")
     print("\nUse --show <gate> to see every case.")
+
+    if args.fail_on == "never":
+        return 0
+    if args.fail_on == "fixable":
+        return 1 if any(f.repairable for f in findings) else 0
     return 1
 
 

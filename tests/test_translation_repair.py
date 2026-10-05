@@ -10,6 +10,9 @@ The model is stubbed here. Whether gemma3 can actually fix a given sentence is
 measured against the corpus (see Gate.measured), not asserted in a unit test.
 """
 
+import json
+import sys
+
 import pytest
 
 from scripts import check_translation
@@ -134,3 +137,36 @@ def test_run_repairs_leaves_source_side_findings_alone(replies, capsys):
     # One prompt only: the source-side finding was never sent to the model.
     assert len(sent) == 1
     assert "1 source-side" in capsys.readouterr().out
+
+
+# --- exit status, which a batch run depends on -----------------------------
+
+
+@pytest.mark.parametrize(
+    "mode,fixable,source_side,expected",
+    [
+        ("any", True, True, 1),
+        ("any", False, True, 1),
+        ("any", False, False, 0),
+        # 'fixable' is what fetch_folktales.sh uses: a source-side finding
+        # means the Norwegian extraction is wrong and needs a human, so
+        # blocking an unattended batch on it would strand the whole set.
+        ("fixable", True, True, 1),
+        ("fixable", False, True, 0),
+        ("fixable", False, False, 0),
+        ("never", True, True, 0),
+    ],
+)
+def test_exit_status_per_fail_on_mode(mode, fixable, source_side, expected, tmp_path, monkeypatch, capsys):
+    sentences = [{"seq": 1, "no": "Jeg bor i Oslo.", "en": "I live in Oslo."}]
+    if fixable:
+        sentences.append({"seq": 2, "no": "Pause.", "en": "40. Pause."})
+    if source_side:
+        sentences.append({"seq": 3, "no": "og 9«Naa skal du høre»", "en": "and “now you shall hear”"})
+
+    f = tmp_path / "staging.json"
+    f.write_text(json.dumps({"sentences": sentences}, ensure_ascii=False))
+    monkeypatch.setattr(sys, "argv", ["check_translation", str(f), "--fail-on", mode])
+
+    assert check_translation.main() == expected
+    capsys.readouterr()
