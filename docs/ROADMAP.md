@@ -85,11 +85,30 @@ each step is useful on its own and makes the next one cheaper.
    So step 2's condition — "checked against Michael's own voice before it is trusted" —
    is **not met**, and step 3 must not be built on exact string match.
 
-   Levers not yet tried, in order of expected payoff: `nb-whisper-large` (6 GB, already
-   the obvious next test); decoding parameters and an `initial_prompt`, since Whisper is
-   weak on 2-second clips having trained on 30s windows; checking whether the takes are
-   quiet or noisy enough to matter; and finally accepting that a say-it drill wants
-   phonetic or fuzzy comparison rather than equality.
+   **Control experiment, same day — the model and the pipeline are cleared.** The same
+   seven sentences as Piper `talesyntese` clips transcribed **7/7 exact** on the same
+   `nb-whisper-small`, against 1/7 for Michael's takes. Re-encoded to webm/opus at
+   MediaRecorder's settings, so the lossy path was identical to his: still **7/7**. And
+   his recordings are technically good — peak −3.3 dBFS, speech −19.7 dBFS, noise floor
+   −60.7 dBFS, **41 dB SNR** (Piper: 48.8 dB), which is clean by any standard Whisper
+   cares about. So the pipeline, the model, the codec and the recording quality are all
+   ruled out in turn. What remains is L2 accent: NB-Whisper is trained on 66,000 hours
+   of *native* Norwegian and does not accommodate a learner.
+
+   This is direct evidence for ADR-025's reasoning rather than a setback: an STT model
+   repairs wobbly speech into fluent Norwegian instead of reporting what it actually
+   heard, so it cannot be the basis of pronunciation feedback — and it cannot be the
+   basis of a say-it drill scored on string equality either, because the model answers
+   confidently with the *wrong* fluent Norwegian (`Bananene er ikke modne ennå` →
+   "Hva er manna ennå?") rather than signalling doubt.
+
+   Levers not yet tried: `nb-whisper-large` (6 GB — bigger did not help from small to
+   medium, but large is a real jump); scoring the audio's *likelihood against the known
+   target* instead of free-decoding and comparing strings, which is forced alignment and
+   therefore ADR-025's wav2vec2 CTC-GOP path rather than this one; and fuzzy or phonetic
+   comparison if free decoding stays. Prompt-conditioning on the expected sentence would
+   make transcripts match, but it biases the model toward the answer, so it proves
+   nothing about what was said and must not be used for scoring.
 
    Weights live on the external drive: `HF_HOME=/Volumes/nvm_2tb/home/michaelw/work/huggingface`
    (3.8 GB for small + medium), and the speech service has its own Python 3.12 venv at
