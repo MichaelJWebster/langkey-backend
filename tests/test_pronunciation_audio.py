@@ -45,10 +45,12 @@ def test_imitation_is_slower_than_every_listening_clip():
     assert PRONUNCIATION_SCALE > LENGTH_SCALE
 
 
-def test_imitation_scale_is_on_the_dictation_ladder():
-    # Otherwise the generator has to synthesise another clip per sentence for
-    # a speed it already produces.
-    assert PRONUNCIATION_SCALE in DICTATION_SCALES
+def test_imitation_is_slower_than_the_whole_dictation_ladder():
+    # Dictation is comprehension practice and wants a pace you have to keep up
+    # with; imitation wants one you can reproduce. The two ladders separated
+    # when the learner asked for "at least 50%" slower, so this is the line
+    # that stops a later retune quietly merging them again.
+    assert PRONUNCIATION_SCALE > max(DICTATION_SCALES)
 
 
 @pytest.mark.parametrize("sentence", POOL_SENTENCES)

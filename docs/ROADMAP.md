@@ -107,7 +107,8 @@ each step is useful on its own and makes the next one cheaper.
    told: the sounds are genuinely absent from the audio. That is a pronunciation finding,
    not a recognition one. NB-Whisper is trained on 66,000 hours of *native* Norwegian and
    does not accommodate a learner — and the learner was copying a reference a third
-   faster than he can speak (ADR-033), which is now fixed.
+   faster than he can speak (ADR-033), which is now fixed: the review panel plays and
+   records against one clear voice at half the old pace.
 
    This is direct evidence for ADR-025's reasoning rather than a setback: an STT model
    repairs wobbly speech into fluent Norwegian instead of reporting what it actually
@@ -138,11 +139,20 @@ each step is useful on its own and makes the next one cheaper.
 3. **Say-it drills.** The crudest possible judgement: did the transcript match the target
    sentence? Closes the loop and lights up the Speaking card on the Aurora dashboard
    (ADR-023), which is disabled until this ships.
-4. **Real pronunciation scoring.** Azure Pronunciation Assessment (`nb-NO`, per-phoneme)
-   on trial first, to learn what good feedback feels like; then decide on a self-hosted
-   wav2vec2 CTC-GOP + NoFA + NST stack. Always against a known target sentence. Presented
-   as a hint, not a grade — the state of the art on Norwegian L2 severity rating is
-   ~36% UAR (NOCASA 2025).
+4. **Real pronunciation scoring — in the review panel, not a new screen.** Michael's ask:
+   *"could we later on use that section to provide feedback about how well I'm pronouncing
+   the expected words?"* That section is the right home, and it is already most of the way
+   there: a known target sentence, a reference clip, and a saved take, which is exactly the
+   input a scorer needs and the reason step 1 kept every take. Azure Pronunciation
+   Assessment (`nb-NO`, per-phoneme) on trial first, to learn what good feedback feels like;
+   then decide on a self-hosted wav2vec2 CTC-GOP + NoFA + NST stack. Always against a known
+   target sentence, never free speech. Presented as a hint, not a grade — the state of the
+   art on Norwegian L2 severity rating is ~36% UAR (NOCASA 2025), so the UI says "worth
+   another go" and highlights which word drifted, never a score out of ten. Note the
+   ordering this implies: scoring does **not** wait on step 3. Say-it drills need a model
+   that transcribes a learner correctly, which NB-Whisper does not; per-phoneme scoring
+   needs only alignment to a sentence already known, which is why ADR-025 picks it as the
+   route to real feedback.
 5. **Conversation last.** Turn-by-turn: record → NB-Whisper → constrained character with a
    couple of tools → reply text → Piper audio. The most work, and steps 1–2 build most of
    what it needs. Not an open-ended agent (ADR-026).
