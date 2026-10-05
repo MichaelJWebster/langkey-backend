@@ -28,7 +28,12 @@ from pathlib import Path
 
 # The gate module owns the shared patterns and the quality checks; the
 # extractor warns about the same faults before they reach a translation.
-from scripts.translation_gates import GLUED_NUMBER_RE, check_all, looks_untranslated
+from scripts.translation_gates import (
+    GLUED_NUMBER_RE,
+    check_all,
+    check_sentence,
+    looks_untranslated,
+)
 
 STAGING_DIR = Path(__file__).parent.parent / "data" / "texts_staging"
 OLLAMA_URL = "http://127.0.0.1:11434"
@@ -138,6 +143,48 @@ def translate_paragraph(model: str, sents: list[str]) -> list[str]:
     return [strip_number(ollama(model, PROMPT + f"1. {s}")) for s in sents]
 
 
+TITLE_PROMPT = (
+    "Translate this Norwegian book or folktale title into English. It may use "
+    "19th-century Dano-Norwegian orthography. Reply with only the English "
+    "title: no quotation marks, no explanation, no alternatives.\n\n"
+    "Norwegian title: {title}\n"
+)
+
+
+def translate_title(model: str, title: str) -> str | None:
+    """Translate a title, or return None rather than store something wrong.
+
+    A bad title is worse than no title: it is the one string a learner sees
+    before choosing what to read, and unlike a sentence it has no Norwegian
+    beside it to correct the impression. So the same gates that check the
+    prose check this, and anything they flag is dropped.
+    """
+    reply = ollama(model, TITLE_PROMPT.format(title=title)).strip()
+    # Models like to answer a one-line question with a paragraph.
+    candidate = reply.splitlines()[0].strip() if reply else ""
+    candidate = candidate.strip("\"'«»“”").strip()
+    if not candidate:
+        return None
+    # A title does not get three times longer in translation; that is the
+    # model explaining itself.
+    if len(candidate.split()) > 3 * len(title.split()) + 4:
+        return None
+    # The echo gate needs four English words before it will speak, and titles
+    # are shorter than that, so handle the echo here. A one-word title handed
+    # back unchanged is usually a name that needs no translation (Victoria,
+    # Pan); two or more words is the model giving up. Dropping a correct
+    # identical title costs nothing -- the reading list then shows the one
+    # title, which is what it would have shown anyway.
+    def flat(x: str) -> str:
+        return re.sub(r"[^\w\s]", "", x).lower().strip()
+
+    if len(title.split()) > 1 and flat(candidate) == flat(title):
+        return None
+    if check_sentence(0, title, candidate):
+        return None
+    return candidate
+
+
 # --- main --------------------------------------------------------------------
 
 
@@ -147,6 +194,10 @@ def main() -> None:
     ap.add_argument("--slug", required=True)
     ap.add_argument("--kind", required=True, help="folktale | novel | nonfiction | article")
     ap.add_argument("--title", help="override; default from first page <h1>")
+    ap.add_argument(
+        "--title-en",
+        help="override the English title; default is translated and gate-checked",
+    )
     ap.add_argument("--author", help="override; default from byline")
     ap.add_argument("--orthography", default="nb", help="nb | dano-1904 | ...")
     ap.add_argument("--license", default="public domain")
@@ -193,6 +244,14 @@ def main() -> None:
         print(f"  WARNING: title is {title!r} — looks like a chapter number, not a book.")
         print("  Pass --title explicitly.")
 
+    final_title = args.title or title or args.slug
+    title_en = args.title_en or translate_title(args.model, final_title)
+    if title_en:
+        print(f"  English title: {title_en!r}")
+    else:
+        print(f"  WARNING: no usable English title for {final_title!r} — the reading")
+        print("  list will show the Norwegian alone. Pass --title-en to set one.")
+
     t0 = time.time()
     done = retried = 0
     for batch in all_sents:
@@ -222,7 +281,8 @@ def main() -> None:
         json.dumps(
             {
                 "slug": args.slug,
-                "title": args.title or title or args.slug,
+                "title": final_title,
+                "title_en": title_en,
                 "author": args.author or author,
                 "language": "nb",
                 "kind": args.kind,

@@ -32,6 +32,9 @@ class ReadingText(Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     slug: Mapped[str] = mapped_column(String(128), unique=True)
     title: Mapped[str] = mapped_column(String(256))
+    # Null when no translation was produced or the quality gates rejected the
+    # one that was: the reading list then shows the Norwegian title alone.
+    title_en: Mapped[str | None] = mapped_column(String(256))
     author: Mapped[str | None] = mapped_column(String(256))
     language_code: Mapped[str] = mapped_column(ForeignKey("languages.code"))
     kind: Mapped[str] = mapped_column(String(24))  # "folktale" | "novel" | ...

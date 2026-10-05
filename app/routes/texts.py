@@ -25,6 +25,7 @@ PAGE_SIZE = 100  # sentences per fetch
 class TextOut(BaseModel):
     slug: str
     title: str
+    title_en: str | None
     author: str | None
     kind: str
     orthography: str
@@ -43,6 +44,7 @@ class SentenceOut(BaseModel):
 class TextPageOut(BaseModel):
     slug: str
     title: str
+    title_en: str | None
     author: str | None
     from_seq: int
     to_seq: int
@@ -76,6 +78,7 @@ async def list_texts(
         TextOut(
             slug=t.slug,
             title=t.title,
+            title_en=t.title_en,
             author=t.author,
             kind=t.kind,
             orthography=t.orthography,
@@ -117,6 +120,7 @@ async def text_page(
     return TextPageOut(
         slug=text.slug,
         title=text.title,
+        title_en=text.title_en,
         author=text.author,
         from_seq=from_seq,
         to_seq=sentences[-1].seq if sentences else from_seq,

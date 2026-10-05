@@ -221,3 +221,48 @@ def test_a_short_line_that_is_its_own_translation_is_not_an_echo(line):
     # 80 of these in Mysterier, every one correct. They are why the check needs
     # a floor on length rather than a lower overlap threshold.
     assert "echoed_source" not in gates_hit(line, line.strip("«»"))
+
+
+# --- titles ----------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "reply,expected",
+    [
+        ("Mysteries", "Mysteries"),
+        # Models wrap titles and pad them out; both are recoverable.
+        ('"Mysteries"', "Mysteries"),
+        ("«Mysteries»", "Mysteries"),
+        ("Mysteries\nThis is the title of Hamsun's novel.", "Mysteries"),
+        # And sometimes they answer a title with an essay, which is not.
+        ("Here is the translation: Mysteries", None),
+        ("The title translates to Mysteries, which refers to the enigmatic "
+         "atmosphere Hamsun creates throughout the novel's many chapters", None),
+        ("", None),
+        ("   ", None),
+    ],
+)
+def test_title_translation_is_cleaned_or_dropped(reply, expected, monkeypatch):
+    # A bad title is worse than none: it is the one string a learner reads
+    # before choosing a text, with no Norwegian beside it to correct it.
+    from scripts import prepare_text
+
+    monkeypatch.setattr(prepare_text, "ollama", lambda model, prompt: reply)
+    assert prepare_text.translate_title("m", "Mysterier") == expected
+
+
+def test_a_title_left_in_norwegian_is_dropped(monkeypatch):
+    from scripts import prepare_text
+
+    monkeypatch.setattr(prepare_text, "ollama", lambda model, prompt: "Jomfru Marjas gullsko")
+    assert prepare_text.translate_title("m", "Jomfru Marjas gullsko") is None
+
+
+def test_a_one_word_title_that_needs_no_translation_is_kept(monkeypatch):
+    # Hamsun's Victoria and Pan are titles in both languages. Rejecting these
+    # would lose a correct answer for no gain.
+    from scripts import prepare_text
+
+    monkeypatch.setattr(prepare_text, "ollama", lambda model, prompt: "Victoria")
+    assert prepare_text.translate_title("m", "Victoria") == "Victoria"
+

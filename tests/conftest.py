@@ -8,6 +8,7 @@ from collections.abc import AsyncIterator
 
 import pytest
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy import event
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 
@@ -20,6 +21,16 @@ async def client() -> AsyncIterator[AsyncClient]:
     engine = create_async_engine(
         "sqlite+aiosqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
     )
+
+    # SQLite ignores foreign keys unless asked, so ON DELETE CASCADE silently
+    # does nothing and a test can pass on orphaned rows that Postgres would
+    # never have left behind.
+    @event.listens_for(engine.sync_engine, "connect")
+    def _enforce_foreign_keys(dbapi_connection, _record):  # noqa: ANN001
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
+
     db.engine = engine
     db.session_factory = async_sessionmaker(engine, expire_on_commit=False)
 

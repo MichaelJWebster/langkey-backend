@@ -80,12 +80,18 @@ async def import_text(path: Path, replace: bool, force: bool = False) -> None:
         )
         if existing and not replace:
             sys.exit(f"Text {data['slug']!r} already imported (id {existing.id}); use --replace")
+        # A hand-corrected English title lives only in the database -- the
+        # staging file has whatever the model proposed, or nothing at all for
+        # a text imported before titles were translated. Re-importing must not
+        # throw that away, so the staging file only wins when it has one.
+        kept_title_en = existing.title_en if existing else None
         if existing:
             await session.execute(delete(ReadingText).where(ReadingText.id == existing.id))
 
         text = ReadingText(
             slug=data["slug"],
             title=data["title"],
+            title_en=data.get("title_en") or kept_title_en,
             author=data.get("author"),
             language_code=data["language"],
             kind=data["kind"],
