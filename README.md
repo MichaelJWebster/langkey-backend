@@ -2,6 +2,15 @@
 
 Python/FastAPI backend for LangKey, a language-learning app. Norwegian (Bokmål) first, language-agnostic by design.
 
+## Project documents
+
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — ADR log, newest first. Covers the
+  frontend and deployment as well as this repo.
+- [docs/ROADMAP.md](docs/ROADMAP.md) — milestones, design principles, known issues.
+
+Both are symlinked from the `~/work/lang_app` umbrella directory, which is not a
+repo, so they are version-controlled here.
+
 ## Quick start
 
 ```bash
