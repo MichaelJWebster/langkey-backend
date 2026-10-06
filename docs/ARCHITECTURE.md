@@ -7,6 +7,16 @@ and about deployment live here too. It is kept in the backend repo because the
 umbrella directory (`~/work/lang_app`) is not version-controlled, and symlinked
 back to there so the familiar path still works.
 
+## ADR-035 (2026-10-06) — One output stage: every clip levelled to a common loudness, behind a master volume
+
+Playback went through a plain `<audio>` element per caller, at whatever level the clip happened to carry. That is wrong for the one thing the review panel exists to do. Measured on the existing corpus: Piper speech sits at about −10.5 dBFS, Michael's recordings at −20 to −28. Playing his take straight after the reference made it a third as loud, so the comparison he was being asked to make — *does mine sound like that?* — was dominated by a level difference rather than by pronunciation. His words: *"Could you try and match the volume of playback of my recordings with the references."*
+
+`src/playback.ts` is now the single output stage. Each clip is measured once and scaled so its **speech** lands at −18 dBFS: 20 ms frames, averaging only those within 25 dB of the loudest, so the silence either side of a short sentence cannot set the level (otherwise the same voice with a longer run-up comes back louder). Gain is clamped to 0.2–8, which stops a near-silent take being amplified into noise. The measurement is cached per clip URL.
+
+This has to be Web Audio: `HTMLAudioElement.volume` only attenuates, and his takes need **boosting**. Where Web Audio is missing, or `decodeAudioData` refuses the container — Safari cannot decode webm/opus — playback falls back to an element at master volume rather than failing. Decoding the whole clip before playing also removes a class of stutter the element had on headerless MediaRecorder blobs, which may be the other half of what he heard as "breaking" (ADR-034 fixed the measurable half).
+
+A master volume rides on the same graph, persisted in `localStorage`, with a slider and mute in the app header so it is reachable from every screen — there was previously no volume control anywhere, and no single place one could have gone. `recordingObjectUrl` became `recordingBlob`, because levelling needs the samples rather than an object URL. `src/playback.test.ts` fixes the behaviour that matters: a −20 dBFS take and a −10 dBFS reference come out within a decibel of each other and on target, silence is left alone, and lead-in length does not change the result. Revisit: if any clip audibly pumps or clips after levelling, add a limiter rather than lowering the target; if Michael wants reference and voice at deliberately *different* levels for comparison, that becomes a second control rather than a change to the target.
+
 ## ADR-034 (2026-10-06) — Recording waits for the microphone, and asks for unprocessed audio
 
 Michael: *"The recording on this page of my voice is constantly breaking, and corrupted."* Measured against the stored takes, it was: every take from 2026-10-06 is **832–957 ms shorter than the wall-clock recording time**, with the silence before his voice collapsed from 280–800 ms to 0–100 ms. The 5 October takes lose 18–66 ms. The opening word was not being captured, so playback started mid-syllable.
