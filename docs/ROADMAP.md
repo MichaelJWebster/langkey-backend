@@ -125,11 +125,35 @@ each step is useful on its own and makes the next one cheaper.
    evidence rather than on principle: it did not raise the score, and on two takes it
    silenced the model entirely.
 
-   **Re-measure before trying anything else.** The 7 takes were all recorded against the
-   old, too-fast pool-voice reference. ADR-033 changed what the record button plays, so
-   the next corpus is recorded against the slowed primary voice — that is the cheapest
-   remaining lever and it has to be pulled before `nb-whisper-large` or alignment work
-   can be judged against anything.
+   **Re-measured 2026-10-06, and the cheap lever was the big one.** 56 takes recorded
+   against the slowed primary reference (ADR-033) with the capture fixed (ADR-034),
+   43 of them sentences:
+
+   | | exact | target words recovered |
+   |---|---|---|
+   | `small` | 19/43 (44%) | 69% |
+   | `small`, peak-normalised | 21/43 (49%) | 69% |
+   | `medium` | 21/43 (49%) | 73% |
+
+   Against **1/7** on the old corpus. Three of the 43 are effectively silent (−49 to
+   −72 dBFS speech), so the usable figure is 21/40. Two things this settles. Bigger is
+   no longer worse — `medium` now edges `small`, where before it scored 0/7. And level
+   is not the limiter: peak-normalising recovers one or two sentences, so disabling
+   automatic gain (ADR-034) cost nothing in recognition even though it left the takes
+   ~12 dB quieter. Not a controlled comparison — tonight's sentences are shorter and
+   more familiar than the original seven — so the honest claim is that the combination
+   of a copyable reference and a complete capture moved recognition from "unusable" to
+   "roughly half", not that any one change did it. A controlled re-test means
+   re-recording the original seven sentences.
+
+   **The misses are now pronunciation data, which is the point.** Across both models,
+   by how often a target word fails to appear: `klokka` 68% (heard as *klokke*,
+   *slakke av*, *klakke*), `åtte` 64%, `ti` 61%, and `lærer`, `nye`, `kaffe`,
+   `slutter` at 83–100%. Never lost across 4+ attempts: *bra, familien, fem, festen,
+   for, gå, i, maten, må, nå, til, to, tusen, vi*. The greeting sentences score 10/10
+   while every `klokka` sentence fails, so this is a short list of specific sounds
+   rather than a general accent verdict — which is the shape of feedback step 4 is
+   supposed to produce, arriving earlier than expected and without Azure.
 
    Weights live on the external drive: `HF_HOME=/Volumes/nvm_2tb/home/michaelw/work/huggingface`
    (3.8 GB for small + medium), and the speech service has its own Python 3.12 venv at
