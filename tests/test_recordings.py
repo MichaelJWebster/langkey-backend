@@ -272,3 +272,119 @@ async def test_transcribe_404s_when_the_audio_is_gone(client, bucket):
         f"/api/v1/recordings/{created['id']}/transcribe", headers=headers
     )
     assert resp.status_code == 404
+
+
+async def _transcribe(client, headers, recording_id, text, model="NbAiLab/nb-whisper-small"):
+    from app.speech import Transcript
+
+    use_transcriber(
+        _FakeTranscriber(
+            Transcript(text=text, language="no", model=model, duration_ms=300, confidence=None)
+        )
+    )
+    return await client.post(
+        f"/api/v1/recordings/{recording_id}/transcribe", headers=headers
+    )
+
+
+async def _upload_example(client, headers, item_id, example_id):
+    return await client.post(
+        "/api/v1/recordings",
+        headers=headers,
+        data={"item_id": str(item_id), "example_id": str(example_id), "duration_ms": "2000"},
+        files={"audio": ("take.webm", AUDIO, "audio/webm;codecs=opus")},
+    )
+
+
+async def _first_example(client, headers):
+    queue = (await client.get("/api/v1/reviews/queue", headers=headers)).json()
+    for card in queue["cards"]:
+        if card["item"]["examples"]:
+            return card["item"]["id"], card["item"]["examples"][0]
+    raise AssertionError("no card in the queue has an example sentence")
+
+
+async def test_transcribe_marks_each_word_of_the_target(client, bucket):
+    headers = await login(client)
+    item_id, example = await _first_example(client, headers)
+    created = (await _upload_example(client, headers, item_id, example["id"])).json()
+
+    body = (await _transcribe(client, headers, created["id"], example["sentence"])).json()
+
+    assert body["target"] == example["sentence"]
+    assert [w["verdict"] for w in body["words"]] == ["said"] * len(body["words"])
+    assert len(body["words"]) == len(example["sentence"].split())
+
+
+async def test_a_word_the_model_lost_is_marked_and_tallied(client, bucket):
+    headers = await login(client)
+    item_id, example = await _first_example(client, headers)
+    created = (await _upload_example(client, headers, item_id, example["id"])).json()
+
+    # Drop the last word of whatever the sentence is.
+    spoken = " ".join(example["sentence"].split()[:-1])
+    body = (await _transcribe(client, headers, created["id"], spoken)).json()
+
+    assert body["words"][-1]["verdict"] == "missed"
+    tally = {h["word"]: h for h in body["history"]}
+    last = body["words"][-1]["word"].lower().strip(".,!?")
+    assert tally[last]["attempts"] == 1
+    assert tally[last]["said"] == 0
+    # One attempt is never a pattern, however bad it looks.
+    assert tally[last]["pattern"] is False
+
+
+async def test_transcribing_the_same_take_twice_does_not_count_it_twice(client, bucket):
+    headers = await login(client)
+    item_id, example = await _first_example(client, headers)
+    created = (await _upload_example(client, headers, item_id, example["id"])).json()
+
+    first = (await _transcribe(client, headers, created["id"], example["sentence"])).json()
+    # A different transcript on the second call must be ignored: the take was
+    # already transcribed, and re-running must not re-score the attempt.
+    second = (await _transcribe(client, headers, created["id"], "noe helt annet")).json()
+
+    assert second["text"] == first["text"]
+    assert {h["word"]: h["attempts"] for h in second["history"]} == {
+        h["word"]: h["attempts"] for h in first["history"]
+    }
+
+
+async def test_the_tally_builds_across_takes_until_it_becomes_a_pattern(client, bucket):
+    from app.pronunciation import PATTERN_MIN_ATTEMPTS
+
+    headers = await login(client)
+    item_id, example = await _first_example(client, headers)
+    spoken = " ".join(example["sentence"].split()[:-1])  # always lose the last word
+    last = example["sentence"].split()[-1].lower().strip(".,!?")
+
+    body = None
+    for _ in range(PATTERN_MIN_ATTEMPTS):
+        created = (await _upload_example(client, headers, item_id, example["id"])).json()
+        body = (await _transcribe(client, headers, created["id"], spoken)).json()
+
+    tally = {h["word"]: h for h in body["history"]}
+    assert tally[last]["attempts"] == PATTERN_MIN_ATTEMPTS
+    assert tally[last]["said"] == 0
+    assert tally[last]["pattern"] is True
+    # A word that keeps landing never becomes one, however often it is said.
+    first_word = example["sentence"].split()[0].lower().strip(".,!?")
+    assert tally[first_word]["pattern"] is False
+
+
+async def test_a_near_miss_counts_against_the_word(client, bucket):
+    """klokka coming back as klokke is the error, not a forgivable variant."""
+    headers = await login(client)
+    item_id, example = await _first_example(client, headers)
+    created = (await _upload_example(client, headers, item_id, example["id"])).json()
+
+    # Bend the last word's ending, the way a drifting -a/-e does.
+    spoken = example["sentence"].split()
+    bare = spoken[-1].strip(".,!?")
+    spoken[-1] = (bare[:-1] + ("x" if bare[-1] != "x" else "y")) if len(bare) > 2 else bare + "x"
+    body = (await _transcribe(client, headers, created["id"], " ".join(spoken))).json()
+
+    last = bare.lower()
+    mark = body["words"][-1]
+    assert mark["verdict"] in ("slipped", "missed")
+    assert {h["word"]: h["said"] for h in body["history"]}[last] == 0

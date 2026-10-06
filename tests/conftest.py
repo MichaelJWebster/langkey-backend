@@ -61,3 +61,30 @@ async def login(client: AsyncClient) -> dict[str, str]:
     )
     assert resp.status_code == 200, resp.text
     return {"Authorization": f"Bearer {resp.json()['access_token']}"}
+
+@pytest.fixture(autouse=True, scope="session")
+def _settings_ignore_local_config():
+    """Tests must not read whatever this machine happens to be configured for.
+
+    `Settings()` loads `.env` and `LANGKEY_*` from the environment, so the
+    moment a developer points their API at a speech backend the seam tests
+    start asserting against that instead of the defaults they were written
+    for. Hermetic here: the only configuration a test sees is the one it
+    passes in.
+    """
+    import os
+
+    from app.config import Settings, get_settings
+
+    original_env_file = Settings.model_config.get("env_file")
+    Settings.model_config["env_file"] = None
+    stashed = {k: v for k, v in os.environ.items() if k.startswith("LANGKEY_")}
+    for key in stashed:
+        del os.environ[key]
+    get_settings.cache_clear()
+    try:
+        yield
+    finally:
+        Settings.model_config["env_file"] = original_env_file
+        os.environ.update(stashed)
+        get_settings.cache_clear()

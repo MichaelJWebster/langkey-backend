@@ -18,14 +18,21 @@ from typing import Annotated
 from botocore.exceptions import BotoCoreError, ClientError
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_current_user
 from app.config import get_settings
 from app.content import _s3_client
 from app.db import get_session
-from app.models import Item, ItemExample, User, UserRecording
+from app.pronunciation import (
+    PATTERN_MIN_ATTEMPTS,
+    SAID,
+    compare,
+    is_pattern,
+    normalise,
+)
+from app.models import Item, ItemExample, PronunciationAttempt, User, UserRecording
 from app.speech import (
     SpeechToText,
     TranscriptionError,
@@ -190,6 +197,23 @@ async def stream_recording(
     )
 
 
+class WordMarkOut(BaseModel):
+    word: str
+    verdict: str  # "said" | "slipped" | "missed"
+    heard: str | None = None
+
+
+class WordRecordOut(BaseModel):
+    """This learner's running record for one word."""
+
+    word: str
+    said: int
+    attempts: int
+    # True once there are enough attempts for the rate to mean something.
+    # Below that the client shows the count without drawing a conclusion.
+    pattern: bool
+
+
 class TranscriptOut(BaseModel):
     text: str
     language: str
@@ -198,6 +222,53 @@ class TranscriptOut(BaseModel):
     model: str
     duration_ms: int | None = None
     confidence: float | None = None
+    # What the learner was asked to say, and how each word of it fared. Never
+    # a score: a transcript can lose a word for reasons that have nothing to
+    # do with the speaker, which is why `history` exists (ADR-036).
+    target: str
+    words: list[WordMarkOut]
+    history: list[WordRecordOut]
+    attempts_for_pattern: int = PATTERN_MIN_ATTEMPTS
+
+
+async def _target_text(session: AsyncSession, recording: UserRecording) -> str:
+    if recording.example_id is not None:
+        example = await session.get(ItemExample, recording.example_id)
+        if example:
+            return example.sentence
+    item = await session.get(Item, recording.item_id)
+    return item.source_text if item else ""
+
+
+async def _history(
+    session: AsyncSession, user: User, language: str, wanted: list[str]
+) -> list[WordRecordOut]:
+    """Each word's tally for this learner, in the order the sentence uses them."""
+    if not wanted:
+        return []
+    rows = await session.execute(
+        select(
+            PronunciationAttempt.word,
+            func.count().label("attempts"),
+            func.count().filter(PronunciationAttempt.said).label("said"),
+        )
+        .where(
+            PronunciationAttempt.user_id == user.id,
+            PronunciationAttempt.language_code == language,
+            PronunciationAttempt.word.in_(set(wanted)),
+        )
+        .group_by(PronunciationAttempt.word)
+    )
+    tally = {w: (said, attempts) for w, attempts, said in rows}
+    out = []
+    for word in dict.fromkeys(wanted):  # de-duplicated, order preserved
+        said, attempts = tally.get(word, (0, 0))
+        out.append(
+            WordRecordOut(
+                word=word, said=said, attempts=attempts, pattern=is_pattern(said, attempts)
+            )
+        )
+    return out
 
 
 @router.post("/{recording_id}/transcribe", response_model=TranscriptOut)
@@ -215,33 +286,76 @@ async def transcribe_recording(
     across models.
     """
     recording = await _owned(session, user, recording_id)
-    try:
-        obj = _s3_client().get_object(
-            Bucket=get_settings().s3_bucket, Key=recording.object_key
-        )
-        audio = obj["Body"].read()
-    except (ClientError, BotoCoreError):
-        raise HTTPException(404, "Recording audio missing")
+    target = await _target_text(session, recording)
+    item = await session.get(Item, recording.item_id)
+    language = item.language_code if item else "nb"
 
-    try:
-        transcript = await transcriber.transcribe(
-            audio, content_type=recording.content_type
+    # Transcribing the same take twice must not count the attempt twice, so
+    # the first transcript is kept and reused.
+    text = recording.transcript
+    model = recording.transcript_model
+    elapsed: int | None = None
+    confidence: float | None = None
+    first_time = text is None
+
+    if first_time:
+        try:
+            obj = _s3_client().get_object(
+                Bucket=get_settings().s3_bucket, Key=recording.object_key
+            )
+            audio = obj["Body"].read()
+        except (ClientError, BotoCoreError):
+            raise HTTPException(404, "Recording audio missing")
+
+        try:
+            transcript = await transcriber.transcribe(
+                audio, content_type=recording.content_type
+            )
+        except TranscriptionUnavailable as exc:
+            # Not the learner's fault and not a failed attempt: nothing should
+            # be scored against them for this.
+            logger.warning("transcription unavailable for %s: %s", recording_id, exc)
+            raise HTTPException(503, str(exc))
+        except TranscriptionError as exc:
+            logger.warning("transcription failed for %s: %s", recording_id, exc)
+            raise HTTPException(502, str(exc))
+
+        text = transcript.text
+        model = transcript.model
+        elapsed = transcript.duration_ms
+        confidence = transcript.confidence
+        recording.transcript = text
+        recording.transcript_model = model
+
+    marks = compare(target, text or "")
+    if first_time:
+        session.add_all(
+            PronunciationAttempt(
+                user_id=user.id,
+                recording_id=recording.id,
+                language_code=language,
+                word=normalise(m.word),
+                # A slip counts against. `klokka` coming back as `klokke` is
+                # not a near miss to be forgiven -- it is precisely the
+                # distinction the learner is not making, and the most common
+                # one in the 2026-10-06 corpus. Only an exact match counts.
+                said=m.verdict == SAID,
+                heard=(m.heard or None),
+            )
+            for m in marks
+            if normalise(m.word)
         )
-    except TranscriptionUnavailable as exc:
-        # Not the learner's fault and not a failed attempt: nothing should be
-        # scored against them for this.
-        logger.warning("transcription unavailable for %s: %s", recording_id, exc)
-        raise HTTPException(503, str(exc))
-    except TranscriptionError as exc:
-        logger.warning("transcription failed for %s: %s", recording_id, exc)
-        raise HTTPException(502, str(exc))
+    await session.commit()
 
     return TranscriptOut(
-        text=transcript.text,
-        language=transcript.language,
-        model=transcript.model,
-        duration_ms=transcript.duration_ms or recording.duration_ms,
-        confidence=transcript.confidence,
+        text=text or "",
+        language=language,
+        model=model or "unknown",
+        duration_ms=elapsed or recording.duration_ms,
+        confidence=confidence,
+        target=target,
+        words=[WordMarkOut(word=m.word, verdict=m.verdict, heard=m.heard) for m in marks],
+        history=await _history(session, user, language, [normalise(m.word) for m in marks]),
     )
 
 

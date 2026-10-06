@@ -17,7 +17,7 @@ from app.models.learning import (
 )
 from app.models.glossary import UserGlossaryEntry
 from app.models.meta import AppMeta
-from app.models.recordings import UserRecording
+from app.models.recordings import PronunciationAttempt, UserRecording
 from app.models.reading import (
     ReadingText,
     Sentence,
@@ -46,5 +46,6 @@ __all__ = [
     "UserCard",
     "UserGlossaryEntry",
     "UserReadingPosition",
+    "PronunciationAttempt",
     "UserRecording",
 ]
