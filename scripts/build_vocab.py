@@ -19,6 +19,8 @@ import unicodedata
 import urllib.request
 from pathlib import Path
 
+from app.categories import CATEGORIES as APP_CATEGORIES
+
 OLLAMA_URL = "http://localhost:11434"
 DEFAULT_MODEL = "gemma3:12b"
 
@@ -37,6 +39,11 @@ CATEGORIES = {
     "nature": "weather, seasons, landscape, animals, outdoors",
     "leisure": "hobbies, sport, music, holidays, celebrations, Norwegian culture",
 }
+
+# These are prompt hints, not labels -- the model needs the longer description
+# to sort a word. The slugs must still be the application's, or the entries
+# this writes would not map onto anything.
+assert set(CATEGORIES) == set(APP_CATEGORIES), set(CATEGORIES) ^ set(APP_CATEGORIES)
 
 PROMPT = """You are building an A1 Norwegian (bokmål) flashcard.
 
