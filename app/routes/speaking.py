@@ -1,0 +1,166 @@
+"""Speaking practice: say the phrase, hear how it landed.
+
+Separate from the writing cards on purpose. Recording lived inside the review
+panel because that is where the sentences were, but a learner reaching for
+pronunciation practice should not have to grade a translation first, and a
+learner writing translations should not be interrupted by a microphone
+(ADR-037).
+
+Phrases are drawn from what the learner has already met, and weighted toward
+the words their own record says are not landing -- which is what the
+`pronunciation_attempts` tally exists for (ADR-036).
+"""
+
+import random
+from typing import Annotated
+
+from fastapi import APIRouter, Depends
+from pydantic import BaseModel
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.audio import PRONUNCIATION_SCALE, PRONUNCIATION_SCALES, audio_url
+from app.auth import get_current_user
+from app.db import get_session
+from app.models import Item, PronunciationAttempt, User, UserCard
+from app.models.learning import RECOGNITION
+from app.pronunciation import PATTERN_MIN_ATTEMPTS, is_pattern, normalise
+
+router = APIRouter(prefix="/api/v1/speaking", tags=["speaking"])
+
+# How much a phrase is favoured for containing a word that is not landing.
+# Enough to bring it round sooner, not so much that a session becomes the same
+# three sentences.
+NEED_WEIGHT = 3.0
+
+
+class SpeedOut(BaseModel):
+    scale: float
+    url: str
+
+
+class PhraseOut(BaseModel):
+    item_id: int
+    example_id: int | None  # null means the headword itself
+    text: str
+    translation: str
+    audio_url: str  # the default rung, for a client that offers no chooser
+    speeds: list[SpeedOut]
+    # Words in this phrase the learner's record says are not landing. The
+    # reason this phrase was chosen, shown so the choice is not mysterious.
+    focus: list[str] = []
+
+
+class WordRecordOut(BaseModel):
+    word: str
+    said: int
+    attempts: int
+    pattern: bool
+
+
+class SpeakingSessionOut(BaseModel):
+    phrases: list[PhraseOut]
+    # The whole record, worst first -- the overview above the session.
+    record: list[WordRecordOut]
+    attempts_for_pattern: int = PATTERN_MIN_ATTEMPTS
+
+
+def _speeds(language: str, text: str) -> list[SpeedOut]:
+    return [
+        SpeedOut(scale=s, url=audio_url(language, text, primary=True, scale=s))
+        for s in PRONUNCIATION_SCALES
+    ]
+
+
+async def _word_record(
+    session: AsyncSession, user: User, language: str
+) -> list[WordRecordOut]:
+    rows = await session.execute(
+        select(
+            PronunciationAttempt.word,
+            func.count().label("attempts"),
+            func.count().filter(PronunciationAttempt.said).label("said"),
+        )
+        .where(
+            PronunciationAttempt.user_id == user.id,
+            PronunciationAttempt.language_code == language,
+        )
+        .group_by(PronunciationAttempt.word)
+    )
+    record = [
+        WordRecordOut(word=w, said=said, attempts=attempts, pattern=is_pattern(said, attempts))
+        for w, attempts, said in rows
+    ]
+    # Worst first, and among equals the one with more evidence behind it.
+    record.sort(key=lambda r: (r.said / r.attempts, -r.attempts))
+    return record
+
+
+@router.get("/practice", response_model=SpeakingSessionOut)
+async def practice(
+    user: Annotated[User, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_session)],
+    language: str = "nb",
+    limit: int = 12,
+) -> SpeakingSessionOut:
+    """A set of phrases to say, favouring the sounds that are not landing."""
+    seen = list(
+        await session.scalars(
+            select(Item)
+            .join(UserCard, UserCard.item_id == Item.id)
+            .where(
+                UserCard.user_id == user.id,
+                UserCard.direction == RECOGNITION,
+                UserCard.last_review.is_not(None),
+                Item.language_code == language,
+            )
+        )
+    )
+    record = await _word_record(session, user, language)
+    if not seen:
+        return SpeakingSessionOut(phrases=[], record=record)
+
+    struggling = {r.word for r in record if r.pattern}
+
+    candidates: list[tuple[Item, object | None, str, str]] = []
+    for item in seen:
+        candidates.append((item, None, item.source_text, item.translation))
+        for ex in item.examples:
+            candidates.append((item, ex, ex.sentence, ex.translation))
+
+    def focus_words(text: str) -> list[str]:
+        return [w for w in dict.fromkeys(normalise(text).split()) if w in struggling]
+
+    weights = [1.0 + NEED_WEIGHT * bool(focus_words(text)) for _i, _e, text, _t in candidates]
+    k = min(limit, len(candidates))
+    picked: list[int] = []
+    pool = list(range(len(candidates)))
+    # Weighted sampling without replacement: a phrase must not appear twice in
+    # one session however strongly it is favoured.
+    for _ in range(k):
+        total = sum(weights[i] for i in pool)
+        cut = random.uniform(0, total)
+        running = 0.0
+        for i in pool:
+            running += weights[i]
+            if running >= cut:
+                picked.append(i)
+                pool.remove(i)
+                break
+    random.shuffle(picked)
+
+    phrases = []
+    for i in picked:
+        item, example, text, translation = candidates[i]
+        phrases.append(
+            PhraseOut(
+                item_id=item.id,
+                example_id=getattr(example, "id", None),
+                text=text,
+                translation=translation,
+                audio_url=audio_url(language, text, primary=True, scale=PRONUNCIATION_SCALE),
+                speeds=_speeds(language, text),
+                focus=focus_words(text),
+            )
+        )
+    return SpeakingSessionOut(phrases=phrases, record=record)

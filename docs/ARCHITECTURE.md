@@ -7,6 +7,18 @@ and about deployment live here too. It is kept in the backend repo because the
 umbrella directory (`~/work/lang_app`) is not version-controlled, and symlinked
 back to there so the familiar path still works.
 
+## ADR-037 (2026-10-10) — Speaking is its own section, with pronunciation and conversation under it
+
+Recording moves out of the writing cards. It lived there because that is where the sentences were, not because it belonged: a learner reaching for pronunciation practice had to grade a translation first, and a learner writing translations was interrupted by a microphone under every example. Michael's call — *"I like the writing practice exercises, but I think the speech parts of them should be moved into a part of the speech section"* — and the section keeps the name the dashboard already uses, **Speaking**.
+
+Speaking now opens on two subsections. **Pronunciation** is a lift and shift of what the review panel had: the slow clear reference (ADR-033), the speed chooser, the microphone, and the word-by-word feedback with its running tally (ADR-036). **Conversation** is a placeholder that says what it will be and why it comes second — it needs this section's recording and recognition plus a model to answer with (ADR-024). The speaking skill is no longer disabled on the dashboard (reversing part of ADR-023, whose condition was "until M3").
+
+What the writing cards keep: the speak buttons. Hearing the word while reviewing is listening support, not speech practice, and removing it would make the cards worse. They play the default imitation rung, since the chooser went with the recording; if review ever wants its own speed control that is a separate decision rather than a leftover.
+
+`GET /api/v1/speaking/practice` supplies the phrases: headwords and example sentences from items the learner has met (the same rule the listening exercises use), weighted ×4 toward phrases containing words the tally says are not landing, sampled without replacement so nothing repeats inside a session. Each phrase names the words it was chosen for, so the choice is visible rather than mysterious, and the session opens with the worst of the record above it. This is the first thing the `pronunciation_attempts` tally actually steers, which was the point of collecting it.
+
+`SpeedChips` moved out of `ReviewSession` into its own module with the remembered-scale hook, because two screens now need it. Revisit: if the focus list fills with grammatical filler — `er` already appears — the fix is to weight by how much a word carries, not to raise the threshold, which would also hide real content words.
+
 ## ADR-036 (2026-10-06) — Pronunciation feedback in the record flow: word marks per take, a tally across them
 
 Michael, after seeing the offline analysis: *"Would it be possible to provide that kind of analysis within the application as I'm using the record function?"* Yes, and the 2026-10-06 corpus says what shape it has to take. Across 56 takes, `klokka` failed in 68% of 22 attempts while fourteen other words never failed once — so **one take says almost nothing and the tally says a lot**. That asymmetry is the design.
