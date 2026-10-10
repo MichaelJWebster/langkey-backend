@@ -16,16 +16,27 @@ from app.models import (
     PRODUCTION,
     RECOGNITION,
     Item,
+    ItemCategory,
     User,
     UserAnswerAlternative,
     UserCard,
 )
+from app.sampling import weighted_sample
 from app.scheduling import NEW_CARDS_PER_SESSION, apply_review
 
 router = APIRouter(prefix="/api/v1/reviews", tags=["reviews"])
 
 # Cards in learning steps come due minutes later; include them in one sitting.
 QUEUE_HORIZON = timedelta(minutes=15)
+
+# Repetition deck weighting (ADR-038). A word the learner keeps missing should
+# come round several times as often as one they have solid, but not so much
+# that the deck becomes the same handful of words every sitting.
+REPEAT_DUE_WEIGHT = 6.0  # due or overdue right now
+REPEAT_UNESTABLISHED_WEIGHT = 3.0  # still in learning or relearning steps
+REPEAT_LAPSE_WEIGHT = 1.5  # per lapse, capped
+REPEAT_LAPSE_CAP = 4
+REPEAT_DIFFICULTY_WEIGHT = 2.0  # scaled by FSRS difficulty over its 1-10 range
 
 
 class CopySpeedOut(BaseModel):
@@ -64,6 +75,7 @@ class ItemOut(BaseModel):
     translation: str
     pos: str | None
     cefr_level: str
+    categories: list[str]
     audio_url: str
     copy_audio_url: str
     copy_speeds: list[CopySpeedOut]
@@ -98,31 +110,47 @@ class ReviewOut(BaseModel):
     requeue: bool  # true if the card comes due again within this sitting
 
 
+def _in_category(category: str | None):
+    """A filter restricting items to one category, or nothing at all."""
+    if not category:
+        return []
+    return [
+        Item.id.in_(
+            select(ItemCategory.item_id).where(ItemCategory.category == category)
+        )
+    ]
+
+
 async def _introduce_new_cards(
     session: AsyncSession,
     user: User,
     language: str,
     allowance: int,
-    focus: str | None,
+    category: str | None,
     direction: str | None = None,
 ) -> list[UserCard]:
     """Pick unseen cards up to `allowance`, merging existing unseen rows and
-    yet-uncarded items under one ordering, so a focus topic wins even over
-    unseen rows created by earlier unfocused fetches.
+    yet-uncarded items under one ordering by frequency rank.
+
+    A category is a hard restriction, not a sort key. It used to only order the
+    pool, which meant a ten-word category silently filled the rest of the deck
+    with unrelated words and the category label stopped describing the sitting
+    (ADR-038). A category deck that runs out of words is finished; the global
+    queue lives in the repetition deck instead.
 
     Staging: every item starts with a recognition card; a production card becomes
     eligible only once the item's recognition card has graduated to Review state.
-    Candidates from both stages interleave by frequency rank; a focus topic's
-    items come first, spilling over to the rest once the topic is exhausted.
+    Candidates from both stages interleave by frequency rank.
     """
     if allowance <= 0:
         return []
-    focus_order = (Item.topic != focus) if focus else Item.frequency_rank
+    scope = _in_category(category)
 
     unseen_filters = [
         UserCard.user_id == user.id,
         UserCard.last_review.is_(None),
         Item.language_code == language,
+        *scope,
     ]
     if direction:
         unseen_filters.append(UserCard.direction == direction)
@@ -131,7 +159,7 @@ async def _introduce_new_cards(
             select(UserCard)
             .join(Item)
             .where(*unseen_filters)
-            .order_by(focus_order, Item.frequency_rank)
+            .order_by(Item.frequency_rank)
             .limit(allowance)
         )
     )
@@ -142,9 +170,9 @@ async def _introduce_new_cards(
         .scalar_subquery()
     )
     rec_rows = await session.execute(
-        select(Item.id, Item.frequency_rank, Item.topic)
-        .where(Item.language_code == language, Item.id.not_in(carded))
-        .order_by(focus_order, Item.frequency_rank)
+        select(Item.id, Item.frequency_rank)
+        .where(Item.language_code == language, Item.id.not_in(carded), *scope)
+        .order_by(Item.frequency_rank)
         .limit(allowance)
     )
     graduated_recognition = (
@@ -162,27 +190,27 @@ async def _introduce_new_cards(
         .scalar_subquery()
     )
     prod_rows = await session.execute(
-        select(Item.id, Item.frequency_rank, Item.topic)
+        select(Item.id, Item.frequency_rank)
         .where(
             Item.language_code == language,
             Item.id.in_(graduated_recognition),
             Item.id.not_in(prod_carded),
+            *scope,
         )
-        .order_by(focus_order, Item.frequency_rank)
+        .order_by(Item.frequency_rank)
         .limit(allowance)
     )
 
-    def key(topic, rank, tiebreak) -> tuple:
-        return (bool(focus) and topic != focus, rank, tiebreak)
-
-    # Merge unseen rows and would-be new cards under the same focus-first order.
+    # Merge unseen rows and would-be new cards under one frequency order; the
+    # tiebreak keeps an existing unseen row ahead of creating a fresh card for
+    # the same rank.
     pool: list[tuple[tuple, str, object]] = [
-        (key(uc.item.topic, uc.item.frequency_rank, 0), "unseen", uc) for uc in unseen
+        ((uc.item.frequency_rank, 0), "unseen", uc) for uc in unseen
     ]
     if direction in (None, RECOGNITION):
-        pool += [(key(t, r, 1), RECOGNITION, i) for i, r, t in rec_rows]
+        pool += [((r, 1), RECOGNITION, i) for i, r in rec_rows]
     if direction in (None, PRODUCTION):
-        pool += [(key(t, r, 2), PRODUCTION, i) for i, r, t in prod_rows]
+        pool += [((r, 2), PRODUCTION, i) for i, r in prod_rows]
     pool.sort(key=lambda entry: entry[0])
 
     picked: list[UserCard] = []
@@ -281,6 +309,7 @@ def _card_out(uc: UserCard, gloss_for=None, alternatives=None) -> CardOut:
             translation=item.translation,
             pos=item.pos,
             cefr_level=item.cefr_level,
+            categories=sorted(c.category for c in item.categories),
             audio_url=audio_url(lang, item.source_text, primary=True),
             copy_audio_url=audio_url(
                 lang, item.source_text, primary=True, scale=PRONUNCIATION_SCALE
@@ -304,17 +333,92 @@ def _card_out(uc: UserCard, gloss_for=None, alternatives=None) -> CardOut:
     )
 
 
+def _repeat_weight(card: UserCard, due_now: bool) -> float:
+    """How strongly this met word wants another look.
+
+    Every met word stays in the pool -- repetition for its own sake is half
+    the point -- but the ones the learner's record says are not landing carry
+    more weight, so they come round more often until they do.
+    """
+    weight = 1.0
+    if due_now:
+        weight += REPEAT_DUE_WEIGHT
+    if card.fsrs_state != FSRS_REVIEW_STATE:
+        weight += REPEAT_UNESTABLISHED_WEIGHT
+    weight += REPEAT_LAPSE_WEIGHT * min(card.lapses, REPEAT_LAPSE_CAP)
+    if card.difficulty is not None:
+        # FSRS difficulty runs 1-10; normalise so only the hard end pays.
+        weight += REPEAT_DIFFICULTY_WEIGHT * max(0.0, (card.difficulty - 1) / 9)
+    return weight
+
+
+async def _repetition_deck(
+    session: AsyncSession,
+    user: User,
+    language: str,
+    limit: int,
+    direction: str | None,
+    scope: list,
+) -> tuple[list[UserCard], list[UserCard]]:
+    """Every word the learner has met, sampled with the shaky ones favoured.
+
+    Returns (due, extra). Introduces nothing new: this is the deck for keeping
+    what is already met, and a sitting here never grows the pile. Due cards
+    come first and in due order so FSRS still gets its reviews on time; the
+    rest is extra drilling the scheduler would not have asked for, which is
+    why it is sampled rather than taken in order -- taking the top N by need
+    would show the same words every sitting.
+    """
+    now = datetime.now(UTC)
+    filters = [
+        UserCard.user_id == user.id,
+        UserCard.last_review.is_not(None),
+        Item.language_code == language,
+        *scope,
+    ]
+    if direction:
+        filters.append(UserCard.direction == direction)
+
+    # The due split stays in SQL: the stored timestamps' awareness depends on
+    # the backend, and comparing them in Python breaks on SQLite.
+    due = list(
+        await session.scalars(
+            select(UserCard)
+            .join(Item)
+            .where(*filters, UserCard.due <= now + QUEUE_HORIZON)
+            .order_by(UserCard.due)
+            .limit(limit)
+        )
+    )
+    room = limit - len(due)
+    if room <= 0:
+        return due, []
+
+    rest = list(
+        await session.scalars(
+            select(UserCard)
+            .join(Item)
+            .where(*filters, UserCard.due > now + QUEUE_HORIZON)
+        )
+    )
+    if not rest:
+        return due, []
+    weights = [_repeat_weight(c, due_now=False) for c in rest]
+    return due, [rest[i] for i in weighted_sample(weights, room)]
+
+
 @router.get("/queue", response_model=QueueOut)
 async def queue(
     user: Annotated[User, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_session)],
     language: str = "nb",
     limit: int = 15,
-    focus: str | None = None,
+    category: str | None = None,
     direction: str | None = None,
     mode: str | None = None,
 ) -> QueueOut:
     now = datetime.now(UTC)
+    scope = _in_category(category)
 
     if mode == "tricky":
         # Extra practice on words not yet established, strongest first: the
@@ -325,6 +429,7 @@ async def queue(
             UserCard.last_review.is_not(None),
             UserCard.fsrs_state != FSRS_REVIEW_STATE,
             Item.language_code == language,
+            *scope,
         ]
         if direction:
             filters.append(UserCard.direction == direction)
@@ -345,11 +450,23 @@ async def queue(
             new_count=0,
         )
 
+    if mode == "repeat":
+        due, extra = await _repetition_deck(session, user, language, limit, direction, scope)
+        cards = due + extra
+        gloss_for = await _gloss_helper(session, user.id, language, cards)
+        alts = await _alternatives(session, user.id)
+        return QueueOut(
+            cards=[_card_out(c, gloss_for, alts) for c in cards],
+            due_count=len(due),
+            new_count=0,
+        )
+
     due_filters = [
         UserCard.user_id == user.id,
         UserCard.last_review.is_not(None),
         UserCard.due <= now + QUEUE_HORIZON,
         Item.language_code == language,
+        *scope,
     ]
     if direction:
         due_filters.append(UserCard.direction == direction)
@@ -363,7 +480,7 @@ async def queue(
         )
     )
     allowance = min(NEW_CARDS_PER_SESSION, limit - len(due_cards))
-    new_cards = await _introduce_new_cards(session, user, language, allowance, focus, direction)
+    new_cards = await _introduce_new_cards(session, user, language, allowance, category, direction)
 
     gloss_for = await _gloss_helper(session, user.id, language, due_cards + new_cards)
     alts = await _alternatives(session, user.id)

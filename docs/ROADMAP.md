@@ -29,7 +29,7 @@ below is sized for the current single learner; none of it should need rewriting 
 
 - Learning-domain schema: languages, items, user_cards (per-direction FSRS state), review_events (immutable log). Alembic migrations run at startup.
 - FSRS scheduling via `py-fsrs` 6.x; new cards in batches of 10 per session with no daily cap (user preference: unlimited practice); recognition cards first, production (EN→NO) cards introduced once recognition graduates (staged directions).
-- Seeded deck: 447 Claude-authored A1–A2 Bokmål entries (words + phrases, each with example sentence + translation, ordered by frequency/usefulness).
+- Seeded deck: 447 Claude-authored A1–A2 Bokmål entries (words + phrases, each with example sentence + translation, ordered by frequency/usefulness). *Now 860 — see M2.6.*
 - API: `GET /reviews/queue`, `POST /reviews` (4-button FSRS rating), `GET /progress` (streak, established/learning counts).
 - Frontend: flashcard session UI (space to reveal, 1–4 to grade, within-session requeue of learning cards), dashboard with streak/stats. Verified end-to-end in browser.
 
@@ -42,7 +42,7 @@ below is sized for the current single learner; none of it should need rewriting 
 ## M2 — Listening (audio pipeline done 2026-09-27; exercises remaining)
 
 - ✅ Piper TTS audio for all items + example sentences into MinIO (content-addressed; one-shot `docker compose --profile tts run --rm tts`), streamed via `/api/v1/audio/...`, played by the speak buttons with browser-TTS fallback.
-- ✅ Topic focus (2026-09-27): 19 topic tags, focus-steered new-card selection, dashboard picker, session-end continue/change-focus, +24 themed starter phrases (meeting people / directions / shopping). Rating legend + single learning step (shorter sessions) same day.
+- ✅ Topic focus (2026-09-27): 19 topic tags, focus-steered new-card selection, dashboard picker, session-end continue/change-focus, +24 themed starter phrases (meeting people / directions / shopping). Rating legend + single learning step (shorter sessions) same day. *Replaced 2026-10-10 by ten many-to-many categories that filter rather than sort — see M2.6 and ADR-038.*
 - ✅ Exercise types (2026-09-27): dictation with diacritic-tolerant checking (a≈å marked "nearly right"), listen-and-choose with distractors; æøå on-screen buttons teaching the ⌥ shortcuts; attempts logged in exercise_attempts. **M2 complete.**
 
 ## M2.5 — Reading (2026-09-29)
@@ -50,6 +50,33 @@ below is sized for the current single learner; none of it should need rewriting 
 - ✅ Reading library: interleaved Norwegian/English texts, sentence-aligned, stored per-sentence in Postgres with versioned translations; paged reader UI with hide-English/tap-to-peek mode and per-text resume position.
 - ✅ Pipeline scripts (backend repo): `find_texts` (bokselskap/Gutenberg discovery) → `prepare_text` (extract → segment → translate via local Ollama gemma3:12b with echo-retry QC) → staging JSON review → `import_text`. First text: Askeladden som kapaad med Troldet (1904 orthography).
 - Next candidates: more folk tales, then a Hamsun novel (multi-chapter via multiple URLs → sections); per-sentence audio; Claude repair pass on draft translations.
+
+## ✅ M2.6 — A real A1 vocabulary, ten categories, a repetition deck (2026-10-10)
+
+Michael: *"the different topics we have in there, like Nature & Weather and Health & Body
+don't really have anything to do with the words being practised on in the sections."*
+Diagnosis and the four changes are in ADR-038; the short version:
+
+- **860 words, 742 of them tagged A1** (was 471). The 389 new entries come from NTNU's
+  *Norsk for universitet og høgskole* A1 list, sorted into categories and given an
+  example sentence each by local `gemma3:12b` via `scripts/build_vocab.py`, which gates
+  every entry on part of speech, category validity, and the headword actually appearing
+  in its own example. 9 of 389 failed that last gate and are hand-written — all
+  reflexives, where `å barbere seg` correctly becomes *han barberer **seg***. The 118
+  pre-existing A2 entries stay: Michael has progress on some, and the upsert key
+  includes the wording.
+- **Nineteen topics → ten categories, many-to-many.** `item_categories` replaces the
+  single `items.topic` column; 406 of the 860 words sit in more than one category
+  (1266 rows over 860 words). Migration `b3c7d50e9a14` backfills from the old topics
+  and was verified both ways on a throwaway database.
+- **A category now filters the deck instead of sorting it**, which is the actual fix to
+  the complaint, and **progress bars** report established/learning/unmet per category
+  and for the whole deck — counting each word once, so a word in two categories is
+  learned in both at once.
+- **Repetition deck** (`mode=repeat`, 40 cards): everything met, nothing new, due cards
+  first, the rest sampled with weight for due/unestablished/lapsed/difficult words.
+
+Audio for the new words: 4,221 Piper clips generated, nothing pruned.
 
 ## M3 — Speaking
 

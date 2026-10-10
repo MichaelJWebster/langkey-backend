@@ -26,8 +26,12 @@ class Item(Base):
     pos: Mapped[str | None] = mapped_column(String(24))  # part of speech
     cefr_level: Mapped[str] = mapped_column(String(4))  # "A1" | "A2" | ...
     frequency_rank: Mapped[int] = mapped_column(Integer, index=True)  # introduction order
-    topic: Mapped[str | None] = mapped_column(String(32), index=True)  # focus area slug
     audio_key: Mapped[str | None] = mapped_column(String(256))  # MinIO key, from M2
+
+    categories: Mapped[list["ItemCategory"]] = relationship(
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
 
     examples: Mapped[list["ItemExample"]] = relationship(
         order_by="ItemExample.position",
@@ -36,6 +40,23 @@ class Item(Base):
     )
 
     __table_args__ = (UniqueConstraint("language_code", "source_text", "translation"),)
+
+
+class ItemCategory(Base):
+    """One item's membership of one category.
+
+    A row per pairing rather than a column on the item, because a word often
+    belongs in two and the single `topic` column could not say so. Progress
+    counts distinct items, so a word in two categories is learned in both at
+    once rather than twice over (ADR-038).
+    """
+
+    __tablename__ = "item_categories"
+
+    item_id: Mapped[int] = mapped_column(
+        ForeignKey("items.id", ondelete="CASCADE"), primary_key=True
+    )
+    category: Mapped[str] = mapped_column(String(32), primary_key=True, index=True)
 
 
 class ItemExample(Base):

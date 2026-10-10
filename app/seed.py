@@ -18,7 +18,7 @@ from app.auth import hash_password
 from app.config import get_settings
 from app.content import DeckEntry, deck_hash, load_deck
 from app.db import Base
-from app.models import AppMeta, Item, ItemExample, Language, User
+from app.models import AppMeta, Item, ItemCategory, ItemExample, Language, User
 
 DEV_USER_EMAIL = "dev@langkey.dev"
 DEV_USER_PASSWORD = "langkey-dev"
@@ -42,6 +42,7 @@ async def _sync_deck(session: AsyncSession, language: str, entries: list[DeckEnt
             ItemExample(position=pos, sentence=ex["no"], translation=ex["en"])
             for pos, ex in enumerate(e["examples"])
         ]
+        categories = [ItemCategory(category=c) for c in e.get("categories") or ()]
         item = existing.get((e["no"], e["en"]))
         if item is None:
             session.add(
@@ -53,8 +54,8 @@ async def _sync_deck(session: AsyncSession, language: str, entries: list[DeckEnt
                     pos=e["pos"],
                     cefr_level=e["cefr"],
                     frequency_rank=rank,
-                    topic=e.get("topic"),
                     examples=examples,
+                    categories=categories,
                 )
             )
         else:
@@ -62,8 +63,8 @@ async def _sync_deck(session: AsyncSession, language: str, entries: list[DeckEnt
             item.pos = e["pos"]
             item.cefr_level = e["cefr"]
             item.frequency_rank = rank
-            item.topic = e.get("topic")
             item.examples = examples  # delete-orphan cascade drops the old rows
+            item.categories = categories
 
     if meta is None:
         session.add(AppMeta(key=meta_key, value=fingerprint))

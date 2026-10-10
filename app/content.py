@@ -23,29 +23,8 @@ logger = logging.getLogger(__name__)
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 
-DeckEntry = dict[str, Any]  # keys: no, en, pos, cefr, type, topic, examples[{no,en}]
-
-TOPIC_LABELS = {
-    "basics": "Basics",
-    "meeting-people": "Meeting people",
-    "time-numbers": "Time & numbers",
-    "people-family": "People & family",
-    "food-drink": "Food & drink",
-    "everyday-verbs": "Everyday verbs",
-    "home": "Home",
-    "describing": "Describing things",
-    "places-travel": "Places & travel",
-    "nature-weather": "Nature & weather",
-    "body-health": "Health & body",
-    "hobbies-leisure": "Hobbies & leisure",
-    "daily-routine": "Daily routine",
-    "shopping": "Buying things",
-    "directions": "Asking directions",
-    "communication": "Communication",
-    "language-school": "Language & school",
-    "celebrations": "Celebrations",
-    "culture": "Norwegian culture",
-}
+DeckEntry = dict[str, Any]
+# keys: no, en, pos, cefr, type, categories[str], examples[{no,en}]
 
 
 def merge_local_deck(language: str = "nb") -> list[DeckEntry]:
@@ -66,7 +45,7 @@ def merge_local_deck(language: str = "nb") -> list[DeckEntry]:
                 "pos": e.get("pos"),
                 "cefr": e.get("cefr", "A1"),
                 "type": e.get("type", "word"),
-                "topic": e.get("topic"),
+                "categories": sorted(set(e.get("categories") or ())),
                 "examples": examples,
             }
         )
@@ -114,12 +93,20 @@ def load_from_minio(language: str = "nb") -> list[DeckEntry]:
         )
         tmp.flush()
         rows = duckdb.sql(
-            f"SELECT no, en, pos, cefr, type, topic, examples FROM read_parquet('{tmp.name}') "
-            "ORDER BY rank"
+            "SELECT no, en, pos, cefr, type, categories, examples "
+            f"FROM read_parquet('{tmp.name}') ORDER BY rank"
         ).fetchall()
     return [
-        {"no": no, "en": en, "pos": pos, "cefr": cefr, "type": typ, "topic": topic, "examples": examples}
-        for no, en, pos, cefr, typ, topic, examples in rows
+        {
+            "no": no,
+            "en": en,
+            "pos": pos,
+            "cefr": cefr,
+            "type": typ,
+            "categories": list(categories or ()),
+            "examples": examples,
+        }
+        for no, en, pos, cefr, typ, categories, examples in rows
     ]
 
 

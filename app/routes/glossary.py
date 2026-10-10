@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audio import audio_url
 from app.auth import get_current_user
-from app.content import TOPIC_LABELS
+from app.categories import label as category_label
 from app.db import get_session
 from app.models import (
     FSRS_REVIEW_STATE,
@@ -27,7 +27,7 @@ class GlossaryEntryOut(BaseModel):
     translation: str
     pos: str | None
     cefr_level: str
-    topic_label: str | None
+    category_labels: list[str]
     first_seen_at: datetime
     via: str  # "card" | "example"
     status: str  # "established" | "learning" | "seen"
@@ -69,7 +69,7 @@ async def glossary(
             translation=e.item.translation,
             pos=e.item.pos,
             cefr_level=e.item.cefr_level,
-            topic_label=TOPIC_LABELS.get(e.item.topic or ""),
+            category_labels=[category_label(c.category) for c in e.item.categories],
             first_seen_at=e.first_seen_at,
             via=e.via,
             status=status(e.item_id),

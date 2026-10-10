@@ -38,13 +38,13 @@ async def test_tricky_mode_returns_seen_unestablished_cards(client: AsyncClient)
     assert all(not c["is_new"] for c in tricky["cards"])
 
 
-async def test_topics_report_established_counts(client: AsyncClient) -> None:
+async def test_categories_report_established_counts(client: AsyncClient) -> None:
     headers = await login(client)
-    topics = (await client.get("/api/v1/topics", headers=headers)).json()
-    assert topics
-    for t in topics:
-        assert t["established"] == 0  # fresh account
-        assert 0 <= t["remaining"] <= t["total"]
+    body = (await client.get("/api/v1/categories", headers=headers)).json()
+    assert body["categories"]
+    for c in body["categories"] + [body["overall"]]:
+        assert c["established"] == 0  # fresh account
+        assert 0 <= c["remaining"] <= c["total"]
 
 
 async def test_skills_breakdown_shape_and_counts(client: AsyncClient) -> None:

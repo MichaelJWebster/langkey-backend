@@ -25,6 +25,7 @@ from app.db import get_session
 from app.models import Item, PronunciationAttempt, User, UserCard
 from app.models.learning import RECOGNITION
 from app.pronunciation import PATTERN_MIN_ATTEMPTS, is_pattern, normalise
+from app.sampling import weighted_sample
 
 router = APIRouter(prefix="/api/v1/speaking", tags=["speaking"])
 
@@ -132,21 +133,7 @@ async def practice(
         return [w for w in dict.fromkeys(normalise(text).split()) if w in struggling]
 
     weights = [1.0 + NEED_WEIGHT * bool(focus_words(text)) for _i, _e, text, _t in candidates]
-    k = min(limit, len(candidates))
-    picked: list[int] = []
-    pool = list(range(len(candidates)))
-    # Weighted sampling without replacement: a phrase must not appear twice in
-    # one session however strongly it is favoured.
-    for _ in range(k):
-        total = sum(weights[i] for i in pool)
-        cut = random.uniform(0, total)
-        running = 0.0
-        for i in pool:
-            running += weights[i]
-            if running >= cut:
-                picked.append(i)
-                pool.remove(i)
-                break
+    picked = weighted_sample(weights, limit)
     random.shuffle(picked)
 
     phrases = []

@@ -7,6 +7,22 @@ and about deployment live here too. It is kept in the backend repo because the
 umbrella directory (`~/work/lang_app`) is not version-controlled, and symlinked
 back to there so the familiar path still works.
 
+## ADR-038 (2026-10-10) — Ten vocabulary categories, many-to-many, and a repetition deck
+
+Michael: *"the different topics we have in there, like Nature & Weather and Health & Body don't really have anything to do with the words being practised on in the sections."* He was right, and for a reason worth recording: `focus` only ordered the **introduction of new cards** (ADR-016). Due reviews came from one global FSRS queue, so picking "Nature & weather" with 203 words met produced a deck of mostly unrelated due cards under a nature heading. The label described how five of fifteen cards had been chosen.
+
+Four changes, all under his request:
+
+**The deck is a real A1 vocabulary.** 389 entries drawn from NTNU's *Norsk for universitet og høgskole* A1 word list, merged with the existing 471 to give **860 words**, all A1. Overlap with the existing deck was resolved by keeping the deck's own `no`/`en` wording, because the seed upsert matches on `(language_code, source_text, translation)` and changing either side would have orphaned a `user_cards` row and lost real progress. New words are appended rather than interleaved: the existing order is what Michael is partway through, and reshuffling it would change what he meets next for no benefit.
+
+**Nineteen topics become ten categories, and an item may be in several.** The old `items.topic` column held one value, which forced arbitrary calls — `å betale` is money and it is shopping — and left categories too small to fill a deck (`communication` had five words). `item_categories` is a join table; `topic` is dropped. Michael asked for the overlap explicitly, and for progress to count a word learned in one category as learned in the other. That falls out of the schema: learning state lives on `user_cards.item_id`, so a word in two categories is the same word, met once, shown as met in both. The per-category totals therefore sum to more than the deck size (905 rows over 860 words) and `overall` counts distinct items — the screen states both rather than hiding the discrepancy.
+
+**A category now restricts the deck instead of sorting it.** Both halves of the queue — due reviews and new cards — are filtered, so "Food & drink" means food and drink. A category that runs out is finished.
+
+**The global queue gets its own section: Repetition.** Removing the spill-over from category decks would otherwise strand due reviews, and Michael asked for a larger repeating-practice section anyway: *"for repetition's sake, but also to ensure that I see the words I'm having more trouble with more frequently until my recognition improves."* `mode=repeat` draws 40 cards from everything met and introduces nothing new. Due cards lead, in due order, so FSRS still gets its reviews on time; the remaining room is sampled from the rest with weights for being due, unestablished, lapsed (capped at four, so one disaster does not dominate) and FSRS-difficult. It is sampled rather than sorted by need because taking the top N would show the same forty words every sitting — the opposite of repetition. The sampler (`app/sampling.py`) is shared with the speaking session, which wanted the same thing for the same reason (ADR-036).
+
+Revisit: if ten categories still feel arbitrary once all 860 words are met, or if the repetition weights need tuning against his actual retention — the weights are constants at the top of `app/routes/reviews.py` precisely so they can be moved.
+
 ## ADR-037 (2026-10-10) — Speaking is its own section, with pronunciation and conversation under it
 
 Recording moves out of the writing cards. It lived there because that is where the sentences were, not because it belonged: a learner reaching for pronunciation practice had to grade a translation first, and a learner writing translations was interrupted by a microphone under every example. Michael's call — *"I like the writing practice exercises, but I think the speech parts of them should be moved into a part of the speech section"* — and the section keeps the name the dashboard already uses, **Speaking**.
@@ -169,6 +185,8 @@ All clips generated at Piper `length_scale=1.25` (≈80% speed, natural slow spe
 
 Items carry a `topic` slug (19 areas; labels in `app/content.py`). A chosen focus steers only which NEW cards are introduced (`/reviews/queue?focus=...` — focused items first, merged across existing-unseen rows and uncarded items, spilling to frequency order when the topic runs out). Due reviews stay a single global FSRS queue — themed sub-decks would break scheduling. UI: dashboard focus chips (persisted in localStorage) + session-end "Keep going"/"Change focus". Richer themes (dialogues, lesson packs) belong to the exercises/content milestones, not the flashcard flow. Starter themed phrases added: meeting-people, directions, shopping (8 each).
 
+**Superseded by ADR-038 (2026-10-10):** the single `topic` column is gone, a focus is now a hard filter over ten many-to-many categories, and the global due queue moved to its own repetition deck. The reasoning here is what went wrong — ordering new cards only was not visible to a learner reading the deck's heading.
+
 ## ADR-015 (2026-09-27) — Single learning step: no in-session repeats except Again
 
 User found sessions too long (they shadow every phrase aloud, so each card takes real time). Learning steps cut from FSRS defaults (1m + 10m) to a single 1m step, relearning to a single 5m step: Good on a new card graduates immediately (returns in ~2–3 days); only Again cycles a card back within the sitting. Pedagogically sound: within-session repeats are massed practice, the weakest spacing; between-day gaps (untouched) carry the retention, and shadowing makes first exposures deep. Revisit: if new-word retention feels weak, restore a second step or add a next-day cap.
@@ -199,7 +217,7 @@ Every item first gets a recognition card (NO→EN). A production card (EN→NO) 
 
 ## ADR-008 (2026-09-26) — Seed deck is Claude-authored JSON in-repo
 
-`data/seed_deck_nb.json`: 447 curated A1–A2 entries, loaded idempotently at startup (only when the items table is empty for that language). Frequency rank = array order. Adding languages = adding a deck file + Language row. Revisit: M4 (LLM-generated content in-app), or if item edits need to propagate to an already-seeded DB (would need a proper content-sync command).
+`data/seed_deck_nb.json`: 860 entries as of ADR-038 (447 at the time of writing), loaded idempotently at startup (only when the items table is empty for that language). Frequency rank = array order. Adding languages = adding a deck file + Language row. Revisit: M4 (LLM-generated content in-app), or if item edits need to propagate to an already-seeded DB (would need a proper content-sync command).
 
 ## ADR-007 (2026-09-26) — Postgres host port 5433 in dev
 

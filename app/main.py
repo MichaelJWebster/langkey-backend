@@ -11,6 +11,7 @@ from app import audio, auth
 from app.config import check_production_config, get_settings
 from app.db import engine
 from app.routes import (
+    categories,
     exercises,
     glossary,
     hello,
@@ -19,7 +20,6 @@ from app.routes import (
     reviews,
     speaking,
     texts,
-    topics,
 )
 from app.glossary import backfill_glossary
 from app.seed import seed_data
@@ -56,7 +56,7 @@ app.include_router(audio.router)
 app.include_router(hello.router)
 app.include_router(reviews.router)
 app.include_router(progress.router)
-app.include_router(topics.router)
+app.include_router(categories.router)
 app.include_router(glossary.router)
 app.include_router(exercises.router)
 app.include_router(texts.router)
