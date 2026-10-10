@@ -4,7 +4,7 @@ from sqlalchemy import func, select
 import app.db as db
 from app.audio import DICTATION_SCALES
 from app.content import merge_local_deck
-from app.models import Item, ItemExample
+from app.models import AppMeta, ExerciseAttempt, Item, ItemExample, User
 from app.seed import seed_data
 from tests.conftest import login
 
@@ -128,3 +128,45 @@ async def test_listening_session_and_attempts(client: AsyncClient) -> None:
         headers=headers,
     )
     assert resp.status_code == 201
+
+
+async def test_deck_sync_keeps_example_ids_that_attempts_reference(
+    client: AsyncClient,
+) -> None:
+    """A deck edit must not delete the example rows exercise attempts point at.
+
+    Reassigning `item.examples` used to drop every row and insert fresh ones,
+    which tripped `exercise_attempts_example_id_fkey` and took the whole
+    startup down with it the first time the deck changed after any listening
+    practice had been done.
+    """
+    async with db.session_factory() as session:
+        item = await session.scalar(
+            select(Item).where(Item.language_code == "nb").order_by(Item.frequency_rank)
+        )
+        example_id = item.examples[0].id
+        user = await session.scalar(select(User))
+        session.add(
+            ExerciseAttempt(
+                user_id=user.id,
+                item_id=item.id,
+                example_id=example_id,
+                exercise_type="dictation",
+                correct=True,
+            )
+        )
+        await session.commit()
+
+    # Force a resync by clearing the content fingerprint.
+    async with db.session_factory() as session:
+        meta = await session.get(AppMeta, "deck_hash:nb")
+        if meta is not None:
+            await session.delete(meta)
+            await session.commit()
+
+    await seed_data()  # must not raise
+
+    async with db.session_factory() as session:
+        attempt = await session.scalar(select(ExerciseAttempt))
+        assert attempt.example_id == example_id
+        assert await session.get(ItemExample, example_id) is not None
