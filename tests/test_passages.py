@@ -19,20 +19,47 @@ from app.seed import DEV_USER_EMAIL, _sync_passages
 from tests.conftest import login
 
 
-async def test_session_serves_passages_easiest_first(client: AsyncClient) -> None:
+async def test_session_serves_the_most_familiar_passages_first(
+    client: AsyncClient,
+) -> None:
+    """Michael: *"favouring sentences where I've seen more words"*.
+
+    The number of words needing a hint is the difficulty that matters, so the
+    queue is ordered by it. Authored sequence survives only as the tie-break.
+    """
     headers = await login(client)
     body = (await client.get("/api/v1/passages", headers=headers)).json()
 
     assert body["total"] == len(load_passages("nb"))
     assert body["attempted"] == 0 and body["got"] == 0
     assert len(body["passages"]) == 10  # one session
-    assert [p["slug"] for p in body["passages"]] == sorted(
-        p["slug"] for p in body["passages"]
-    ), "authored order is easiest-first; the queue must not shuffle it"
+
+    hints = [len(p["glossary"]) for p in body["passages"]]
+    assert hints == sorted(hints), f"queue is not ordered by familiarity: {hints}"
 
     first = body["passages"][0]
     assert first["no"] and first["en"]
     assert first["last_mark"] is None and first["attempts"] == 0
+
+
+async def test_a_familiar_passage_outranks_an_earlier_but_harder_one(
+    client: AsyncClient,
+) -> None:
+    """a1-025 is authored last and needs the most hints; it must not lead.
+
+    And the rule has to beat sequence, not merely agree with it: a1-003 is
+    authored third yet needs almost nothing explained, so it comes before
+    passages written before it.
+    """
+    headers = await login(client)
+    served = [
+        p["slug"]
+        for p in (await client.get("/api/v1/passages", headers=headers)).json()[
+            "passages"
+        ]
+    ]
+    assert "a1-025" not in served, "the hardest passage led the queue"
+    assert served.index("a1-003") < served.index("a1-001")
 
 
 async def test_every_passage_carries_a_reference_and_its_glossary(
@@ -168,9 +195,14 @@ async def test_resync_keeps_passage_ids_so_attempts_survive_an_edit(
         original_id = before.id
 
         # Edit the content: change the reference translation and add a gloss.
+        # The entry to edit is found by slug -- the queue no longer serves the
+        # content file in order, so entries[0] is not what was served first.
         entries = load_passages("nb")
-        entries[0]["en"] = "A different reference translation."
-        entries[0]["glossary"] = [{"form": "Anna", "lemma": "Anna", "en": "Anna"}]
+        edited = next(e for e in entries if e["slug"] == slug)
+        edited["en"] = "A different reference translation."
+        edited["glossary"] = [
+            {"form": edited["no"].split()[0], "lemma": "x", "en": "x"}
+        ]
         await session.execute(
             select(AppMeta).where(AppMeta.key == "passages_hash:nb")
         )
@@ -181,7 +213,7 @@ async def test_resync_keeps_passage_ids_so_attempts_survive_an_edit(
         assert after is not None
         assert after.id == original_id, "the row was replaced, not updated"
         assert after.en_text == "A different reference translation."
-        assert [g.form for g in after.glosses] == ["Anna"]
+        assert [g.form for g in after.glosses] == [edited["no"].split()[0]]
 
         attempt = await session.scalar(select(PassageAttempt))
         assert attempt is not None

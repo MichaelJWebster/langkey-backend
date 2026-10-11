@@ -76,7 +76,7 @@ def _glossary(
     passage: Passage,
     index,  # FormIndex
     known: set[int],
-    items: dict[int, Item],
+    words: dict[int, tuple[str, str]],  # item id -> (source text, translation)
 ) -> list[GlossOut]:
     """The authored glossary plus every deck word this learner has not met.
 
@@ -120,14 +120,13 @@ def _glossary(
 
     for form, item_id, at in matched_forms(index, text):
         # Every item this surface form could mean, not just the first claimant.
-        ids = [
-            i
+        rows = [
+            words[i]
             for i in index.form_items.get(form.lower(), [item_id])
-            if i in items and i not in known
+            if i in words and i not in known
         ]
-        if not ids:
+        if not rows:
             continue
-        rows = [items[i] for i in ids]
         candidates.append(
             (
                 at,
@@ -135,8 +134,8 @@ def _glossary(
                 False,
                 GlossOut(
                     form=form,
-                    lemma=" · ".join(dict.fromkeys(r.source_text for r in rows)),
-                    en=" · ".join(dict.fromkeys(r.translation for r in rows)),
+                    lemma=" · ".join(dict.fromkeys(lemma for lemma, _ in rows)),
+                    en=" · ".join(dict.fromkeys(en for _, en in rows)),
                     source="unseen",
                 ),
             )
@@ -202,11 +201,39 @@ async def passage_session(
         )
     }
 
+    # The glossary is built for every passage, not just the ones served: how
+    # many words a passage needs explained is what decides its place in the
+    # queue, so it has to be known before the sort. It is pure CPU -- a regex
+    # and some dict lookups per passage -- and the two cannot drift apart,
+    # because the number the sort uses is the number of hints he will see.
+    index = await form_index(session, language)
+    known = set(
+        await session.scalars(
+            select(UserGlossaryEntry.item_id).where(
+                UserGlossaryEntry.user_id == user.id
+            )
+        )
+    )
+    words = {
+        item_id: (source_text, translation)
+        for item_id, source_text, translation in await session.execute(
+            select(Item.id, Item.source_text, Item.translation).where(
+                Item.language_code == language
+            )
+        )
+    }
+    glossaries = {p.id: _glossary(p, index, known, words) for p in rows}
+
     def mark_of(p: Passage) -> str | None:
         return history.get(p.id, (None, 0))[0]
 
-    def sort_key(p: Passage) -> tuple[int, int]:
-        return (MARK_PRIORITY.get(mark_of(p), 0), p.seq)
+    def sort_key(p: Passage) -> tuple[int, int, int]:
+        # Michael: *"favouring sentences where I've seen more words"*. The
+        # count of words needing a hint is the difficulty that matters -- a
+        # long passage with one unfamiliar word reads easily, a short one with
+        # four does not -- so it orders ahead of the authored sequence, which
+        # survives as the tie-break and still puts the simpler grammar first.
+        return (MARK_PRIORITY.get(mark_of(p), 0), len(glossaries[p.id]), p.seq)
 
     limit = max(1, limit)
     # Lead with a few that went badly, then work forward through the rest.
@@ -217,30 +244,6 @@ async def passage_session(
     # Which deck words this learner has already met, and the items behind the
     # ones they have not. Only the passages actually being served are looked
     # at, so the cost does not grow with the size of the content file.
-    index = await form_index(session, language)
-    known = set(
-        await session.scalars(
-            select(UserGlossaryEntry.item_id).where(
-                UserGlossaryEntry.user_id == user.id
-            )
-        )
-    )
-    wanted = {
-        candidate
-        for p in ordered
-        for form, item_id, _at in matched_forms(index, p.no_text)
-        for candidate in index.form_items.get(form.lower(), [item_id])
-        if candidate not in known
-    }
-    items = (
-        {
-            row.id: row
-            for row in await session.scalars(select(Item).where(Item.id.in_(wanted)))
-        }
-        if wanted
-        else {}
-    )
-
     return PassageSessionOut(
         total=len(rows),
         attempted=sum(1 for p in rows if p.id in history),
@@ -255,7 +258,7 @@ async def passage_session(
                 lines=[LineOut(**ln) for ln in p.lines] if p.lines else None,
                 word_count=p.word_count,
                 topics=sorted(t.topic for t in p.topics),
-                glossary=_glossary(p, index, known, items),
+                glossary=glossaries[p.id],
                 last_mark=history.get(p.id, (None, 0))[0],
                 attempts=history.get(p.id, (None, 0))[1],
             )
