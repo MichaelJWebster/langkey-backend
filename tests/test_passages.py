@@ -6,14 +6,16 @@ them a gate on the content file too: a passage with an unglossed word or a
 missing reference translation fails here.
 """
 
+import re
+
 import pytest
 from httpx import AsyncClient
 from sqlalchemy import select
 
 import app.db as db
 from app.content import load_passages
-from app.models import AppMeta, Passage, PassageAttempt
-from app.seed import _sync_passages, seed_data
+from app.models import AppMeta, Item, Passage, PassageAttempt
+from app.seed import DEV_USER_EMAIL, _sync_passages
 from tests.conftest import login
 
 
@@ -199,3 +201,153 @@ async def test_sync_is_a_no_op_when_the_content_has_not_changed(
         await session.commit()
         rows = list(await session.scalars(select(Passage)))
         assert len(rows) == len(entries), "a no-op sync duplicated rows"
+
+
+# --- Glossing words the learner has not met yet ------------------------------
+#
+# Michael, trying the first batch: *"I notice there are words that I haven't
+# seen appearing in the sentences, though they might be in the A1 vocabulary.
+# Could we add hints/translations for those words I haven't seen alongside the
+# translations for words outside the vocabulary?"*
+#
+# So "unfamiliar" is per learner, not a property of the passage: being in the
+# course is no help while reading if it has not been taught yet.
+
+
+async def mark_seen(user_email: str, words: list[str]) -> None:
+    """Record that this learner has encountered these deck words."""
+    from datetime import UTC, datetime
+
+    from app.models import User, UserGlossaryEntry
+
+    async with db.session_factory() as session:
+        user = await session.scalar(select(User).where(User.email == user_email))
+        assert user is not None
+        for word in words:
+            item = await session.scalar(select(Item).where(Item.source_text == word))
+            assert item is not None, f"{word!r} is not in the deck"
+            session.add(
+                UserGlossaryEntry(
+                    user_id=user.id,
+                    item_id=item.id,
+                    first_seen_at=datetime.now(UTC),
+                    via="card",
+                )
+            )
+        await session.commit()
+
+
+async def glossary_for(client: AsyncClient, headers: dict[str, str], slug: str):
+    body = (await client.get("/api/v1/passages?limit=500", headers=headers)).json()
+    for p in body["passages"]:
+        if p["slug"] == slug:
+            return p["glossary"]
+    raise AssertionError(f"{slug} not served")
+
+
+async def test_a_deck_word_not_yet_met_is_glossed(client: AsyncClient) -> None:
+    headers = await login(client)
+    gloss = await glossary_for(client, headers, "a1-009")  # "Jeg liker å lese bøker..."
+    forms = {g["form"].lower(): g for g in gloss}
+
+    assert "bøker" in forms, "a deck word he has not met must be glossed"
+    assert forms["bøker"]["source"] == "unseen"
+    assert forms["bøker"]["lemma"] == "bøker"
+    assert forms["bøker"]["en"]
+
+
+async def test_a_word_already_met_is_not_glossed(client: AsyncClient) -> None:
+    headers = await login(client)
+    before = await glossary_for(client, headers, "a1-009")
+    assert any(g["form"].lower() == "bøker" for g in before)
+
+    await mark_seen(DEV_USER_EMAIL, ["bøker"])
+
+    after = await glossary_for(client, headers, "a1-009")
+    assert not any(g["form"].lower() == "bøker" for g in after), (
+        "a word he has met is no longer a hint, it is vocabulary"
+    )
+
+
+async def test_the_two_kinds_of_unfamiliar_word_sit_together(
+    client: AsyncClient,
+) -> None:
+    """a1-016 has an authored gloss (`snør`, not in the deck) and deck words."""
+    headers = await login(client)
+    gloss = await glossary_for(client, headers, "a1-016")
+    by_form = {g["form"].lower(): g for g in gloss}
+
+    assert by_form["snør"]["source"] == "new", "å snø is not in the deck at all"
+    unseen = [g for g in gloss if g["source"] == "unseen"]
+    assert unseen, "the deck words in this passage have not been met either"
+    # Both kinds, one list, each marked.
+    assert {g["source"] for g in gloss} == {"new", "unseen"}
+
+
+async def test_the_glossary_reads_in_the_order_the_words_appear(
+    client: AsyncClient,
+) -> None:
+    headers = await login(client)
+    gloss = await glossary_for(client, headers, "a1-016")
+    body = (await client.get("/api/v1/passages?limit=500", headers=headers)).json()
+    no = next(p["no"] for p in body["passages"] if p["slug"] == "a1-016").lower()
+
+    # Word-boundary search, not a plain substring one: "er" occurs inside
+    # "vinteren" long before it appears as a word, and the route positions a
+    # matched token, not the first place its letters happen to turn up.
+    def at(form: str) -> int:
+        m = re.search(rf"\b{re.escape(form.lower())}\b", no)
+        return m.start() if m else no.find(form.lower())
+
+    offsets = [at(g["form"]) for g in gloss]
+    assert offsets == sorted(offsets), (
+        f"glossary out of reading order: {[(g['form'], o) for g, o in zip(gloss, offsets)]}"
+    )
+
+
+async def test_an_authored_note_wins_over_the_deck_translation(
+    client: AsyncClient,
+) -> None:
+    """a1-017 glosses `en time` as "an appointment" -- the deck says "an hour".
+
+    The authored note was written for this passage and knows which sense is
+    meant, so it must not be replaced by the dictionary entry.
+    """
+    headers = await login(client)
+    gloss = await glossary_for(client, headers, "a1-017")
+    time = [g for g in gloss if g["form"].lower() == "en time"]
+    assert len(time) == 1, "glossed twice"
+    assert time[0]["source"] == "new"
+    assert "appointment" in time[0]["en"]
+
+
+async def test_glossing_does_not_leak_between_learners(client: AsyncClient) -> None:
+    """The glossary is per learner: one person's progress is not another's."""
+    from app.auth import hash_password
+    from app.models import User
+
+    async with db.session_factory() as session:
+        session.add(
+            User(
+                email="other@langkey.dev",
+                display_name="Other",
+                password_hash=hash_password("other-password"),
+            )
+        )
+        await session.commit()
+
+    await mark_seen(DEV_USER_EMAIL, ["bøker"])
+    dev = await login(client)
+    assert not any(
+        g["form"].lower() == "bøker" for g in await glossary_for(client, dev, "a1-009")
+    )
+
+    resp = await client.post(
+        "/api/v1/auth/login",
+        json={"email": "other@langkey.dev", "password": "other-password"},
+    )
+    other = {"Authorization": f"Bearer {resp.json()['access_token']}"}
+    assert any(
+        g["form"].lower() == "bøker"
+        for g in await glossary_for(client, other, "a1-009")
+    ), "the other learner has met nothing, so they still get the hint"

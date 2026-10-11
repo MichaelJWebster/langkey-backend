@@ -54,6 +54,13 @@ class FormIndex:
     def __init__(self, items: list[Item]):
         by_source: dict[str, int] = {}
         self.forms: dict[str, int] = {}
+        #: Every item a surface form could mean, not just the first claimant.
+        #: `_lemma_forms` generates inflections blindly, so forms collide --
+        #: "dusjer" is both `en dusj` + "er" and the present tense of
+        #: `å dusje`. `forms` keeps one answer because the user glossary only
+        #: needs to know the word was met; anything that *shows* a translation
+        #: needs all of them, or it will confidently gloss a verb as a noun.
+        self.form_items: dict[str, list[int]] = {}
         self.phrases: list[tuple[str, int]] = []
         for item in items:
             by_source[item.source_text.lower()] = item.id
@@ -67,11 +74,18 @@ class FormIndex:
                 continue
             for form in _lemma_forms(bare):
                 self.forms.setdefault(form, item.id)
+                ids = self.form_items.setdefault(form, [])
+                if item.id not in ids:
+                    ids.append(item.id)
         for form, lemma in IRREGULAR_FORMS.items():
             if lemma is None:
                 self.forms.pop(form, None)
+                self.form_items.pop(form, None)
             elif lemma.lower() in by_source:
+                # An irregular form is known exactly, so it overrides the
+                # guesses rather than joining them.
                 self.forms[form] = by_source[lemma.lower()]
+                self.form_items[form] = [by_source[lemma.lower()]]
 
     def match(self, sentence: str) -> set[int]:
         lowered = sentence.lower()
@@ -82,6 +96,35 @@ class FormIndex:
         }
         found.update(item_id for phrase, item_id in self.phrases if phrase in lowered)
         return found
+
+
+def matched_forms(index: FormIndex, sentence: str) -> list[tuple[str, int, int]]:
+    """Deck items recognised in `sentence`, with the form that matched them.
+
+    `FormIndex.match` answers "which items are in here", which is all the
+    glossary needs. A reading passage needs more: to gloss an unseen word it
+    has to show the word *as written* -- "bøker", not "ei bok" -- so the
+    matching token itself has to come back out.
+
+    Returns (surface form, item id, character offset), one entry per item, at
+    its first occurrence, ordered by position in the sentence. Phrases are
+    matched by substring as they are in `match`, and the slice of the original
+    text is returned so the original capitalisation survives.
+    """
+    lowered = sentence.lower()
+    found: dict[int, tuple[str, int]] = {}
+    for m in _WORD_RE.finditer(sentence):
+        item_id = index.forms.get(m.group().lower())
+        if item_id is not None and item_id not in found:
+            found[item_id] = (m.group(), m.start())
+    for phrase, item_id in index.phrases:
+        at = lowered.find(phrase)
+        if at >= 0 and item_id not in found:
+            found[item_id] = (sentence[at : at + len(phrase)], at)
+    return sorted(
+        ((form, item_id, at) for item_id, (form, at) in found.items()),
+        key=lambda row: row[2],
+    )
 
 
 _index_cache: dict[tuple[str, int], FormIndex] = {}
@@ -99,6 +142,11 @@ async def _form_index(session: AsyncSession, language: str) -> FormIndex:
         )
         _index_cache[key] = FormIndex(items)
     return _index_cache[key]
+
+
+async def form_index(session: AsyncSession, language: str) -> FormIndex:
+    """The cached FormIndex for a language, for callers outside this module."""
+    return await _form_index(session, language)
 
 
 async def record_encounters(

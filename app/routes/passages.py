@@ -15,7 +15,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_current_user
 from app.db import get_session
-from app.models import MARKS, Passage, PassageAttempt, User
+from app.glossary import form_index, matched_forms
+from app.models import (
+    MARKS,
+    Item,
+    Passage,
+    PassageAttempt,
+    User,
+    UserGlossaryEntry,
+)
 
 router = APIRouter(prefix="/api/v1/passages", tags=["passages"])
 
@@ -37,6 +45,9 @@ class GlossOut(BaseModel):
     form: str
     lemma: str
     en: str
+    #: "new" -- not in the course at all, glossed by the author.
+    #: "unseen" -- a deck word, but one this learner has not met yet.
+    source: str
 
 
 class PassageOut(BaseModel):
@@ -50,6 +61,91 @@ class PassageOut(BaseModel):
     glossary: list[GlossOut]
     last_mark: str | None
     attempts: int
+
+
+def _glossary(
+    passage: Passage,
+    index,  # FormIndex
+    known: set[int],
+    items: dict[int, Item],
+) -> list[GlossOut]:
+    """The authored glossary plus every deck word this learner has not met.
+
+    Michael: *"there are words that I haven't seen appearing in the sentences,
+    though they might be in the A1 vocabulary"*. Being in the course is no help
+    while reading if you have not been taught it yet, so the two kinds of
+    unfamiliar word are glossed the same way and marked so the UI can say
+    which is which.
+
+    Two things keep the list readable:
+
+    **Longer glosses swallow shorter ones.** `rett over gata` is one deck entry
+    and so are `rett` and `over`; glossing all three turns a six-word sentence
+    into a wall of notes. A gloss whose span sits inside a longer one is
+    dropped, which also removes the duplicate when an authored note covers a
+    phrase the deck happens to contain.
+
+    **An ambiguous form shows every meaning.** `dusjer` is both `en dusj` plus
+    a suffix and the present tense of `å dusje`; `FormIndex.forms` answers with
+    whichever came first in the deck, which is how a verb ends up glossed as a
+    noun. Here all the candidates are joined, so the learner sees the choice
+    instead of a confident wrong answer.
+    """
+    text = passage.no_text
+    lowered = text.lower()
+    # (start, end, authored?, gloss)
+    candidates: list[tuple[int, int, bool, GlossOut]] = []
+
+    for g in passage.glosses:
+        at = lowered.find(g.form.lower())
+        if at < 0:
+            at = len(text)
+        candidates.append(
+            (
+                at,
+                at + len(g.form),
+                True,
+                GlossOut(form=g.form, lemma=g.lemma, en=g.en, source="new"),
+            )
+        )
+
+    for form, item_id, at in matched_forms(index, text):
+        # Every item this surface form could mean, not just the first claimant.
+        ids = [
+            i
+            for i in index.form_items.get(form.lower(), [item_id])
+            if i in items and i not in known
+        ]
+        if not ids:
+            continue
+        rows = [items[i] for i in ids]
+        candidates.append(
+            (
+                at,
+                at + len(form),
+                False,
+                GlossOut(
+                    form=form,
+                    lemma=" · ".join(dict.fromkeys(r.source_text for r in rows)),
+                    en=" · ".join(dict.fromkeys(r.translation for r in rows)),
+                    source="unseen",
+                ),
+            )
+        )
+
+    # Longest first, so a phrase is settled before the words inside it.
+    kept: list[tuple[int, int, bool, GlossOut]] = []
+    for cand in sorted(candidates, key=lambda c: (c[0] - c[1], not c[2])):
+        if any(
+            k[0] <= cand[0] and cand[1] <= k[1] and (k[0], k[1]) != (cand[0], cand[1])
+            for k in kept
+        ):
+            continue
+        if any(k[3].form.lower() == cand[3].form.lower() for k in kept):
+            continue
+        kept.append(cand)
+
+    return [g for _at, _end, _authored, g in sorted(kept, key=lambda c: c[0])]
 
 
 class PassageSessionOut(BaseModel):
@@ -108,6 +204,34 @@ async def passage_session(
     review = [p for p in rows if mark_of(p) in ("missed", "partly")][:REVIEW_SLOTS]
     rest = [p for p in sorted(rows, key=sort_key) if p not in review]
     ordered = (review + rest)[:limit]
+
+    # Which deck words this learner has already met, and the items behind the
+    # ones they have not. Only the passages actually being served are looked
+    # at, so the cost does not grow with the size of the content file.
+    index = await form_index(session, language)
+    known = set(
+        await session.scalars(
+            select(UserGlossaryEntry.item_id).where(
+                UserGlossaryEntry.user_id == user.id
+            )
+        )
+    )
+    wanted = {
+        candidate
+        for p in ordered
+        for form, item_id, _at in matched_forms(index, p.no_text)
+        for candidate in index.form_items.get(form.lower(), [item_id])
+        if candidate not in known
+    }
+    items = (
+        {
+            row.id: row
+            for row in await session.scalars(select(Item).where(Item.id.in_(wanted)))
+        }
+        if wanted
+        else {}
+    )
+
     return PassageSessionOut(
         total=len(rows),
         attempted=sum(1 for p in rows if p.id in history),
@@ -121,9 +245,7 @@ async def passage_session(
                 en=p.en_text,
                 word_count=p.word_count,
                 topics=sorted(t.topic for t in p.topics),
-                glossary=[
-                    GlossOut(form=g.form, lemma=g.lemma, en=g.en) for g in p.glosses
-                ],
+                glossary=_glossary(p, index, known, items),
                 last_mark=history.get(p.id, (None, 0))[0],
                 attempts=history.get(p.id, (None, 0))[1],
             )
