@@ -7,6 +7,24 @@ and about deployment live here too. It is kept in the backend repo because the
 umbrella directory (`~/work/lang_app`) is not version-controlled, and symlinked
 back to there so the familiar path still works.
 
+## ADR-039 (2026-10-11) — The sentence's shape in dictation, and when a word is judged
+
+Michael pressed Hint on a listening exercise believing he already had the whole phrase typed. He did not, and nothing on screen could have told him: the exercise showed his own input and nothing else, so the number of words still to come was invisible. His ask: *"I'd like to have an indication of what words are expected using underscores"* — `Hva heter du?` shown as `___ _____ __?`, each word filling in as it is typed correctly.
+
+**One underscore per letter, punctuation left standing.** The punctuation is free information that costs nothing and anchors the shape, and the letter count is the point — it is what tells him whether the word he is reaching for is the short one or the long one.
+
+**A word is judged only once it is complete**, which is the part worth recording, because the first design was wrong. Matching a prefix as the learner types looks helpful and is not: every learner is mid-word most of the time, so an early verdict means flashing an error at correct typing. Michael drew the line himself — *"there should be no indication of the correct characters being entered - just an indication when a correct word is complete or when a complete word is incorrect"* — and the implementation follows it literally. A word counts as complete when the learner has moved past it, which is exactly what the trailing space says. Nothing at all happens while the last word is being typed: no letters appearing, no colour, no sound.
+
+**A wrong completed word stays hidden.** It turns the slot red but does not reveal the answer — guessing wrong must not be a way to see the word, or the skeleton becomes a free hint.
+
+**The mistake light is derived, never stored.** It is recomputed from the input on every render, so correcting the word is what clears it; there is no error state that can go stale, and Hint clears it for free because Hint rewrites the answer to be right. Hinted words now carry a trailing space so they read as complete and show in the skeleton.
+
+**The cue sounds on the edge only** — as a mistake appears, not once per keystroke for as long as it stands, and again only after the first one is fixed. It runs through `playback.ts`'s master gain like every other sound, so the volume control governs it (ADR-035) and it cannot become the one loud thing in the app.
+
+Tolerance matches the checker exactly: a plain `a` for `å` shows the real spelling in amber and is never a mistake (ADR-019's rule, same `clean`/`fold` helpers).
+
+Not extended to the typed recall cards in writing practice, though "in general" was the ask. There the expected answer is a translation, and a card accepts any wording the learner has vouched for with "that should have counted" (`user_answer_alternatives`), so a skeleton would show the shape of one accepted answer among several and quietly mark the rest as the wrong length. Revisit if the deck ever has a single canonical answer per card.
+
 ## ADR-038 (2026-10-10) — Ten vocabulary categories, many-to-many, and a repetition deck
 
 Michael: *"the different topics we have in there, like Nature & Weather and Health & Body don't really have anything to do with the words being practised on in the sections."* He was right, and for a reason worth recording: `focus` only ordered the **introduction of new cards** (ADR-016). Due reviews came from one global FSRS queue, so picking "Nature & weather" with 203 words met produced a deck of mostly unrelated due cards under a nature heading. The label described how five of fifteen cards had been chosen.
