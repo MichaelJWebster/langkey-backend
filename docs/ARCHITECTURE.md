@@ -7,6 +7,22 @@ and about deployment live here too. It is kept in the backend repo because the
 umbrella directory (`~/work/lang_app`) is not version-controlled, and symlinked
 back to there so the familiar path still works.
 
+## ADR-040 (2026-10-11) — æ ø å count, and every exercise shows its mark
+
+Two asks in one breath, and the first came with its own precondition: *"I actually think we should count mistakes where we substitute a for å and the others - so long as we have fairly prominent selections of those special characters either on the phone or the computer."*
+
+**The precondition first.** The characters already had buttons on both typed screens, but they were small (`px-3 py-1`, about 40×28) and sharing one non-wrapping flex row with the mistake light, Hint and Check — comfortably over a phone's width, so on the device where they are the *only* practical way to type æ ø å they were the first thing to be squashed. They now sit on their own row above the actions, 44px tall, splitting the width into three thumb-sized targets below `sm` and returning to normal size above it. The ⌥ shortcut hint is hidden on small screens, where it means nothing. Only then does the rule change.
+
+**A missing diacritic is an ordinary spelling mistake.** It costs what any other wrong letter costs — similarity-based partial credit in dictation, a near miss rather than an exact answer in writing practice — and it can no longer produce a "correct" verdict. The folding helper survives, but only to *recognise* the shape of the mistake (`isDiacriticSlip`), never to forgive it: the feedback says "check æ ø å" so the learner knows which character, instead of a bare red mark.
+
+**A slip does not reveal the spelling.** This is the subtle one. The first cut showed the correct word in amber, as the old near-miss did — but with the mistake now costing marks, showing the fix means he retypes it and the mistake costs nothing after all. A slipped word stays underscores like any other wrong word; only its colour and the light's wording differ. The skeleton reveals a word for getting it right, never for getting it nearly right (ADR-039).
+
+**The short-word guard still applies, and should.** `hore` for `høre` comes out *wrong* rather than close, because the minimal-pair rule refuses near misses under five characters. That is the right answer here for a better reason than the rule was written for: `far` and `får` are different words, not one word spelt carelessly.
+
+**An explicit mark on every exercise.** *"I'd like some explicit score to be created for these listening exercises, so we can get a percentage at the end of each exercise."* The per-word credit already existed but only surfaced when something went wrong — a correct answer said "✅ Correct!" and a percentage was never shown. Every result now carries the number in a badge, green at 100, amber from 60, red below; the verdict line beside it gives the reason rather than repeating the figure. The session summary leads with the average of those marks at display size, where it used to be a grey footnote under the right/total count.
+
+Revisit: if the diacritic rule proves too harsh in practice, the lever is `isDiacriticSlip` — it already separates these from ordinary misspellings, so they could be scored on their own curve without going back to forgiving them.
+
 ## ADR-039 (2026-10-11) — The sentence's shape in dictation, and when a word is judged
 
 Michael pressed Hint on a listening exercise believing he already had the whole phrase typed. He did not, and nothing on screen could have told him: the exercise showed his own input and nothing else, so the number of words still to come was invisible. His ask: *"I'd like to have an indication of what words are expected using underscores"* — `Hva heter du?` shown as `___ _____ __?`, each word filling in as it is typed correctly.
@@ -190,6 +206,8 @@ Three levers adapt to the learner: (1) dictation speed ladder — every example 
 ## ADR-019 (2026-09-27) — Listening exercises check client-side, log server-side
 
 Dictation targets travel to the client (practice, not an exam) so checking is instant: normalised comparison, with a diacritic-folded pass marking å/ø/æ slips as "nearly right", never wrong (US-keyboard friendliness; on-screen æøå buttons double as ⌥-shortcut teachers). Every attempt lands in `exercise_attempts` (immutable, like review_events) for future analytics/personalisation. Exercises draw only from items the user has met (recognition card reviewed). Revisit: exercise results could feed FSRS scheduling as review evidence; server-side checking if anything competitive ever appears.
+
+**Amended by ADR-040 (2026-10-11):** the diacritic-folded pass is gone. A plain `a` for `å` is a mistake now, on Michael's call, once the æ ø å buttons were made prominent enough to be the obvious way in.
 
 ## ADR-018 (2026-09-27) — Audio: 80% speed, multi-voice example sentences
 
