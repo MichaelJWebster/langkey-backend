@@ -50,12 +50,21 @@ class GlossOut(BaseModel):
     source: str
 
 
+class LineOut(BaseModel):
+    role: str  # one of ROLES
+    no: str
+    en: str
+
+
 class PassageOut(BaseModel):
     slug: str
     kind: str
     level: str
     no: str
     en: str  # the reference translation, revealed by the UI on request
+    #: Present when the passage is an exchange or otherwise wants its lines
+    #: kept apart; null when it is a plain paragraph.
+    lines: list[LineOut] | None
     word_count: int
     topics: list[str]
     glossary: list[GlossOut]
@@ -243,6 +252,7 @@ async def passage_session(
                 level=p.level,
                 no=p.no_text,
                 en=p.en_text,
+                lines=[LineOut(**ln) for ln in p.lines] if p.lines else None,
                 word_count=p.word_count,
                 topics=sorted(t.topic for t in p.topics),
                 glossary=_glossary(p, index, known, items),

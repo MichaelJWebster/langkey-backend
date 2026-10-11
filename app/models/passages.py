@@ -19,6 +19,7 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy import (
+    JSON,
     DateTime,
     ForeignKey,
     Integer,
@@ -35,6 +36,11 @@ from app.db import Base
 #: `MARKS.index(mark)` is the score, so the order is load-bearing.
 MARKS = ("missed", "partly", "got")
 
+#: What a line of a structured passage is. "question" and "answer" are labelled
+#: in the UI; "line" is an unlabelled line, for a passage that wants the breaks
+#: without the scaffolding.
+ROLES = ("question", "answer", "line")
+
 
 class Passage(Base):
     __tablename__ = "passages"
@@ -48,6 +54,21 @@ class Passage(Base):
     no_text: Mapped[str] = mapped_column(Text)
     en_text: Mapped[str] = mapped_column(Text)  # the reference translation
     word_count: Mapped[int] = mapped_column(Integer)
+    #: Optional structure: a list of {"role", "no", "en"}. An exchange reads
+    #: far better split and labelled --
+    #:
+    #:     Question: Unnskyld, hvor er nærmeste bank?
+    #:     Answer:   Den ligger rett over gata, ved siden av apoteket.
+    #:
+    #: -- than as one run-on line, and which utterance is a question is a fact
+    #: about the content, not something to infer from a question mark: a1-023
+    #: is three sentences and two question marks from a single speaker.
+    #:
+    #: JSON rather than a child table because lines are presentation and
+    #: nothing references one. `no_text`/`en_text` stay the whole passage and
+    #: are derived from these when they are present, so the gates, the word
+    #: count and the glossary keep working on the complete text.
+    lines: Mapped[list[dict[str, str]] | None] = mapped_column(JSON)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

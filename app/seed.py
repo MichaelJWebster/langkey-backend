@@ -201,6 +201,7 @@ async def _sync_passages(
                 no_text=e["no"],
                 en_text=e["en"],
                 word_count=word_count,
+                lines=e.get("lines"),
             )
             session.add(row)
         else:
@@ -209,6 +210,7 @@ async def _sync_passages(
             row.no_text = e["no"]
             row.en_text = e["en"]
             row.word_count = word_count
+            row.lines = e.get("lines")
         touched.append(row)
 
     # One flush so every new passage has an id to hang its children off.

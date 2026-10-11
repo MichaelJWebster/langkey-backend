@@ -19,6 +19,7 @@ from app.models.glossary import UserGlossaryEntry
 from app.models.meta import AppMeta
 from app.models.passages import (
     MARKS,
+    ROLES,
     Passage,
     PassageAttempt,
     PassageGloss,
@@ -49,6 +50,7 @@ __all__ = [
     "PassageGloss",
     "PassageTopic",
     "RECOGNITION",
+    "ROLES",
     "ReadingText",
     "ReviewEvent",
     "Sentence",

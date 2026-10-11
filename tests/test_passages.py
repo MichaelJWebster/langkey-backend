@@ -351,3 +351,66 @@ async def test_glossing_does_not_leak_between_learners(client: AsyncClient) -> N
         g["form"].lower() == "bøker"
         for g in await glossary_for(client, other, "a1-009")
     ), "the other learner has met nothing, so they still get the hint"
+
+
+# --- Exchanges laid out as a question and its answer --------------------------
+#
+# Michael: *"It would be better if we formatted it like this: Question:
+# Unnskyld, hvor er nærmeste bank? / Answer: Den ligger rett over gata, ved
+# siden av apoteket."*
+
+
+async def test_an_exchange_is_served_as_labelled_lines(client: AsyncClient) -> None:
+    headers = await login(client)
+    gloss_free = (
+        await client.get("/api/v1/passages?limit=500", headers=headers)
+    ).json()
+    bank = next(p for p in gloss_free["passages"] if p["slug"] == "a1-007")
+
+    assert bank["lines"] is not None
+    assert [ln["role"] for ln in bank["lines"]] == ["question", "answer"]
+    assert bank["lines"][0]["no"] == "Unnskyld, hvor er nærmeste bank?"
+    assert bank["lines"][1]["no"] == "Den ligger rett over gata, ved siden av apoteket."
+    # The English is split the same way, so the learner can compare line by line.
+    assert bank["lines"][0]["en"] == "Excuse me, where is the nearest bank?"
+
+
+async def test_a_plain_passage_has_no_lines(client: AsyncClient) -> None:
+    headers = await login(client)
+    body = (await client.get("/api/v1/passages?limit=500", headers=headers)).json()
+    anna = next(p for p in body["passages"] if p["slug"] == "a1-001")
+    assert anna["lines"] is None
+
+
+async def test_the_whole_text_is_derived_from_the_lines() -> None:
+    """Two copies of the same sentence drift apart.
+
+    `no_text` is what the gates, the word count and the glossary run on, so if
+    it were authored separately from the lines a drift would mean gating text
+    the learner never sees. It is joined from the lines instead.
+    """
+    for e in load_passages("nb"):
+        if not e["lines"]:
+            continue
+        assert e["no"] == " ".join(ln["no"] for ln in e["lines"])
+        assert e["en"] == " ".join(ln["en"] for ln in e["lines"])
+
+
+async def test_every_line_has_a_known_role() -> None:
+    from app.models import ROLES
+
+    for e in load_passages("nb"):
+        for ln in e["lines"] or ():
+            assert ln["role"] in ROLES, (e["slug"], ln["role"])
+            assert ln["no"].strip() and ln["en"].strip(), e["slug"]
+
+
+async def test_the_glossary_still_covers_the_whole_exchange(
+    client: AsyncClient,
+) -> None:
+    """Glossing runs on the joined text, so a word in either line is covered."""
+    headers = await login(client)
+    gloss = await glossary_for(client, headers, "a1-007")
+    forms = {g["form"].lower() for g in gloss}
+    # "apoteket" is in the answer, "nærmeste" in the question.
+    assert any("apotek" in f for f in forms), forms

@@ -53,7 +53,8 @@ def merge_local_deck(language: str = "nb") -> list[DeckEntry]:
 
 
 PassageEntry = dict[str, Any]
-# keys: slug, kind, topics[str], no, en, glossary[{form,lemma,en}]
+# keys: slug, kind, topics[str], no, en, lines[{role,no,en}] | None,
+#       glossary[{form,lemma,en}]
 
 
 def load_passages(language: str = "nb") -> list[PassageEntry]:
@@ -71,13 +72,22 @@ def load_passages(language: str = "nb") -> list[PassageEntry]:
         if not line.strip():
             continue
         e = json.loads(line)
+        lines = [
+            {"role": ln.get("role", "line"), "no": ln["no"], "en": ln["en"]}
+            for ln in e.get("lines") or ()
+        ] or None
+        # When a passage is authored as lines, the whole text is derived from
+        # them rather than written twice. Two copies of the same sentence drift
+        # apart, and the gates run on the derived text, so a drift would mean
+        # gating something the learner never sees.
         entries.append(
             {
                 "slug": e["slug"],
                 "kind": e.get("kind", "sentence"),
                 "topics": sorted(set(e.get("topics") or ())),
-                "no": e["no"],
-                "en": e["en"],
+                "no": " ".join(ln["no"] for ln in lines) if lines else e["no"],
+                "en": " ".join(ln["en"] for ln in lines) if lines else e["en"],
+                "lines": lines,
                 "glossary": [
                     {
                         "form": g["form"],
