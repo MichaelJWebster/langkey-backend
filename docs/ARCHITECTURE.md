@@ -7,6 +7,26 @@ and about deployment live here too. It is kept in the backend repo because the
 umbrella directory (`~/work/lang_app`) is not version-controlled, and symlinked
 back to there so the familiar path still works.
 
+## ADR-041 (2026-10-11) — A1 reading: authored passages, self-marked translation
+
+*"I want to create subsections in Reading - The top one called \"A1 Reading and translation\" and the existing one with the novels and folktales in a section titled \"Reading for interest (not A1 based)\"."* The second half is a relabelling. The first is a new exercise: short Norwegian built from the deck, translated into English by the learner.
+
+**No model on the request path.** The passages are static content, authored once and shipped like the deck — repo file, seed sync, hash gate. Generating them per request would put a model in the container (or a Cloudflare Workers AI call) on the critical path of a screen that must load, for content that is identical for every learner and every visit. It would also mean every obscenity and grammar gate runs live, against a deadline, with no chance for Michael to read what he is about to be shown. The pipeline instead is: author → deterministic gates → review → commit. The container already carries `data/`, so production needs nothing new.
+
+**Marking is self-assessed.** Michael's call — *"we'll have to do self assessed"* — and it is also the right one. A free translation has too many correct answers to grade by string comparison, and the alternative is a model judging English prose, which is both a request-path dependency and a worse judge than the learner of whether they understood the Norwegian. What the app owes the learner is an easy judgement, not an automatic one: the reference translation beside their own, one question, three answers (`got` / `partly` / `missed`). The session percentage counts a partial as a half, because calling a near miss a failure would make the number useless as feedback.
+
+**The reference is held back until Check.** It is sent to the client with the passage — this is practice, not an exam, and a round trip to reveal it would be a worse experience for no gain — but the UI does not show it until the learner commits. The answer box is kept with the mark, so the record of progress is the translations themselves and not just a tally.
+
+**The glossary shows the inflected form, never the lemma.** *"with the words shown in the forms they're used in the Norwegian we want the user to translate."* `Hverdagen`, not `en hverdag`. A beginner cannot get from the dictionary form to the definite singular, and a glossary that makes them try is most of why glossaries go unread. The lemma is stored alongside and shown as a secondary note, for when it is useful rather than as the entry word.
+
+**Selection is not FSRS.** A passage has no recall interval worth modelling. The queue is: up to `REVIEW_SLOTS` (3) that went badly, then forward through what has not been seen, then the rest. The cap is the point — without it a bad day becomes a wall of its own failures next session. Same reasoning as `REPEAT_LAPSE_CAP` in the repetition deck (ADR-038). A passage marked `got` is never retired, so the section cannot run dry.
+
+**Passage rows are updated in place, not replaced** — `passage_attempts.passage_id` points at them, and this is the trap that took startup down when the deck grew (ADR-008's `_sync_examples`). Glosses and topics have no inbound references so they are rebuilt, but by `DELETE` then `INSERT` with an explicit `passage_id`: assigning the relationship makes the ORM insert the replacements before issuing the deletes, and the new rows collide with the old on `(passage_id, position)`. A passage dropped from the content file keeps its row, so the history of having worked through it stays readable.
+
+**A gate bug worth recording.** The deck-coverage gate used `FormIndex.forms` to decide whether a word was known, and `FormIndex` routes every multi-word entry to `self.phrases` for substring matching instead — 548 of the 860 deck entries. It also drops `så` deliberately as too ambiguous to match. The gate was therefore blind to two thirds of the vocabulary and failed 6 of the first 25 passages on words Michael has (`nærmeste`, `ski`, `føle`, `bort`, `gått`). `FormIndex` is right for its own job; a coverage question needs a wider set, built from the tokens inside phrase entries too. Any coverage figure measured before this fix understates the truth.
+
+Revisit: the generation side is still manual. Haiku 4.5 through the Batch API costs well under a dollar for several hundred passages and would make regeneration cheap as the deck grows; the gates and the review step stay either way. The second-pass grammar check (NorMistral proposing a rewrite, reject on any disagreement) measured 5/6 faults caught on a nine-case probe, but its proposal diff currently counts a verbatim quote of the original as a change, so its false-alarm rate is not yet trustworthy.
+
 ## ADR-040 (2026-10-11) — æ ø å count, and every exercise shows its mark
 
 Two asks in one breath, and the first came with its own precondition: *"I actually think we should count mistakes where we substitute a for å and the others - so long as we have fairly prominent selections of those special characters either on the phone or the computer."*

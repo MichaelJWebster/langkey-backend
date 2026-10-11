@@ -17,6 +17,13 @@ from app.models.learning import (
 )
 from app.models.glossary import UserGlossaryEntry
 from app.models.meta import AppMeta
+from app.models.passages import (
+    MARKS,
+    Passage,
+    PassageAttempt,
+    PassageGloss,
+    PassageTopic,
+)
 from app.models.recordings import PronunciationAttempt, UserRecording
 from app.models.reading import (
     ReadingText,
@@ -35,7 +42,12 @@ __all__ = [
     "ItemCategory",
     "ItemExample",
     "Language",
+    "MARKS",
     "PRODUCTION",
+    "Passage",
+    "PassageAttempt",
+    "PassageGloss",
+    "PassageTopic",
     "RECOGNITION",
     "ReadingText",
     "ReviewEvent",

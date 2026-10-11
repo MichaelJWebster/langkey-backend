@@ -52,6 +52,51 @@ def merge_local_deck(language: str = "nb") -> list[DeckEntry]:
     return entries
 
 
+PassageEntry = dict[str, Any]
+# keys: slug, kind, topics[str], no, en, glossary[{form,lemma,en}]
+
+
+def load_passages(language: str = "nb") -> list[PassageEntry]:
+    """A1 translation passages from the local JSONL, in authored order.
+
+    One JSON object per line, hand-written and reviewed rather than generated
+    at request time (ADR-041). Local-only for now: 25 short passages are not
+    worth a Parquet snapshot, and the container image carries `data/`.
+    """
+    path = DATA_DIR / f"a1_passages_{language}.jsonl"
+    if not path.exists():
+        return []
+    entries: list[PassageEntry] = []
+    for line in path.read_text().splitlines():
+        if not line.strip():
+            continue
+        e = json.loads(line)
+        entries.append(
+            {
+                "slug": e["slug"],
+                "kind": e.get("kind", "sentence"),
+                "topics": sorted(set(e.get("topics") or ())),
+                "no": e["no"],
+                "en": e["en"],
+                "glossary": [
+                    {
+                        "form": g["form"],
+                        "lemma": g.get("lemma") or g["form"],
+                        "en": g["en"],
+                    }
+                    for g in e.get("glossary") or ()
+                ],
+            }
+        )
+    return entries
+
+
+def passages_hash(entries: list[PassageEntry]) -> str:
+    """Stable fingerprint, used to skip no-op DB syncs."""
+    payload = json.dumps(entries, sort_keys=True, ensure_ascii=False)
+    return hashlib.sha256(payload.encode()).hexdigest()
+
+
 def _s3_client(*, fail_fast: bool = False):
     """Shared S3/R2 client.
 

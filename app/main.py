@@ -15,6 +15,7 @@ from app.routes import (
     exercises,
     glossary,
     hello,
+    passages,
     progress,
     recordings,
     reviews,
@@ -60,6 +61,7 @@ app.include_router(categories.router)
 app.include_router(glossary.router)
 app.include_router(exercises.router)
 app.include_router(texts.router)
+app.include_router(passages.router)
 app.include_router(recordings.router)
 app.include_router(speaking.router)
 

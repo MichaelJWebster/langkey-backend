@@ -51,6 +51,19 @@ below is sized for the current single learner; none of it should need rewriting 
 - ✅ Pipeline scripts (backend repo): `find_texts` (bokselskap/Gutenberg discovery) → `prepare_text` (extract → segment → translate via local Ollama gemma3:12b with echo-retry QC) → staging JSON review → `import_text`. First text: Askeladden som kapaad med Troldet (1904 orthography).
 - Next candidates: more folk tales, then a Hamsun novel (multi-chapter via multiple URLs → sections); per-sentence audio; Claude repair pass on draft translations.
 
+## ✅ M2.7 — Reading splits in two; A1 translation practice (2026-10-11)
+
+Michael: *"I want to create subsections in Reading - The top one called "A1 Reading and translation" and the existing one with the novels and folktales in a section titled "Reading for interest (not A1 based)"."*
+
+- ✅ Reading opens on two subsections. The library (novels, folktales) moves behind **Reading for interest (not A1 based)** unchanged; Escape and the back button now walk sections → category → text list → reader.
+- ✅ **A1 Reading and translation**: a short Norwegian passage, an answer box, Check to reveal the reference translation, then one self-assessment with three answers (`got` / `partly` / `missed`). Session percentage counts a partial as a half.
+- ✅ Glossary under every passage from the start, each word **in the inflected form the Norwegian uses** (`Hverdagen`, not `en hverdag`), lemma shown as a secondary note.
+- ✅ New tables `passages`, `passage_glosses`, `passage_topics`, `passage_attempts` (migration `c5a81f3e74b2`). Passage rows are updated in place on a content edit so attempt history survives; glosses rebuilt by DELETE-then-INSERT to avoid the `(passage_id, position)` collision.
+- ✅ Queue: up to 3 passages that went badly lead a session, then forward through unseen material. No FSRS — a passage has no recall interval worth modelling. See ADR-041.
+- ✅ First 25 passages hand-authored and gated (mean 95% deck coverage, every unknown word glossed, banned-word list, length bounds), in `data/a1_passages_nb.jsonl`.
+- Found on the way: the deck-coverage gate was blind to the 548 multi-word deck entries, because `FormIndex` sends those to `.phrases` and not `.forms`. Fixed in the gate; `FormIndex` itself is correct for its own job.
+- Next: the remaining ~175 passages; optionally generate them with Haiku 4.5 through the Batch API (under $1 for several hundred) rather than by hand, keeping the gates and the review step. The NorMistral second-pass grammar check needs its proposal diff fixed before its false-alarm rate can be trusted — it currently counts a verbatim quote of the original as a proposed change.
+
 ## ✅ M2.6 — A real A1 vocabulary, ten categories, a repetition deck (2026-10-10)
 
 Michael: *"the different topics we have in there, like Nature & Weather and Health & Body
