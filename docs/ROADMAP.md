@@ -62,9 +62,9 @@ Michael: *"I want to create subsections in Reading - The top one called "A1 Read
 - ✅ New tables `passages`, `passage_glosses`, `passage_topics`, `passage_attempts` (migration `c5a81f3e74b2`). Passage rows are updated in place on a content edit so attempt history survives; glosses rebuilt by DELETE-then-INSERT to avoid the `(passage_id, position)` collision.
 - ✅ An exchange is laid out as `Question:` / `Answer:` on separate lines, in both the Norwegian and the reference translation. Structure is authored (`lines` on the passage), not inferred from question marks — `a1-023` is two question marks from one speaker.
 - ✅ Queue: up to 3 passages that went badly lead a session, then the ones needing the fewest words explained (measured per learner from `user_glossary`), authored sequence as tie-break. No FSRS — a passage has no recall interval worth modelling. See ADR-041.
-- ✅ **150 passages** hand-authored and gated (mean 92% deck coverage, every unknown word glossed in the form used, banned-word list, length bounds, role checks on exchanges), in `data/a1_passages_nb.jsonl`. 35 are exchanges, 37 are multi-sentence paragraphs; 6–43 words, median 12. Michael confirmed the level on 2026-10-11 after working through the first dozen. Target is ~200.
+- ✅ **200 passages** hand-authored and gated (mean 92% deck coverage, every unknown word glossed in the form used, banned-word list, length bounds, role checks on exchanges), in `data/a1_passages_nb.jsonl`. 45 are exchanges, 47 are multi-sentence paragraphs; 6–53 words, median 11; 627 authored glosses. Michael confirmed the level on 2026-10-11 after working through the first dozen. **Target met.**
 - Found on the way: the deck-coverage gate was blind to the 548 multi-word deck entries, because `FormIndex` sends those to `.phrases` and not `.forms`. Fixed in the gate; `FormIndex` itself is correct for its own job.
-- Next: the final ~50 passages; optionally generate them with Haiku 4.5 through the Batch API (under $1 for several hundred) rather than by hand, keeping the gates and the review step. The NorMistral second-pass grammar check needs its proposal diff fixed before its false-alarm rate can be trusted — it currently counts a verbatim quote of the original as a proposed change.
+- Next: nothing required. Further passages (A2, or more A1 breadth) could be generated with Haiku 4.5 through the Batch API (under $1 for several hundred) rather than by hand, keeping the gates and the review step. The NorMistral second-pass grammar check needs its proposal diff fixed before its false-alarm rate can be trusted — it currently counts a verbatim quote of the original as a proposed change.
 
 ## ✅ M2.6 — A real A1 vocabulary, ten categories, a repetition deck (2026-10-10)
 
@@ -236,6 +236,27 @@ estimation and FSRS, if at all.
 - DuckLake over MinIO for analytics on review history.
 
 ## Known issues
+
+### `start.sh` reported a wedged port as a slow start (fixed 2026-10-12)
+
+Michael: *"why is start.sh taking so long to start up the application... took several minutes bringing up the back end?"*
+
+The backend was never slow. Measured on his machine: Alembic 0.04s, `seed_data` 0.79s, `backfill_glossary` 2.04s, whole app startup 3.7s, and a cold `uv run uvicorn --reload` answering in 4.3s. Local Postgres round-trip is 0.23ms, which is why `backfill_glossary`'s ~6,000 round trips cost two seconds here and ~75s in production (see the cold-start entry).
+
+The fault was in `wait_for`, which counted loop iterations as if each took a second:
+
+```bash
+while [ "$waited" -lt "$secs" ]; do
+  up "$url" && return 0      # curl --max-time 2
+  sleep 1
+  waited=$((waited + 1))
+done
+```
+
+Each iteration costs up to 3s, so `wait_for "$API_URL" 60` allowed **up to 3m15s, measured**. The overrun is worst in exactly the case worth diagnosing: a port held by a dead worker accepts the connection into its backlog and never answers, so every probe burns the full curl timeout. A port with nothing listening refuses instantly and the loop runs at its nominal speed — which is why this never showed up until a copy of the API was left holding :8000.
+
+Fixed by taking a real deadline from bash's `SECONDS` (10s asked now waits 12.4s, bounded by one final probe, rather than 32.4s). Three things came with it: the log is appended to with a timestamped banner rather than truncated, because two concurrent runs overwrote the one line that said `[Errno 48] Address already in use`; a `diagnose` helper runs after a failed wait and names that error specifically, since the pre-flight `wedged` check cannot see a corpse that was still exiting when it looked; and both start paths now print how long they took.
+
 
 - **Cold-start timeout in production — fix before the next deploy (diagnosed 2026-10-11, not fixed).** Michael hit `Request failed (500)` on the live app; a retry a minute later worked. The app is not down — when warm, health and every dashboard endpoint answer 200, Neon is healthy (never suspends, 32 MB of a 1 GB limit) and R2's deck is untouched since 1 Oct. It is a cold boot that has grown too slow to answer in time.
 

@@ -92,15 +92,37 @@ wedged() {
   return 0
 }
 
-# Poll a URL until it answers. $2 is how many seconds to allow.
+# Poll a URL until it answers, for at most $2 seconds.
+#
+# The deadline is real wall-clock time, from bash's own SECONDS. Counting
+# iterations instead -- which this did until 2026-10-12 -- is wrong by however
+# long a probe takes, and the probe is slowest in exactly the case worth
+# waiting through: a port held by a dead worker accepts the connection into its
+# backlog and never answers, so every `up` burns the full curl timeout. That
+# made `wait_for "$API_URL" 60` wait up to 3m15s, measured, and turned a wedged
+# port into "start.sh is taking several minutes".
 wait_for() {
-  local url=$1 secs=$2 waited=0
-  while [ "$waited" -lt "$secs" ]; do
+  local url=$1 deadline=$((SECONDS + $2))
+  while [ "$SECONDS" -lt "$deadline" ]; do
     up "$url" && return 0
     sleep 1
-    waited=$((waited + 1))
   done
   return 1
+}
+
+# Why the port did not come up. Called after a failed wait, when the state has
+# had time to settle -- the pre-flight `wedged` check runs before anything is
+# launched, so it cannot see a corpse that was still exiting at the time.
+diagnose() {
+  local name=$1 port=$2 log=$3 pids
+  pids=$(port_pids "$port")
+  if grep -q 'Address already in use' "$log" 2>/dev/null; then
+    note "$log says the port was already in use, so this $name never bound."
+    note "something else still held port $port — usually an earlier copy that"
+    note "had not finished exiting. ./stop.sh clears it."
+  fi
+  [ -n "$pids" ] && note "port $port is held by pid(s): ${pids//$'\n'/ }"
+  tail -5 "$log" 2>/dev/null | sed 's/^/          /'
 }
 
 STATUS_ONLY=false
@@ -168,13 +190,17 @@ elif $STATUS_ONLY; then
 else
   # --reload, so editing backend files picks up without a restart. Migrations
   # and seeding run on startup, which is why this waits a good while.
+  printf '\n=== starting api %s ===\n' "$(date '+%Y-%m-%d %H:%M:%S')" >> "$LOGS/api.log"
+  # Append rather than truncate: two runs at once used to overwrite each other
+  # here, which destroyed the one line that said what went wrong.
   (cd "$BACKEND" && nohup uv run uvicorn app.main:app --reload \
-      > "$LOGS/api.log" 2>&1 &) 
+      >> "$LOGS/api.log" 2>&1 &)
+  started=$SECONDS
   if wait_for "$API_URL" 60; then
-    ok "api started               http://localhost:8000  ($LOGS/api.log)"
+    ok "api started               http://localhost:8000  ($((SECONDS - started))s)"
   else
-    fail "api did not answer within a minute — see $LOGS/api.log"
-    tail -5 "$LOGS/api.log" 2>/dev/null | sed 's/^/          /'
+    fail "api did not answer within $((SECONDS - started))s — see $LOGS/api.log"
+    diagnose "api" "$API_PORT" "$LOGS/api.log"
     exit 1
   fi
 fi
@@ -211,12 +237,14 @@ elif wedged "vite" "$WEB_PORT" "$LOGS/web.log"; then
 elif $STATUS_ONLY; then
   note "vite not running"
 else
-  (cd "$FRONTEND" && nohup npm run dev > "$LOGS/web.log" 2>&1 &)
+  printf '\n=== starting vite %s ===\n' "$(date '+%Y-%m-%d %H:%M:%S')" >> "$LOGS/web.log"
+  (cd "$FRONTEND" && nohup npm run dev >> "$LOGS/web.log" 2>&1 &)
+  started=$SECONDS
   if wait_for "$WEB_URL" 45; then
-    ok "vite started              $WEB_URL  ($LOGS/web.log)"
+    ok "vite started              $WEB_URL  ($((SECONDS - started))s)"
   else
-    fail "vite did not answer — see $LOGS/web.log"
-    tail -5 "$LOGS/web.log" 2>/dev/null | sed 's/^/          /'
+    fail "vite did not answer within $((SECONDS - started))s — see $LOGS/web.log"
+    diagnose "vite" "$WEB_PORT" "$LOGS/web.log"
     exit 1
   fi
 fi
