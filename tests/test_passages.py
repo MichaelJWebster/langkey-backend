@@ -567,3 +567,123 @@ async def test_one_learner_s_score_is_not_another_s(client: AsyncClient) -> None
     other = {"Authorization": f"Bearer {resp.json()['access_token']}"}
     tally = (await client.get("/api/v1/passages", headers=other)).json()["tally"]
     assert tally["attempted"] == 0 and tally["score"] is None
+
+
+# --- Translating counts as reading -------------------------------------------
+#
+# Michael, looking at the dashboard rings with 28 passages behind him:
+# *"I don't see a percentage for reading here - it's 0%?"* The CEFR reading
+# estimate counted only sentences read in the library, so translation earned
+# nothing.
+
+
+async def establish_vocabulary(n: int) -> None:
+    """Graduate n recognition cards, so the reading estimate has something to
+    discount. Reading is `vocab * reading_factor`, so with no vocabulary the
+    ring cannot move however much is read."""
+    from datetime import UTC, datetime
+
+    from app.models import FSRS_REVIEW_STATE, RECOGNITION, User as U, UserCard
+
+    async with db.session_factory() as session:
+        user = await session.scalar(select(U).where(U.email == DEV_USER_EMAIL))
+        items = list(await session.scalars(select(Item).limit(n)))
+        now = datetime.now(UTC)
+        for item in items:
+            session.add(
+                UserCard(
+                    user_id=user.id,
+                    item_id=item.id,
+                    direction=RECOGNITION,
+                    fsrs_state=FSRS_REVIEW_STATE,
+                    due=now,
+                    last_review=now,
+                    stability=10.0,
+                    difficulty=5.0,
+                    reps=3,
+                    lapses=0,
+                )
+            )
+        await session.commit()
+
+
+async def test_translating_moves_the_reading_estimate(client: AsyncClient) -> None:
+    await establish_vocabulary(150)
+    headers = await login(client)
+    before = (await client.get("/api/v1/progress/cefr", headers=headers)).json()
+    reading_before = next(s for s in before["skills"] if s["skill"] == "reading")
+    assert reading_before["practised"] is False
+    assert reading_before["detail"] == "no reading yet"
+
+    slugs = [
+        p["slug"]
+        for p in (await client.get("/api/v1/passages?limit=500", headers=headers))
+        .json()["passages"][:12]
+    ]
+    for slug in slugs:
+        await client.post(
+            f"/api/v1/passages/{slug}/attempt", headers=headers, json={"mark": "got"}
+        )
+
+    after = (await client.get("/api/v1/progress/cefr", headers=headers)).json()
+    reading_after = next(s for s in after["skills"] if s["skill"] == "reading")
+    assert reading_after["practised"] is True
+    assert "12 passages translated" in reading_after["detail"]
+    assert reading_after["progress"] > reading_before["progress"], (
+        "translating twelve passages has to move the ring off zero"
+    )
+
+
+async def test_a_missed_passage_earns_no_reading_credit(client: AsyncClient) -> None:
+    """Marking yourself wrong is not evidence of having read it."""
+    headers = await login(client)
+    slugs = [
+        p["slug"]
+        for p in (await client.get("/api/v1/passages?limit=500", headers=headers))
+        .json()["passages"][:6]
+    ]
+    for slug in slugs:
+        await client.post(
+            f"/api/v1/passages/{slug}/attempt", headers=headers, json={"mark": "missed"}
+        )
+    body = (await client.get("/api/v1/progress/cefr", headers=headers)).json()
+    reading = next(s for s in body["skills"] if s["skill"] == "reading")
+    # It counts as practice -- he did the work -- but earns no comprehension.
+    assert reading["practised"] is True
+    assert reading["progress"] == 0
+
+
+async def test_the_detail_names_both_halves_of_reading(client: AsyncClient) -> None:
+    from app.models import ReadingText, Sentence, TextSection, UserReadingPosition
+    from app.models import User as U
+
+    async with db.session_factory() as session:
+        t = ReadingText(
+            slug="t", title="T", title_en=None, author=None,
+            language_code="nb", kind="folktale", orthography="nb",
+        )
+        session.add(t)
+        await session.flush()
+        sec = TextSection(text_id=t.id, seq=1)
+        session.add(sec)
+        await session.flush()
+        for i in range(1, 6):
+            session.add(
+                Sentence(text_id=t.id, section_id=sec.id, seq=i, paragraph=1, no_text=f"S{i}.")
+            )
+        user = await session.scalar(select(U).where(U.email == DEV_USER_EMAIL))
+        session.add(UserReadingPosition(user_id=user.id, text_id=t.id, seq=5))
+        await session.commit()
+
+    headers = await login(client)
+    slug = (await client.get("/api/v1/passages", headers=headers)).json()[
+        "passages"
+    ][0]["slug"]
+    await client.post(
+        f"/api/v1/passages/{slug}/attempt", headers=headers, json={"mark": "got"}
+    )
+
+    body = (await client.get("/api/v1/progress/cefr", headers=headers)).json()
+    detail = next(s for s in body["skills"] if s["skill"] == "reading")["detail"]
+    assert "1 passages translated" in detail
+    assert "5 library sentences read" in detail

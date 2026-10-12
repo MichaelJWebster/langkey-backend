@@ -6,6 +6,7 @@ done, then what you got wrong". Sorting happens in Python because the whole
 set is a few hundred rows and the rule is easier to read than the SQL for it.
 """
 
+import re
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -69,6 +70,57 @@ class Tally(BaseModel):
     score: float | None
 
 
+def _latest_attempts(user_id):
+    """Each passage's most recent attempt, as a subquery of (passage_id, last_id).
+
+    Only the latest mark counts anywhere: going back to a passage and getting
+    it right should replace the earlier miss, not average with it.
+    """
+    return (
+        select(
+            PassageAttempt.passage_id,
+            func.max(PassageAttempt.id).label("last_id"),
+        )
+        .where(PassageAttempt.user_id == user_id)
+        .group_by(PassageAttempt.passage_id)
+        .subquery()
+    )
+
+
+_SENTENCE_END = re.compile(r"[.!?]+(?:\s|$)")
+
+
+def _sentences(text_: str) -> int:
+    """Sentences in a passage, for comparison with library sentences read."""
+    return max(1, len(_SENTENCE_END.findall(text_)))
+
+
+async def reading_credit(
+    session: AsyncSession, user_id, language: str = "nb"
+) -> tuple[float, int]:
+    """Sentence-equivalents of reading done through translation, and how many
+    passages that was.
+
+    Returned in sentences so it can be added to the library's `sentences_read`
+    in the CEFR estimate, which is denominated that way. Weighted by how each
+    passage went, because a passage marked "missed" is not evidence of having
+    read it -- the same reasoning that makes the listening estimate discount
+    vocabulary by the dictation mark rather than by attempts made.
+    """
+    latest = _latest_attempts(user_id)
+    rows = (
+        await session.execute(
+            select(Passage.no_text, PassageAttempt.mark)
+            .select_from(PassageAttempt)
+            .join(latest, latest.c.last_id == PassageAttempt.id)
+            .join(Passage, Passage.id == PassageAttempt.passage_id)
+            .where(Passage.language_code == language)
+        )
+    ).all()
+    credit = sum(MARK_CREDIT.get(mark, 0.0) * _sentences(no) for no, mark in rows)
+    return credit, len(rows)
+
+
 async def mark_tally(
     session: AsyncSession, user_id, language: str = "nb"
 ) -> Tally:
@@ -81,20 +133,13 @@ async def mark_tally(
         )
     ) or 0
 
-    latest = (
-        select(
-            PassageAttempt.passage_id,
-            func.max(PassageAttempt.id).label("last_id"),
-        )
-        .where(PassageAttempt.user_id == user_id)
-        .group_by(PassageAttempt.passage_id)
-        .subquery()
-    )
+    latest = _latest_attempts(user_id)
     rows = (
         await session.execute(
             select(PassageAttempt.mark, func.count())
+            .select_from(PassageAttempt)
             .join(latest, latest.c.last_id == PassageAttempt.id)
-            .join(Passage, Passage.id == latest.c.passage_id)
+            .join(Passage, Passage.id == PassageAttempt.passage_id)
             .where(Passage.language_code == language)
             .group_by(PassageAttempt.mark)
         )

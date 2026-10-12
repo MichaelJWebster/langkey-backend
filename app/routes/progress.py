@@ -23,7 +23,7 @@ from app.models import (
 )
 from app.models.reading import ReadingText, Sentence, UserReadingPosition
 from app.routes.exercises import _attempt_score
-from app.routes.passages import Tally, mark_tally
+from app.routes.passages import Tally, mark_tally, reading_credit
 
 router = APIRouter(prefix="/api/v1/progress", tags=["progress"])
 
@@ -351,6 +351,17 @@ async def _established(session: AsyncSession, user_id, language: str, direction:
     ) or 0
 
 
+def _reading_detail(sentences_read: int, passages_done: int) -> str:
+    """The line under the reading ring. Names both halves when both exist, so
+    it is obvious which activity moved the number."""
+    parts = []
+    if passages_done:
+        parts.append(f"{passages_done} passages translated")
+    if sentences_read:
+        parts.append(f"{sentences_read} library sentences read")
+    return " · ".join(parts) if parts else "no reading yet"
+
+
 @router.get("/cefr", response_model=CefrOut)
 async def cefr_progress(
     user: Annotated[User, Depends(get_current_user)],
@@ -392,9 +403,16 @@ async def cefr_progress(
             )
         )
     ) or 0
+    # Translating an A1 passage is reading too -- more actively than following
+    # an interleaved novel, since the learner has to produce the meaning and
+    # then mark it. Michael had 28 passages behind him and the ring still said
+    # "no reading yet", because this counted only the library. Weighted by how
+    # each passage went, so a passage marked "missed" earns nothing.
+    translated, passages_done = await reading_credit(session, user.id, language)
+
     # Reading comfort saturates once a few hundred sentences of connected
     # text have been read; below that it discounts the vocabulary estimate.
-    reading_factor = min(1.0, sentences_read / 300)
+    reading_factor = min(1.0, (sentences_read + translated) / 300)
 
     effectives: dict[str, tuple[float, bool, str]] = {
         "vocabulary": (vocab, vocab > 0, f"{vocab} words established"),
@@ -407,10 +425,8 @@ async def cefr_progress(
         ),
         "reading": (
             vocab * reading_factor,
-            sentences_read > 0,
-            f"{sentences_read} sentences of connected text read"
-            if sentences_read
-            else "no reading yet",
+            sentences_read > 0 or passages_done > 0,
+            _reading_detail(sentences_read, passages_done),
         ),
         "writing": (
             prod_vocab,

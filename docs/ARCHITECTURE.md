@@ -30,6 +30,12 @@ Which utterance is a question is **authored, not inferred**. Splitting on questi
 
 `no_text`/`en_text` are **derived** from the lines when they are present rather than authored twice. Two copies of the same sentence drift, and the derived text is what the gates, the word count and the glossary run on, so a drift would mean gating text the learner never sees. A `JSON` column rather than a child table: lines are presentation, nothing references an individual one, and it avoids repeating the delete-then-insert dance the glosses needed. If per-line audio ever arrives they will want real rows, and that is the change to make then.
 
+**Translating counts as reading on the dashboard rings.** Michael, with 28 passages behind him: *"I don't see a percentage for reading here - it's 0%?"* The skills breakdown had the tally by then, but the CEFR ring is a different endpoint, and its `reading_factor` was `sentences_read / 300` — sentences read **in the library**, which was still zero for him. So the ring said "no reading yet" while he had translated twenty-eight passages. A real gap, not a display problem.
+
+Passages now contribute sentence-equivalents to the same factor, weighted by `MARK_CREDIT`, because a passage marked `missed` is not evidence of having read it — the same reasoning that makes the listening estimate discount vocabulary by the dictation mark rather than by attempts made. His 28 passages (24 got, 3 partly, 1 missed) come to 48.5 weighted sentences, a factor of 0.16, and the ring moved from 0% to 5%.
+
+That number is deliberately not flattering. Reading is `vocab × reading_factor`, so it stays well under the 28% vocabulary ring until a few hundred sentences of text have gone through. At his current rate the full 200 passages would be ~346 sentence-equivalents and reading would saturate and track vocabulary, which is the right shape: translating the whole A1 set should make reading as strong as the words behind it, and not before.
+
 **The score is a standing, not a session.** Michael, after a couple of dozen passages: *"I'm not seeing a percentage or score appear on the main page of the application, or in the reading exercises section."* The percentage existed only in the end-of-session summary and went away with it, so there was nothing to come back to. `Tally` is now computed per language and appears in three places: the exercise header, the A1 card in the Reading index, and the Reading subtitle on the dashboard.
 
 Three decisions in it:
