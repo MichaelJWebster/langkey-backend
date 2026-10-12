@@ -18,6 +18,7 @@ from app.db import get_session
 from app.glossary import form_index, matched_forms
 from app.models import (
     MARKS,
+    MARK_CREDIT,
     Item,
     Passage,
     PassageAttempt,
@@ -39,6 +40,77 @@ REVIEW_SLOTS = 3
 #: progress; one already marked "got" is last but never retired, so the
 #: section does not run dry.
 MARK_PRIORITY = {None: 0, "missed": 1, "partly": 2, "got": 3}
+
+
+class Tally(BaseModel):
+    """How the learner stands on the marked part of Reading.
+
+    Michael, after a run of exercises: *"I'm not seeing a percentage or score
+    appear on the main page of the application, or in the reading exercises
+    section."* The percentage existed only in the session summary and vanished
+    when the session ended, so there was nothing to come back to.
+
+    `score` is quality, over the passages actually attempted: it answers "how
+    well am I translating". `attempted`/`total` is distance through the
+    material. They are deliberately separate -- averaging a score over 200
+    passages would read as 9% to someone translating well but early on.
+
+    Counted from the **latest** mark per passage, not every attempt, so going
+    back and getting one right replaces the miss instead of averaging with it.
+    """
+
+    total: int
+    attempted: int
+    got: int
+    partly: int
+    missed: int
+    #: 0-100 over the attempted passages; null before anything is marked, so
+    #: the UI can say "not started" rather than show a misleading zero.
+    score: float | None
+
+
+async def mark_tally(
+    session: AsyncSession, user_id, language: str = "nb"
+) -> Tally:
+    """The learner's standing on A1 passages, from each one's latest mark."""
+    total = (
+        await session.scalar(
+            select(func.count())
+            .select_from(Passage)
+            .where(Passage.language_code == language)
+        )
+    ) or 0
+
+    latest = (
+        select(
+            PassageAttempt.passage_id,
+            func.max(PassageAttempt.id).label("last_id"),
+        )
+        .where(PassageAttempt.user_id == user_id)
+        .group_by(PassageAttempt.passage_id)
+        .subquery()
+    )
+    rows = (
+        await session.execute(
+            select(PassageAttempt.mark, func.count())
+            .join(latest, latest.c.last_id == PassageAttempt.id)
+            .join(Passage, Passage.id == latest.c.passage_id)
+            .where(Passage.language_code == language)
+            .group_by(PassageAttempt.mark)
+        )
+    ).all()
+
+    by_mark = {mark: n for mark, n in rows}
+    attempted = sum(by_mark.values())
+    credit = sum(MARK_CREDIT.get(m, 0.0) * n for m, n in by_mark.items())
+    return Tally(
+        total=total,
+        attempted=attempted,
+        got=by_mark.get("got", 0),
+        partly=by_mark.get("partly", 0),
+        missed=by_mark.get("missed", 0),
+        score=round(100 * credit / attempted, 1) if attempted else None,
+    )
 
 
 class GlossOut(BaseModel):
@@ -160,6 +232,7 @@ class PassageSessionOut(BaseModel):
     total: int
     attempted: int  # distinct passages marked at least once
     got: int  # distinct passages whose latest mark is "got"
+    tally: Tally  # the standing to show in the header, per language not session
     passages: list[PassageOut]
 
 
@@ -245,6 +318,7 @@ async def passage_session(
     # ones they have not. Only the passages actually being served are looked
     # at, so the cost does not grow with the size of the content file.
     return PassageSessionOut(
+        tally=await mark_tally(session, user.id, language),
         total=len(rows),
         attempted=sum(1 for p in rows if p.id in history),
         got=sum(1 for p in rows if history.get(p.id, (None, 0))[0] == "got"),

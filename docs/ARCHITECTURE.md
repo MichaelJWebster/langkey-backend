@@ -30,6 +30,16 @@ Which utterance is a question is **authored, not inferred**. Splitting on questi
 
 `no_text`/`en_text` are **derived** from the lines when they are present rather than authored twice. Two copies of the same sentence drift, and the derived text is what the gates, the word count and the glossary run on, so a drift would mean gating text the learner never sees. A `JSON` column rather than a child table: lines are presentation, nothing references an individual one, and it avoids repeating the delete-then-insert dance the glosses needed. If per-line audio ever arrives they will want real rows, and that is the change to make then.
 
+**The score is a standing, not a session.** Michael, after a couple of dozen passages: *"I'm not seeing a percentage or score appear on the main page of the application, or in the reading exercises section."* The percentage existed only in the end-of-session summary and went away with it, so there was nothing to come back to. `Tally` is now computed per language and appears in three places: the exercise header, the A1 card in the Reading index, and the Reading subtitle on the dashboard.
+
+Three decisions in it:
+
+- **Quality and distance are separate numbers.** `score` is over the passages attempted, `attempted/total` is progress through the material. Rolling them together would make the score sink every time I add content — 91% over 28 would read as 13% against 200, punishing him for the batches.
+- **Only the latest mark counts.** Going back and getting a passage right replaces the earlier miss rather than averaging with it, which is the behaviour that makes returning to a hard one worth doing.
+- **A null score, not zero, before anything is marked.** 0% reads as "you scored nothing"; the UI shows "not started" instead.
+
+A near miss is worth a half (`MARK_CREDIT`), the same rule the session summary already used, and the badge thresholds match the listening mark (ADR-040) so a percentage means the same thing wherever it appears. The library half of Reading gets no percentage at all — Michael was explicit that *"the scores are only for the sentences we created for exercises"*, and it is right: reading a novel is not an exercise with a right answer, and scoring it would invent a judgement nobody made. There is a test asserting the library card carries no `%`.
+
 **Selection is not FSRS.** A passage has no recall interval worth modelling. The queue is: up to `REVIEW_SLOTS` (3) that went badly, then **the passages needing the fewest words explained**, then the rest. The cap is the point — without it a bad day becomes a wall of its own failures next session. Same reasoning as `REPEAT_LAPSE_CAP` in the repetition deck (ADR-038). A passage marked `got` is never retired, so the section cannot run dry.
 
 **Passage rows are updated in place, not replaced** — `passage_attempts.passage_id` points at them, and this is the trap that took startup down when the deck grew (ADR-008's `_sync_examples`). Glosses and topics have no inbound references so they are rebuilt, but by `DELETE` then `INSERT` with an explicit `passage_id`: assigning the relationship makes the ORM insert the replacements before issuing the deletes, and the new rows collide with the old on `(passage_id, position)`. A passage dropped from the content file keeps its row, so the history of having worked through it stays readable.

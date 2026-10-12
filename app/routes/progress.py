@@ -23,6 +23,7 @@ from app.models import (
 )
 from app.models.reading import ReadingText, Sentence, UserReadingPosition
 from app.routes.exercises import _attempt_score
+from app.routes.passages import Tally, mark_tally
 
 router = APIRouter(prefix="/api/v1/progress", tags=["progress"])
 
@@ -195,6 +196,10 @@ class ListeningBreakdown(BaseModel):
 class ReadingBreakdown(BaseModel):
     sentences_read: int
     sentences_total: int
+    #: The A1 translation passages -- the only part of Reading that is marked.
+    #: The library is read, not scored, so it has no percentage and should not
+    #: be given one.
+    passages: Tally
 
 
 class SkillsBreakdownOut(BaseModel):
@@ -305,7 +310,11 @@ async def skills_breakdown(
         vocabulary=vocabulary,
         writing=writing,
         listening=ListeningBreakdown(clean=clean, helped=helped, missed=missed, total=len(recent)),
-        reading=ReadingBreakdown(sentences_read=sentences_read, sentences_total=sentences_total),
+        reading=ReadingBreakdown(
+            sentences_read=sentences_read,
+            sentences_total=sentences_total,
+            passages=await mark_tally(session, user.id, language),
+        ),
     )
 
 

@@ -446,3 +446,124 @@ async def test_the_glossary_still_covers_the_whole_exchange(
     forms = {g["form"].lower() for g in gloss}
     # "apoteket" is in the answer, "nærmeste" in the question.
     assert any("apotek" in f for f in forms), forms
+
+
+# --- The standing, not just the session ---------------------------------------
+#
+# Michael, after a run of exercises: *"I'm not seeing a percentage or score
+# appear on the main page of the application, or in the reading exercises
+# section. Note: the scores are only for the sentences we created for
+# exercises."*
+
+
+async def test_tally_is_null_before_anything_is_marked(client: AsyncClient) -> None:
+    headers = await login(client)
+    tally = (await client.get("/api/v1/passages", headers=headers)).json()["tally"]
+    assert tally["attempted"] == 0
+    assert tally["score"] is None, "a zero here would read as 'you scored nothing'"
+    assert tally["total"] == len(load_passages("nb"))
+
+
+async def test_a_partial_counts_as_a_half(client: AsyncClient) -> None:
+    headers = await login(client)
+    slugs = [
+        p["slug"]
+        for p in (await client.get("/api/v1/passages?limit=500", headers=headers))
+        .json()["passages"]
+    ]
+    for slug, mark in zip(slugs, ["got", "partly", "missed", "got"]):
+        await client.post(
+            f"/api/v1/passages/{slug}/attempt", headers=headers, json={"mark": mark}
+        )
+
+    tally = (await client.get("/api/v1/passages", headers=headers)).json()["tally"]
+    assert (tally["got"], tally["partly"], tally["missed"]) == (2, 1, 1)
+    assert tally["attempted"] == 4
+    # (1 + 0.5 + 0 + 1) / 4
+    assert tally["score"] == 62.5
+
+
+async def test_the_score_is_over_what_was_attempted_not_the_whole_set(
+    client: AsyncClient,
+) -> None:
+    """Averaging over 200 passages would read as 1% to someone doing well."""
+    headers = await login(client)
+    slug = (await client.get("/api/v1/passages", headers=headers)).json()[
+        "passages"
+    ][0]["slug"]
+    await client.post(
+        f"/api/v1/passages/{slug}/attempt", headers=headers, json={"mark": "got"}
+    )
+    tally = (await client.get("/api/v1/passages", headers=headers)).json()["tally"]
+    assert tally["score"] == 100.0
+    assert tally["attempted"] == 1 and tally["total"] > 1
+
+
+async def test_only_the_latest_mark_counts(client: AsyncClient) -> None:
+    """Going back and getting it right replaces the miss, not averages with it."""
+    headers = await login(client)
+    slug = (await client.get("/api/v1/passages", headers=headers)).json()[
+        "passages"
+    ][0]["slug"]
+    for mark in ("missed", "partly", "got"):
+        await client.post(
+            f"/api/v1/passages/{slug}/attempt", headers=headers, json={"mark": mark}
+        )
+    tally = (await client.get("/api/v1/passages", headers=headers)).json()["tally"]
+    assert tally["attempted"] == 1
+    assert (tally["got"], tally["partly"], tally["missed"]) == (1, 0, 0)
+    assert tally["score"] == 100.0
+
+
+async def test_the_same_tally_reaches_the_dashboard(client: AsyncClient) -> None:
+    headers = await login(client)
+    slugs = [
+        p["slug"]
+        for p in (await client.get("/api/v1/passages", headers=headers)).json()[
+            "passages"
+        ]
+    ]
+    for slug, mark in zip(slugs, ["got", "missed"]):
+        await client.post(
+            f"/api/v1/passages/{slug}/attempt", headers=headers, json={"mark": mark}
+        )
+
+    reading = (await client.get("/api/v1/progress/skills", headers=headers)).json()[
+        "reading"
+    ]
+    assert reading["passages"]["score"] == 50.0
+    assert reading["passages"]["attempted"] == 2
+    # The library is read, not scored: it keeps its own counters and gains no
+    # percentage from this.
+    assert "sentences_read" in reading and "score" not in reading
+
+
+async def test_one_learner_s_score_is_not_another_s(client: AsyncClient) -> None:
+    from app.auth import hash_password
+    from app.models import User
+
+    async with db.session_factory() as session:
+        session.add(
+            User(
+                email="other2@langkey.dev",
+                display_name="Other",
+                password_hash=hash_password("other-password"),
+            )
+        )
+        await session.commit()
+
+    headers = await login(client)
+    slug = (await client.get("/api/v1/passages", headers=headers)).json()[
+        "passages"
+    ][0]["slug"]
+    await client.post(
+        f"/api/v1/passages/{slug}/attempt", headers=headers, json={"mark": "got"}
+    )
+
+    resp = await client.post(
+        "/api/v1/auth/login",
+        json={"email": "other2@langkey.dev", "password": "other-password"},
+    )
+    other = {"Authorization": f"Bearer {resp.json()['access_token']}"}
+    tally = (await client.get("/api/v1/passages", headers=other)).json()["tally"]
+    assert tally["attempted"] == 0 and tally["score"] is None

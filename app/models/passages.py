@@ -36,6 +36,11 @@ from app.db import Base
 #: `MARKS.index(mark)` is the score, so the order is load-bearing.
 MARKS = ("missed", "partly", "got")
 
+#: What a self-mark is worth towards a percentage. A near miss counting as a
+#: half is the same rule the session summary uses: calling it a failure makes
+#: the number useless as feedback, and calling it a pass makes it flattery.
+MARK_CREDIT = {"got": 1.0, "partly": 0.5, "missed": 0.0}
+
 #: What a line of a structured passage is. "question" and "answer" are labelled
 #: in the UI; "line" is an unlabelled line, for a passage that wants the breaks
 #: without the scaffolding.
