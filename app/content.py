@@ -107,6 +107,45 @@ def passages_hash(entries: list[PassageEntry]) -> str:
     return hashlib.sha256(payload.encode()).hexdigest()
 
 
+GameEntry = dict[str, Any]
+# keys: slug, game, title, description, pairs[{en,no,note?}]
+
+
+def load_games(language: str = "nb") -> list[GameEntry]:
+    """Game sets from the local JSONL, in authored order.
+
+    Local-only like the passages: a handful of hand-written sets is not worth a
+    Parquet snapshot, and the container image carries `data/`.
+    """
+    path = DATA_DIR / f"games_{language}.jsonl"
+    if not path.exists():
+        return []
+    entries: list[GameEntry] = []
+    for line in path.read_text().splitlines():
+        if not line.strip():
+            continue
+        e = json.loads(line)
+        entries.append(
+            {
+                "slug": e["slug"],
+                "game": e.get("game", "matching"),
+                "title": e["title"],
+                "description": e.get("description", ""),
+                "pairs": [
+                    {"en": p["en"], "no": p["no"], "note": p.get("note")}
+                    for p in e["pairs"]
+                ],
+            }
+        )
+    return entries
+
+
+def games_hash(entries: list[GameEntry]) -> str:
+    """Stable fingerprint, used to skip no-op DB syncs."""
+    payload = json.dumps(entries, sort_keys=True, ensure_ascii=False)
+    return hashlib.sha256(payload.encode()).hexdigest()
+
+
 def _s3_client(*, fail_fast: bool = False):
     """Shared S3/R2 client.
 

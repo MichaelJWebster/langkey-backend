@@ -13,6 +13,7 @@ from app.db import engine
 from app.routes import (
     categories,
     exercises,
+    games,
     glossary,
     hello,
     passages,
@@ -62,6 +63,7 @@ app.include_router(glossary.router)
 app.include_router(exercises.router)
 app.include_router(texts.router)
 app.include_router(passages.router)
+app.include_router(games.router)
 app.include_router(recordings.router)
 app.include_router(speaking.router)
 

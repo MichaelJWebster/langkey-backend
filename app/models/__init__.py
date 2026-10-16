@@ -15,6 +15,7 @@ from app.models.learning import (
     UserAnswerAlternative,
     UserCard,
 )
+from app.models.games import GAMES, GamePair, GameRound, GameSet
 from app.models.glossary import UserGlossaryEntry
 from app.models.meta import AppMeta
 from app.models.passages import (
@@ -40,6 +41,10 @@ __all__ = [
     "AppMeta",
     "ExerciseAttempt",
     "FSRS_REVIEW_STATE",
+    "GAMES",
+    "GamePair",
+    "GameRound",
+    "GameSet",
     "Item",
     "ItemCategory",
     "ItemExample",

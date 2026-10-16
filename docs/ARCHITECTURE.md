@@ -7,6 +7,22 @@ and about deployment live here too. It is kept in the backend repo because the
 umbrella directory (`~/work/lang_app`) is not version-controlled, and symlinked
 back to there so the familiar path still works.
 
+## ADR-042 (2026-10-17) — Games: practice that keeps score but moves no needle
+
+*"I'd like a new section after speaking on the main page. Call it games... Initially just create a flashcards subsection with one set of flash cards."* Three levels — subsections, sets, play — because Michael said there would be several of each, and one of everything exists today.
+
+**Games feeds nothing.** A round records its own best result and that is all: not FSRS, not the glossary, not the CEFR estimate. Matching ten words against the clock is recognition under time pressure, not evidence of recall at an interval, and letting it move the rings would quietly corrupt numbers that currently mean something. The reading ring was recently taught to count translated passages (ADR-041) precisely because translation *is* reading; this is the other side of the same judgement.
+
+**No ring on the skills list, by Michael's choice when asked.** The five skills each carry a CEFR ring and an "A1 achieved" descriptor. There is no Council of Europe can-do statement for a matching game, and a ring that looked identical while counting something else would make every ring on the page mean less. The Games row takes the full width where the ring and milestone box would sit.
+
+**A subsection is a game kind.** `GameSet.game` names it (`matching` today), and the UI derives its subsections from the kinds present. Adding a kind to the content file adds a subsection with no code change — the same bargain the reading library makes with its `kind` (ADR-019).
+
+**The shuffle has to guarantee a difference, not merely be random.** Michael: *"but not in the same order"*. The weaker reading — shuffle both columns independently and accept whatever comes out — leaves cards facing their own translations often enough to matter at ten pairs, and every one of those is a free match. `deal` reshuffles the right column until no card faces its pair, and falls back to rotating by one if twenty attempts all align, which only happens when the random source is degenerate. A one-pair set is returned as-is rather than looping forever.
+
+**`note` exists because the English is not always unique.** "How long" is `hvor lenge` for time and `hvor langt` for distance. Two cards both reading "how long" would be unplayable rather than hard, so the pair carries a disambiguating note and the card renders "how long (time)". A test asserts both sides of every pair in every set are unique once the note is applied.
+
+**Best is fewest mistakes, then quickest.** Accuracy first: a fast round full of wrong guesses is not a better one. Only completed rounds are recorded — a set abandoned halfway is not a result, and counting it would make the best score a function of how often he gave up. The clock starts on the first pick, not on arrival, so reading the board before committing costs nothing.
+
 ## ADR-041 (2026-10-11) — A1 reading: authored passages, self-marked translation
 
 *"I want to create subsections in Reading - The top one called \"A1 Reading and translation\" and the existing one with the novels and folktales in a section titled \"Reading for interest (not A1 based)\"."* The second half is a relabelling. The first is a new exercise: short Norwegian built from the deck, translated into English by the learner.

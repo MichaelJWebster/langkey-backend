@@ -51,6 +51,18 @@ below is sized for the current single learner; none of it should need rewriting 
 - ✅ Pipeline scripts (backend repo): `find_texts` (bokselskap/Gutenberg discovery) → `prepare_text` (extract → segment → translate via local Ollama gemma3:12b with echo-retry QC) → staging JSON review → `import_text`. First text: Askeladden som kapaad med Troldet (1904 orthography).
 - Next candidates: more folk tales, then a Hamsun novel (multi-chapter via multiple URLs → sections); per-sentence audio; Claude repair pass on draft translations.
 
+## ✅ M2.8 — Games (2026-10-17)
+
+Michael: *"I'd like a new section after speaking on the main page. Call it games. In games I will have several sections with different gamified learning features."*
+
+- ✅ **Games** row on the skills list, below Speaking. No CEFR ring and no can-do box — his call when asked — because there is no descriptor for a matching game and a lookalike ring would devalue the real ones.
+- ✅ Three levels: subsections (derived from each set's `game` kind) → sets → play. One subsection, **Flashcards**, and one set, **Question words**.
+- ✅ **Question words**: 10 pairs — what/who/where/when/why/how plus the `hvor`-compounds *hvor mye, hvor mange, hvor lenge, hvor langt*. The last two carry notes (time / distance) because "how long" alone would appear twice and make the board unplayable.
+- ✅ Matching: English on the left, Norwegian on the right, both shuffled with a guarantee that **no card faces its own translation**. Pick either side first; a wrong pairing costs one mistake and nothing else; switching sides mid-pick is free.
+- ✅ New tables `game_sets`, `game_pairs`, `game_rounds` (migration `e7b2d91a5c48`), seeded from `data/games_nb.jsonl` by the same hash-gated sync as the deck and the passages. Set rows update in place so rounds keep their target.
+- ✅ Best score per set: fewest mistakes, then quickest. Only completed rounds count. Games feeds nothing else — not FSRS, not the glossary, not the CEFR rings. See ADR-042.
+- Next: more sets (numbers, days, prepositions, irregular verbs), and a second game kind when one is wanted.
+
 ## ✅ M2.7 — Reading splits in two; A1 translation practice (2026-10-11)
 
 Michael: *"I want to create subsections in Reading - The top one called "A1 Reading and translation" and the existing one with the novels and folktales in a section titled "Reading for interest (not A1 based)"."*

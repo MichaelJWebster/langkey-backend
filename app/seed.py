@@ -20,9 +20,12 @@ from app.auth import hash_password
 from app.config import get_settings
 from app.content import (
     DeckEntry,
+    GameEntry,
     PassageEntry,
     deck_hash,
+    games_hash,
     load_deck,
+    load_games,
     load_passages,
     passages_hash,
 )
@@ -34,6 +37,8 @@ from app.models import (
     Item,
     ItemCategory,
     ItemExample,
+    GamePair,
+    GameSet,
     Language,
     Passage,
     PassageGloss,
@@ -230,6 +235,79 @@ async def _sync_passages(
         meta.value = fingerprint
 
 
+async def _sync_games(
+    session: AsyncSession, language: str, entries: list[GameEntry]
+) -> None:
+    """Bring `game_sets` in line with the content file, matched by slug.
+
+    Set rows are updated in place because `game_rounds.set_id` points at them
+    and a round that forgets which set it was is worth nothing. Pairs are
+    rebuilt by DELETE then INSERT with an explicit `set_id`, for the same
+    reason the passage glosses are: assigning the relationship makes the ORM
+    insert the replacements before issuing the deletes, and they collide on
+    (set_id, position).
+    """
+    fingerprint = games_hash(entries)
+    meta_key = f"games_hash:{language}"
+    meta = await session.get(AppMeta, meta_key)
+    if meta is not None and meta.value == fingerprint:
+        return
+
+    existing = {
+        row.slug: row
+        for row in await session.scalars(
+            select(GameSet).where(GameSet.language_code == language)
+        )
+    }
+    if existing:
+        await session.execute(
+            delete(GamePair).where(
+                GamePair.set_id.in_([row.id for row in existing.values()])
+            )
+        )
+
+    touched: list[GameSet] = []
+    for seq, e in enumerate(entries, start=1):
+        row = existing.get(e["slug"])
+        if row is None:
+            row = GameSet(
+                slug=e["slug"],
+                language_code=language,
+                game=e["game"],
+                title=e["title"],
+                description=e["description"],
+                seq=seq,
+            )
+            session.add(row)
+        else:
+            row.game = e["game"]
+            row.title = e["title"]
+            row.description = e["description"]
+            row.seq = seq
+        touched.append(row)
+
+    await session.flush()
+    for row, e in zip(touched, entries):
+        for pos, pair in enumerate(e["pairs"]):
+            session.add(
+                GamePair(
+                    set_id=row.id,
+                    position=pos,
+                    en=pair["en"],
+                    no=pair["no"],
+                    note=pair["note"],
+                )
+            )
+    await session.flush()
+    for row in touched:
+        session.expire(row, ["pairs"])
+
+    if meta is None:
+        session.add(AppMeta(key=meta_key, value=fingerprint))
+    else:
+        meta.value = fingerprint
+
+
 async def seed_data() -> None:
     async with db.session_factory() as session:
         for code, name in LANGUAGES.items():
@@ -259,6 +337,7 @@ async def seed_data() -> None:
             await _sync_passages(
                 session, code, await asyncio.to_thread(load_passages, code)
             )
+            await _sync_games(session, code, await asyncio.to_thread(load_games, code))
         await session.commit()
 
 
