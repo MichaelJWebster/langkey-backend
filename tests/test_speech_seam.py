@@ -10,10 +10,22 @@ import httpx
 import pytest
 
 from app.config import Settings
-from app.speech import SpeechToText, Transcript, TranscriptionError, TranscriptionUnavailable
+from app.speech import (
+    SpeechToText,
+    Transcript,
+    TranscriptionError,
+    TranscriptionUnavailable,
+    WordAligner,
+    WordSpan,
+)
 from app.speech.http import HttpTranscriber
 from app.speech.null import NullTranscriber
-from app.speech.registry import build_transcriber, check_model_policy, is_norwegian_model
+from app.speech.registry import (
+    build_transcriber,
+    check_model_policy,
+    get_aligner,
+    is_norwegian_model,
+)
 
 
 # --- ADR-031: Norwegian-trained models, local or deployed -------------------
@@ -223,3 +235,83 @@ async def test_a_reply_without_text_is_a_failure(speech_service):
     t = speech_service(lambda request: httpx.Response(200, json={"language": "no"}))
     with pytest.raises(TranscriptionError):
         await t.transcribe(b"x", content_type="audio/webm")
+
+
+# --- word alignment over the same seam (ADR-043) ------------------------------
+
+
+@pytest.mark.anyio
+async def test_a_good_alignment_reply_places_every_word(speech_service):
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.path == "/align"
+        return httpx.Response(
+            200,
+            json={
+                "words": [{"word": "god", "start": 0.16, "end": 0.64}, None],
+                "model": "NbAiLab/nb-wav2vec2-300m-bokmaal",
+            },
+        )
+
+    t = speech_service(handler)
+    alignment = await t.align(b"wav", content_type="audio/wav", words=["god", "kveld"])
+
+    assert alignment.words[0] == WordSpan("god", 0.16, 0.64)
+    assert alignment.words[1] is None  # the service could not place it; not an error
+    assert "wav2vec2" in alignment.model
+
+
+@pytest.mark.anyio
+async def test_the_words_travel_with_the_audio_as_json(speech_service):
+    seen = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen["body"] = request.read()
+        return httpx.Response(200, json={"words": [None], "model": "m"})
+
+    t = speech_service(handler)
+    await t.align(b"wav", content_type="audio/wav", words=["klokka"])
+
+    assert b'name="words"' in seen["body"]
+    assert b'["klokka"]' in seen["body"]
+    assert b"audio/wav" in seen["body"]
+
+
+@pytest.mark.anyio
+async def test_a_reply_with_the_wrong_number_of_spans_is_a_failure(speech_service):
+    # One entry per word sent is the contract; anything else cannot be
+    # lined up with the marks and must not be guessed at.
+    t = speech_service(lambda r: httpx.Response(200, json={"words": [], "model": "m"}))
+    with pytest.raises(TranscriptionError):
+        await t.align(b"wav", content_type="audio/wav", words=["a", "b"])
+
+
+@pytest.mark.anyio
+async def test_a_server_error_on_align_is_unavailable(speech_service):
+    t = speech_service(lambda r: httpx.Response(500, text="boom"))
+    with pytest.raises(TranscriptionUnavailable):
+        await t.align(b"wav", content_type="audio/wav", words=["a"])
+
+
+@pytest.mark.anyio
+async def test_the_null_backend_cannot_align_either():
+    with pytest.raises(TranscriptionUnavailable):
+        await NullTranscriber().align(b"x", content_type="audio/wav", words=["a"])
+
+
+def test_the_http_backend_is_an_aligner():
+    t = HttpTranscriber("http://x", model="nb-whisper-small")
+    assert isinstance(t, WordAligner)
+    assert get_aligner(t) is t
+
+
+def test_a_transcribe_only_backend_gets_the_null_aligner():
+    """One setting chooses the service; a backend that cannot place words
+    costs the per-word compare and nothing else."""
+
+    class TranscribeOnly:
+        name = "legacy"
+
+        async def transcribe(self, audio, *, content_type, language="no"):
+            raise NotImplementedError
+
+    assert get_aligner(TranscribeOnly()).name == "none"

@@ -10,7 +10,7 @@ pronunciation scoring against later.
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db import Base
@@ -42,6 +42,14 @@ class UserRecording(Base):
     # free and never double-counts the attempt (app/routes/recordings.py).
     transcript: Mapped[str | None] = mapped_column(Text)
     transcript_model: Mapped[str | None] = mapped_column(String(128))
+    # Where each word of the transcript sits in the take, so one word of it
+    # can be played against the same word of the reference (ADR-043). One
+    # entry per word of `words(transcript)`: {word, start, end} in seconds,
+    # or null where the aligner could not place it. Null as a whole until the
+    # take has been through the aligner, which may be later than the
+    # transcript -- the check must not wait on it.
+    transcript_words: Mapped[list[dict | None] | None] = mapped_column(JSON)
+    alignment_model: Mapped[str | None] = mapped_column(String(128))
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 

@@ -140,3 +140,88 @@ async def test_a_struggling_word_is_named_on_the_phrases_that_contain_it(client,
     containing = [p for p in body["phrases"] if last in p["text"].lower()]
     assert containing, "the phrase with the struggling word should be offered"
     assert all(last in p["focus"] for p in containing)
+
+
+# --- where the words are in a reference clip (ADR-043) ------------------------
+
+from app.audio import audio_object_key  # noqa: E402
+from tests.test_recordings import _FakeTranscriber, use_transcriber  # noqa: E402
+
+TEXT = "God kveld! Har dere et ledig bord?"
+WORDS = ["god", "kveld", "har", "dere", "et", "ledig", "bord"]
+
+
+@pytest.fixture
+def clips(monkeypatch):
+    """The clip store as the speaking route sees it."""
+    from app.routes import speaking
+
+    fake = _FakeS3()
+    monkeypatch.setattr(speaking, "_s3_client", lambda **kw: fake)
+    return fake
+
+
+def _placed(n: int):
+    return [(i * 0.5, i * 0.5 + 0.4) for i in range(n)]
+
+
+async def test_clip_words_are_placed_once_and_kept(client, clips):
+    headers = await login(client)
+    key = audio_object_key("nb", TEXT, primary=True, scale=3.4)
+    clips.objects[key] = b"RIFF..."
+    fake = use_transcriber(_FakeTranscriber(spans=_placed(7)))
+
+    first = await client.get(
+        "/api/v1/speaking/words", params={"text": TEXT, "scale": 3.4}, headers=headers
+    )
+
+    assert first.status_code == 200, first.text
+    body = first.json()
+    assert body["url"] == f"/api/v1/{key}"
+    assert body["scale"] == 3.4
+    assert [w["word"] for w in body["words"]] == WORDS
+    assert body["words"][1] == {"word": "kveld", "start": 0.5, "end": 0.9}
+    # The clip's bytes and the words, tokenised as the marks are.
+    assert fake.align_calls == [(b"RIFF...", "audio/wav", WORDS)]
+
+    again = await client.get(
+        "/api/v1/speaking/words", params={"text": TEXT, "scale": 3.4}, headers=headers
+    )
+    assert again.json() == body
+    assert len(fake.align_calls) == 1, "content-addressed: aligned once, for everyone"
+
+
+async def test_each_speed_is_its_own_clip_with_its_own_timings(client, clips):
+    headers = await login(client)
+    for scale in (3.4, 2.2):
+        clips.objects[audio_object_key("nb", TEXT, primary=True, scale=scale)] = b"wav"
+    fake = use_transcriber(_FakeTranscriber(spans=_placed(7)))
+
+    slow = (await client.get("/api/v1/speaking/words", params={"text": TEXT, "scale": 3.4}, headers=headers)).json()
+    easier = (await client.get("/api/v1/speaking/words", params={"text": TEXT, "scale": 2.2}, headers=headers)).json()
+
+    assert slow["url"] != easier["url"]
+    assert len(fake.align_calls) == 2
+
+
+async def test_clip_words_need_a_generated_clip(client, clips):
+    headers = await login(client)
+    use_transcriber(_FakeTranscriber(spans=_placed(7)))
+    resp = await client.get("/api/v1/speaking/words", params={"text": TEXT}, headers=headers)
+    assert resp.status_code == 404
+
+
+async def test_clip_words_only_come_from_the_ladder(client, clips):
+    headers = await login(client)
+    resp = await client.get(
+        "/api/v1/speaking/words", params={"text": TEXT, "scale": 1.0}, headers=headers
+    )
+    assert resp.status_code == 422
+
+
+async def test_clip_words_report_503_when_the_aligner_is_down(client, clips):
+    headers = await login(client)
+    clips.objects[audio_object_key("nb", TEXT, primary=True, scale=3.4)] = b"wav"
+    use_transcriber(_FakeTranscriber())  # transcribes, cannot align
+    resp = await client.get("/api/v1/speaking/words", params={"text": TEXT}, headers=headers)
+    assert resp.status_code == 503

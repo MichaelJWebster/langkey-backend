@@ -10,6 +10,7 @@ from app.pronunciation import (
     compare,
     is_pattern,
     normalise,
+    take_spans,
     words,
 )
 
@@ -90,3 +91,65 @@ class TestIsPattern:
 
     def test_a_word_that_usually_lands_is_not_flagged(self):
         assert not is_pattern(20, 22)
+
+
+# --- where each word is in the take (ADR-043) ---------------------------------
+
+
+def test_a_mark_remembers_which_heard_word_it_came_from():
+    """Playing a word of the take back needs the take's word, not the
+    target's: for klokka heard as klokke, the stretch that *was* klokke."""
+    marks = compare("Møtet slutter klokka åtte.", "Møte slutter klokke åtte.")
+    assert [m.heard_index for m in marks] == [0, 1, 2, 3]
+    assert marks[2].verdict == SLIPPED
+
+
+def test_a_word_the_model_found_nothing_for_points_at_no_heard_word():
+    marks = compare("Jeg bor i Oslo.", "Jeg bor Oslo.")
+    by_word = {m.word: m for m in marks}
+    assert by_word["i"].verdict == MISSED
+    assert by_word["i"].heard_index is None
+    # The words either side still know where they are in the transcript.
+    assert by_word["bor"].heard_index == 1
+    assert by_word["Oslo."].heard_index == 2
+
+
+def test_a_word_replaced_by_something_unrelated_still_points_at_it():
+    # Wrong, but the model did put *something* there, and that something is
+    # exactly what the learner should hear back.
+    marks = {m.word: m for m in compare("Vi kjøper brød.", "Vi kjøper tog.")}
+    assert marks["brød."].verdict == MISSED
+    assert marks["brød."].heard == "tog"
+    assert marks["brød."].heard_index == 2
+
+
+def test_take_spans_follow_the_heard_words():
+    marks = compare("Møtet slutter klokka åtte.", "Møte slutter klokke åtte.")
+    heard = [(0.2, 0.6), (0.6, 1.1), (1.1, 1.6), (1.7, 2.0)]
+    assert take_spans(marks, heard) == heard
+
+
+def test_a_missed_word_gets_the_stretch_between_its_neighbours():
+    # "i" was not heard. Whatever he said between "bor" and "Oslo" is where
+    # it should have been, and that is the thing worth hearing back.
+    marks = compare("Jeg bor i Oslo.", "Jeg bor Oslo.")
+    heard = [(0.1, 0.4), (0.5, 0.8), (1.2, 1.7)]
+    spans = take_spans(marks, heard)
+    assert spans == [(0.1, 0.4), (0.5, 0.8), (0.8, 1.2), (1.2, 1.7)]
+
+
+def test_a_missed_word_at_the_edge_has_nothing_to_point_at():
+    marks = compare("Jeg bor i Oslo.", "bor i Oslo.")
+    heard = [(0.5, 0.8), (0.8, 0.9), (1.2, 1.7)]
+    spans = take_spans(marks, heard)
+    assert spans[0] is None  # nothing before "bor" to bracket it
+    assert spans[1:] == heard
+
+
+def test_an_unplaced_heard_word_leaves_its_mark_without_a_span():
+    marks = compare("Jeg bor i Oslo.", "Jeg bor i Oslo.")
+    heard = [(0.1, 0.4), None, (0.8, 0.9), (1.2, 1.7)]
+    spans = take_spans(marks, heard)
+    # The aligner could not place "bor"; it is bracketed by its neighbours,
+    # the same as a word that was never heard.
+    assert spans[1] == (0.4, 0.8)

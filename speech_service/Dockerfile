@@ -21,13 +21,17 @@ RUN pip install --no-cache-dir uv \
 # Face (ADR-024). The image cap on Cloudflare containers is the instance disk,
 # so the model size decides the instance type.
 ARG SPEECH_MODEL=NbAiLab/nb-whisper-small
+ARG ALIGNER_MODEL=NbAiLab/nb-wav2vec2-300m-bokmaal
 ENV LANGKEY_SPEECH_MODEL=${SPEECH_MODEL} \
+    LANGKEY_SPEECH_ALIGNER=${ALIGNER_MODEL} \
     HF_HOME=/srv/langkey/.hf \
     LANGKEY_SPEECH_PRELOAD=true
 RUN python -c "\
-from transformers import pipeline; \
+from transformers import pipeline, Wav2Vec2ForCTC, Wav2Vec2Processor; \
 import os; \
-pipeline('automatic-speech-recognition', model=os.environ['LANGKEY_SPEECH_MODEL'])"
+pipeline('automatic-speech-recognition', model=os.environ['LANGKEY_SPEECH_MODEL']); \
+Wav2Vec2Processor.from_pretrained(os.environ['LANGKEY_SPEECH_ALIGNER']); \
+Wav2Vec2ForCTC.from_pretrained(os.environ['LANGKEY_SPEECH_ALIGNER'])"
 
 EXPOSE 8001
 CMD ["uvicorn", "speech_service.main:app", "--host", "0.0.0.0", "--port", "8001"]

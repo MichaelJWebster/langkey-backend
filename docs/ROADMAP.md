@@ -110,6 +110,16 @@ Diagnosis and the four changes are in ADR-038; the short version:
 
 Audio for the new words: 4,221 Piper clips generated, nothing pruned.
 
+## ✅ M3.2 — Hear one word: yours against the reference, cut from the sentence (2026-10-17)
+
+Michael: *"When I don't get a sound or word, I'd like to have the ability to play the word against my attempt so I can compare... both simultaneous playing panned hard left and right... and also to play each word separately. The words should come from the actual sentence audio used in the reference."*
+
+- ✅ Tap a word in the feedback panel: **Reference**, **You**, or **Both** (reference left ear, you right). Each is cut from a whole clip — the reference at the speed on screen, and the take just heard — never synthesised on its own. Supersedes the per-word-clip plan of 2026-10-05.
+- ✅ Whisper's word timestamps measured and rejected (boundaries mid-word, trailing silence glued to the previous word). Forced alignment instead: `NbAiLab/nb-wav2vec2-300m-bokmaal`, a hand-written CTC Viterbi plus energy-based boundary refinement, validated against the measured silences in four clips. `POST /align` on the speech service.
+- ✅ `clip_alignments` caches reference placements by object key (content, shared by everyone, computed on first ask); `user_recordings.transcript_words` keeps the take's. Migration `f3c1a0d9e2b7`.
+- ✅ Your side plays the word the model actually heard there, `klokke` for `klokka`; a word it found nothing for plays the stretch between its neighbours. The aligner being down costs the compare and nothing else. See ADR-043.
+- Next: let the compare loop (play both, say it, play both); show the two waveforms; a per-word tally of which words he asks to hear, as a second signal beside the transcript tally.
+
 ## M3 — Speaking
 
 Researched 2026-10-04; see ADR-024 (conversation), ADR-025 (pronunciation) and the

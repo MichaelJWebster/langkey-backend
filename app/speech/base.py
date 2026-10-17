@@ -38,6 +38,45 @@ class Transcript:
     segments: tuple[str, ...] = field(default_factory=tuple)
 
 
+@dataclass(frozen=True)
+class WordSpan:
+    """Where one word sits in a clip, in seconds from its start."""
+
+    word: str
+    start: float
+    end: float
+
+
+@dataclass(frozen=True)
+class Alignment:
+    """Each word the caller sent, placed -- or None where it could not be.
+
+    `model` for the same reason `Transcript.model` exists: ADR-031 applies to
+    the aligner too, and the claim has to be recorded where the result is.
+    """
+
+    words: tuple[WordSpan | None, ...]
+    model: str
+
+
+@runtime_checkable
+class WordAligner(Protocol):
+    """Place known words in a clip (ADR-043).
+
+    Separate from SpeechToText because it answers a different question --
+    not "what was said" but "where is each word" -- and takes the words as
+    input. The caller tokenises; the aligner must return one entry per word
+    sent, in order. Raises the same TranscriptionUnavailable /
+    TranscriptionError pair, with the same meaning.
+    """
+
+    name: str
+
+    async def align(
+        self, audio: bytes, *, content_type: str, words: list[str]
+    ) -> Alignment: ...
+
+
 @runtime_checkable
 class SpeechToText(Protocol):
     """One method, because that is all a say-it drill needs.

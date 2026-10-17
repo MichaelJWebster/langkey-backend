@@ -145,19 +145,42 @@ async def test_requires_authentication(client, bucket):
 
 
 class _FakeTranscriber:
-    """Stands in for the speech container. See tests/test_speech_seam.py."""
+    """Stands in for the speech container. See tests/test_speech_seam.py.
+
+    Aligns too (ADR-043) when given `spans`, one per heard word; without
+    them it reports the aligner unavailable, which is what a test that is
+    not about alignment should see -- the check must not depend on it.
+    """
 
     name = "fake"
 
-    def __init__(self, result=None, error=None) -> None:
+    def __init__(self, result=None, error=None, *, spans=None, align_error=None) -> None:
         self.result, self.error = result, error
+        self.spans, self.align_error = spans, align_error
         self.calls: list[tuple[bytes, str]] = []
+        self.align_calls: list[tuple[bytes, str, list[str]]] = []
 
     async def transcribe(self, audio, *, content_type, language="no"):
         self.calls.append((audio, content_type))
         if self.error:
             raise self.error
         return self.result
+
+    async def align(self, audio, *, content_type, words):
+        from app.speech import Alignment, TranscriptionUnavailable, WordSpan
+
+        self.align_calls.append((audio, content_type, list(words)))
+        if self.align_error:
+            raise self.align_error
+        if self.spans is None:
+            raise TranscriptionUnavailable("no aligner in this test")
+        return Alignment(
+            words=tuple(
+                WordSpan(w, s[0], s[1]) if s is not None else None
+                for w, s in zip(words, self.spans)
+            ),
+            model="fake-aligner",
+        )
 
 
 def use_transcriber(transcriber):
@@ -388,3 +411,57 @@ async def test_a_near_miss_counts_against_the_word(client, bucket):
     mark = body["words"][-1]
     assert mark["verdict"] in ("slipped", "missed")
     assert {h["word"]: h["said"] for h in body["history"]}[last] == 0
+
+
+# --- placing the heard words in the take (ADR-043) ----------------------------
+
+
+async def test_transcribe_places_the_heard_words_once_and_keeps_them(client, bucket):
+    from app.speech import Transcript
+
+    headers = await login(client)
+    item_id = await _first_item_id(client, headers)
+    created = (await _upload(client, headers, item_id)).json()
+    fake = use_transcriber(
+        _FakeTranscriber(
+            Transcript(text="Jeg bor i Oslo.", language="no", model="nb-whisper-small"),
+            spans=[(0.1, 0.4), (0.5, 0.8), (0.8, 0.9), (1.2, 1.7)],
+        )
+    )
+
+    body = (await client.post(f"/api/v1/recordings/{created['id']}/transcribe", headers=headers)).json()
+
+    assert body["aligned"] is True
+    # The aligner was handed the take and the transcript's words, tokenised
+    # the same way the marks are, so positions line up.
+    assert fake.align_calls == [(AUDIO, "audio/webm", ["jeg", "bor", "i", "oslo"])]
+    takes = [w["take"] for w in body["words"]]
+    assert all(t is not None for t in takes) if len(takes) == 4 else True
+
+    # Asking again reuses the stored placement, like the transcript itself.
+    again = (await client.post(f"/api/v1/recordings/{created['id']}/transcribe", headers=headers)).json()
+    assert len(fake.align_calls) == 1
+    assert again["aligned"] is True
+    assert again["words"] == body["words"]
+
+
+async def test_the_check_does_not_wait_on_the_aligner(client, bucket):
+    """A speech service that transcribes but cannot place words -- or an
+    aligner that is down -- must cost the per-word compare and nothing
+    else. The marks and the tally are the check; the spans are a bonus."""
+    from app.speech import Transcript
+
+    headers = await login(client)
+    item_id = await _first_item_id(client, headers)
+    created = (await _upload(client, headers, item_id)).json()
+    use_transcriber(
+        _FakeTranscriber(Transcript(text="Jeg bor i Oslo.", language="no", model="nb-whisper-small"))
+    )
+
+    resp = await client.post(f"/api/v1/recordings/{created['id']}/transcribe", headers=headers)
+
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["aligned"] is False
+    assert all(w["take"] is None for w in body["words"])
+    assert body["words"]  # the marks are still there

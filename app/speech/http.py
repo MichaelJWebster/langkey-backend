@@ -6,11 +6,18 @@ serves a service running on the M2 Max during development -- only the URL
 changes -- which is the point of having the seam.
 """
 
+import json
 import logging
 
 import httpx
 
-from app.speech.base import Transcript, TranscriptionError, TranscriptionUnavailable
+from app.speech.base import (
+    Alignment,
+    Transcript,
+    TranscriptionError,
+    TranscriptionUnavailable,
+    WordSpan,
+)
 
 log = logging.getLogger(__name__)
 
@@ -28,12 +35,58 @@ class HttpTranscriber:
     async def transcribe(
         self, audio: bytes, *, content_type: str, language: str = "no"
     ) -> Transcript:
+        response = await self._post(
+            "/transcribe", audio, content_type=content_type, data={"language": language}
+        )
+        try:
+            body = response.json()
+            return Transcript(
+                text=body["text"],
+                language=body.get("language", language),
+                model=body.get("model", self.model),
+                duration_ms=body.get("duration_ms"),
+                confidence=body.get("confidence"),
+                segments=tuple(body.get("segments") or ()),
+            )
+        except (ValueError, KeyError, TypeError) as exc:
+            log.warning("speech service sent an unreadable reply: %s", exc)
+            raise TranscriptionError("The speech service sent an unreadable reply") from exc
+
+    async def align(
+        self, audio: bytes, *, content_type: str, words: list[str]
+    ) -> Alignment:
+        response = await self._post(
+            "/align", audio, content_type=content_type, data={"words": json.dumps(words)}
+        )
+        try:
+            body = response.json()
+            spans = body["words"]
+            if len(spans) != len(words):
+                raise ValueError(f"{len(spans)} spans for {len(words)} words")
+            return Alignment(
+                words=tuple(
+                    WordSpan(word=w, start=float(s["start"]), end=float(s["end"]))
+                    if s is not None
+                    else None
+                    for w, s in zip(words, spans)
+                ),
+                model=body.get("model", "unknown"),
+            )
+        except (ValueError, KeyError, TypeError) as exc:
+            log.warning("speech service sent an unreadable alignment: %s", exc)
+            raise TranscriptionError("The speech service sent an unreadable reply") from exc
+
+    async def _post(
+        self, path: str, audio: bytes, *, content_type: str, data: dict[str, str]
+    ) -> httpx.Response:
+        """One request to the service, with failures sorted into the two
+        kinds the routes answer differently."""
         try:
             async with httpx.AsyncClient(timeout=self.timeout_seconds) as client:
                 response = await client.post(
-                    f"{self.url}/transcribe",
+                    f"{self.url}{path}",
                     files={"audio": ("take", audio, content_type)},
-                    data={"language": language},
+                    data=data,
                 )
         except httpx.TimeoutException as exc:
             # A long utterance on a cold container can genuinely take a while;
@@ -55,17 +108,4 @@ class HttpTranscriber:
             raise TranscriptionError(
                 f"The speech service rejected the audio ({response.status_code})"
             )
-
-        try:
-            body = response.json()
-            return Transcript(
-                text=body["text"],
-                language=body.get("language", language),
-                model=body.get("model", self.model),
-                duration_ms=body.get("duration_ms"),
-                confidence=body.get("confidence"),
-                segments=tuple(body.get("segments") or ()),
-            )
-        except (ValueError, KeyError, TypeError) as exc:
-            log.warning("speech service sent an unreadable reply: %s", exc)
-            raise TranscriptionError("The speech service sent an unreadable reply") from exc
+        return response

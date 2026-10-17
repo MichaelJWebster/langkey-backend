@@ -10,9 +10,12 @@ quietly costing a third of the accuracy on Bokmål.
 import logging
 import re
 from functools import lru_cache
+from typing import Annotated
+
+from fastapi import Depends
 
 from app.config import Settings, get_settings
-from app.speech.base import SpeechToText
+from app.speech.base import SpeechToText, WordAligner
 from app.speech.http import HttpTranscriber
 from app.speech.null import NullTranscriber
 
@@ -90,3 +93,18 @@ def build_transcriber(settings: Settings) -> SpeechToText:
 def get_transcriber() -> SpeechToText:
     """FastAPI dependency. Cached: an HTTP client is cheap but not free."""
     return build_transcriber(get_settings())
+
+
+def get_aligner(
+    transcriber: Annotated[SpeechToText, Depends(get_transcriber)],
+) -> WordAligner:
+    """FastAPI dependency: the aligner behind the configured backend.
+
+    Derived from get_transcriber rather than configured separately, so one
+    setting chooses the service and a test that swaps the transcriber swaps
+    the aligner with it. A backend that can only transcribe gets the null
+    aligner: the per-word compare is then absent, and nothing else changes.
+    """
+    if isinstance(transcriber, WordAligner):
+        return transcriber
+    return NullTranscriber()

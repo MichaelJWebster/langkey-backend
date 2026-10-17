@@ -12,6 +12,9 @@ class SpeechSettings(BaseSettings):
     # generic model at startup; this default is the small NB-Whisper, which
     # the CPU benchmark in ADR-024 was measured on.
     model: str = "NbAiLab/nb-whisper-small"
+    # The CTC model that places each word in a clip (speech_service/aligner.py).
+    # Also NbAiLab, so ADR-031 holds for it too. Runs on the CPU.
+    aligner: str = "NbAiLab/nb-wav2vec2-300m-bokmaal"
     device: str = "auto"  # "auto" | "cpu" | "mps" | "cuda"
     compute_type: str = "int8"
     # Load at startup rather than on the first request. Off by default so the

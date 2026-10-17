@@ -31,12 +31,16 @@ from app.pronunciation import (
     compare,
     is_pattern,
     normalise,
+    take_spans,
+    words,
 )
 from app.models import Item, ItemExample, PronunciationAttempt, User, UserRecording
 from app.speech import (
     SpeechToText,
     TranscriptionError,
     TranscriptionUnavailable,
+    WordAligner,
+    get_aligner,
     get_transcriber,
 )
 
@@ -197,10 +201,20 @@ async def stream_recording(
     )
 
 
+class SpanOut(BaseModel):
+    start: float  # seconds into the take
+    end: float
+
+
 class WordMarkOut(BaseModel):
     word: str
     verdict: str  # "said" | "slipped" | "missed"
     heard: str | None = None
+    #: Where in the take to hear this word back: the word the model found
+    #: here (right or wrong), or the stretch between its neighbours where a
+    #: missed word should have been. Null when there is nothing to point at,
+    #: or the take has not been through the aligner (ADR-043).
+    take: SpanOut | None = None
 
 
 class WordRecordOut(BaseModel):
@@ -229,6 +243,19 @@ class TranscriptOut(BaseModel):
     words: list[WordMarkOut]
     history: list[WordRecordOut]
     attempts_for_pattern: int = PATTERN_MIN_ATTEMPTS
+    #: Whether the heard words were placed in the take. False means the
+    #: aligner was not available, so every `take` is null for that reason
+    #: and not because nothing was heard.
+    aligned: bool = False
+
+
+def _audio_bytes(recording: UserRecording) -> bytes | None:
+    """The stored take, or None when the object is gone."""
+    try:
+        obj = _s3_client().get_object(Bucket=get_settings().s3_bucket, Key=recording.object_key)
+        return obj["Body"].read()
+    except (ClientError, BotoCoreError):
+        return None
 
 
 async def _target_text(session: AsyncSession, recording: UserRecording) -> str:
@@ -277,6 +304,7 @@ async def transcribe_recording(
     user: Annotated[User, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_session)],
     transcriber: Annotated[SpeechToText, Depends(get_transcriber)],
+    aligner: Annotated[WordAligner, Depends(get_aligner)],
 ) -> TranscriptOut:
     """Transcribe a saved take.
 
@@ -297,14 +325,11 @@ async def transcribe_recording(
     elapsed: int | None = None
     confidence: float | None = None
     first_time = text is None
+    audio: bytes | None = None
 
     if first_time:
-        try:
-            obj = _s3_client().get_object(
-                Bucket=get_settings().s3_bucket, Key=recording.object_key
-            )
-            audio = obj["Body"].read()
-        except (ClientError, BotoCoreError):
+        audio = _audio_bytes(recording)
+        if audio is None:
             raise HTTPException(404, "Recording audio missing")
 
         try:
@@ -328,6 +353,38 @@ async def transcribe_recording(
         recording.transcript_model = model
 
     marks = compare(target, text or "")
+
+    # Place the heard words in the take, for playing one of them against the
+    # same word of the reference (ADR-043). Once per take, like the
+    # transcript, but never on the critical path of the check: an aligner
+    # that is down costs the per-word compare and nothing else. Legacy takes
+    # get placed the next time they are checked.
+    heard_words = words(text or "")
+    if recording.transcript_words is None and heard_words:
+        if audio is None:
+            audio = _audio_bytes(recording)
+        if audio is not None:
+            try:
+                alignment = await aligner.align(
+                    audio, content_type=recording.content_type, words=heard_words
+                )
+            except TranscriptionError as exc:  # TranscriptionUnavailable included
+                logger.info("alignment skipped for %s: %s", recording_id, exc)
+            else:
+                recording.transcript_words = [
+                    {"word": w.word, "start": w.start, "end": w.end} if w else None
+                    for w in alignment.words
+                ]
+                recording.alignment_model = alignment.model
+
+    placed = recording.transcript_words
+    aligned = placed is not None and len(placed) == len(heard_words)
+    spans = (
+        take_spans(marks, [(w["start"], w["end"]) if w else None for w in placed])
+        if aligned
+        else [None] * len(marks)
+    )
+
     if first_time:
         session.add_all(
             PronunciationAttempt(
@@ -354,8 +411,17 @@ async def transcribe_recording(
         duration_ms=elapsed or recording.duration_ms,
         confidence=confidence,
         target=target,
-        words=[WordMarkOut(word=m.word, verdict=m.verdict, heard=m.heard) for m in marks],
+        words=[
+            WordMarkOut(
+                word=m.word,
+                verdict=m.verdict,
+                heard=m.heard,
+                take=SpanOut(start=span[0], end=span[1]) if span else None,
+            )
+            for m, span in zip(marks, spans)
+        ],
         history=await _history(session, user, language, [normalise(m.word) for m in marks]),
+        aligned=aligned,
     )
 
 

@@ -33,7 +33,18 @@ disk — on this machine that means `/Volumes/nvm_2tb/home/michaelw/work`.
 
 - `POST /transcribe` — multipart `audio` file plus optional `language`.
   Returns `{text, language, model, duration_ms, confidence, segments}`.
-- `GET /health` — reports whether the model is loaded, without loading it.
+- `POST /align` — multipart `audio` file plus `words`, a JSON list of the
+  words as spoken, already tokenised (the caller owns tokenisation so its
+  positions and the answer line up). Returns `{words, model, duration_ms}`
+  with one `{word, start, end}` per word sent, in seconds, or null where a
+  word could not be placed. Forced alignment with a Norwegian CTC model
+  (`LANGKEY_SPEECH_ALIGNER`, default `NbAiLab/nb-wav2vec2-300m-bokmaal`),
+  not Whisper's own timestamps, which land mid-word; see ADR-043 and
+  `speech_service/aligner.py`. Send the whole utterance: forced means
+  forced, and three words aligned against seven words of audio will be
+  stretched to cover it.
+- `GET /health` — reports both models and whether each is loaded, without
+  loading either.
 
 ## Why no GPU
 

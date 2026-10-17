@@ -62,6 +62,13 @@ class WordMark:
     word: str  # as written in the target, punctuation and case intact
     verdict: str
     heard: str | None = None  # what the model put in its place
+    # Index into `words(heard)` of the word this mark came from -- the one
+    # the model found here, right or wrong. None when nothing was found, so
+    # there is no word of the take to point at.
+    heard_index: int | None = None
+
+
+Span = tuple[float, float]
 
 
 def compare(target: str, heard: str) -> list[WordMark]:
@@ -82,23 +89,56 @@ def compare(target: str, heard: str) -> list[WordMark]:
     marks: list[WordMark | None] = [None] * len(want)
     for op, i1, i2, j1, j2 in SequenceMatcher(None, want, got).get_opcodes():
         if op == "equal":
-            for k in range(i1, i2):
-                marks[k] = WordMark(display[k], SAID)
+            for offset, k in enumerate(range(i1, i2)):
+                marks[k] = WordMark(display[k], SAID, heard_index=j1 + offset)
         elif op == "delete":
             for k in range(i1, i2):
                 marks[k] = WordMark(display[k], MISSED)
         elif op == "replace":
             for offset, k in enumerate(range(i1, i2)):
-                alternative = got[j1 + offset] if j1 + offset < j2 else None
+                j = j1 + offset
+                alternative = got[j] if j < j2 else None
                 if alternative is None:
                     marks[k] = WordMark(display[k], MISSED)
                 elif _fold(want[k]) == _fold(alternative) or _similar(want[k], alternative) >= 0.7:
-                    marks[k] = WordMark(display[k], SLIPPED, alternative)
+                    marks[k] = WordMark(display[k], SLIPPED, alternative, heard_index=j)
                 else:
-                    marks[k] = WordMark(display[k], MISSED, alternative)
+                    marks[k] = WordMark(display[k], MISSED, alternative, heard_index=j)
         # "insert" is a word the model added; it belongs to no target word.
 
     return [m or WordMark(display[k], MISSED) for k, m in enumerate(marks)]
+
+
+def take_spans(marks: list[WordMark], heard_spans: list[Span | None]) -> list[Span | None]:
+    """Where in the take to look for each target word.
+
+    `heard_spans` places each word of the transcript (ADR-043). A target word
+    the model found -- right or wrong -- is wherever that heard word is: for
+    `klokka` heard as `klokke`, the stretch of the take that *was* klokke is
+    exactly what the learner should hear back. A target word the model found
+    nothing for has no word of its own, so it gets the stretch between its
+    neighbours' words where it should have been; with no neighbour on one
+    side there is nothing to point at, and the entry is None.
+    """
+    placed: list[Span | None] = [
+        heard_spans[m.heard_index]
+        if m.heard_index is not None and m.heard_index < len(heard_spans)
+        else None
+        for m in marks
+    ]
+
+    out: list[Span | None] = []
+    for k, (m, span) in enumerate(zip(marks, placed)):
+        if span is not None:
+            out.append(span)
+            continue
+        before = next((p for p in reversed(placed[:k]) if p is not None), None)
+        after = next((p for p in placed[k + 1 :] if p is not None), None)
+        if before is not None and after is not None and after[0] > before[1]:
+            out.append((before[1], after[0]))
+        else:
+            out.append(None)
+    return out
 
 
 def is_pattern(hits: int, attempts: int) -> bool:

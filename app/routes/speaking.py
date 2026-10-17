@@ -11,21 +11,40 @@ the words their own record says are not landing -- which is what the
 `pronunciation_attempts` tally exists for (ADR-036).
 """
 
+import logging
 import random
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from botocore.exceptions import BotoCoreError, ClientError
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.audio import PRONUNCIATION_SCALE, PRONUNCIATION_SCALES, audio_url
+from app.audio import (
+    MISSING_CODES,
+    PRONUNCIATION_SCALE,
+    PRONUNCIATION_SCALES,
+    audio_object_key,
+    audio_url,
+)
 from app.auth import get_current_user
+from app.config import get_settings
+from app.content import _s3_client
 from app.db import get_session
-from app.models import Item, PronunciationAttempt, User, UserCard
+from app.models import ClipAlignment, Item, PronunciationAttempt, User, UserCard
 from app.models.learning import RECOGNITION
-from app.pronunciation import PATTERN_MIN_ATTEMPTS, is_pattern, normalise
+from app.pronunciation import PATTERN_MIN_ATTEMPTS, is_pattern, normalise, words
 from app.sampling import weighted_sample
+from app.speech import (
+    TranscriptionError,
+    TranscriptionUnavailable,
+    WordAligner,
+    get_aligner,
+)
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/speaking", tags=["speaking"])
 
@@ -161,3 +180,89 @@ async def practice(
             )
         )
     return SpeakingSessionOut(phrases=phrases, record=record)
+
+
+# --- where the words are in a reference clip (ADR-043) ------------------------
+
+
+class ClipWordOut(BaseModel):
+    word: str
+    start: float  # seconds into the clip
+    end: float
+
+
+class ClipWordsOut(BaseModel):
+    url: str
+    scale: float
+    #: One entry per word of `words(text)`, in order; null where the aligner
+    #: could not place a word.
+    words: list[ClipWordOut | None]
+    model: str
+
+
+@router.get("/words", response_model=ClipWordsOut)
+async def clip_words(
+    text: str,
+    user: Annotated[User, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_session)],
+    aligner: Annotated[WordAligner, Depends(get_aligner)],
+    language: str = "nb",
+    scale: float = PRONUNCIATION_SCALE,
+) -> ClipWordsOut:
+    """Where each word sits in the reference clip for `text` at `scale`.
+
+    From the clip actually played, not a per-word synthesis: Michael's
+    point that a word inside a sentence is not pronounced the way it is on
+    its own, and the whole reason this exists. Each speed is a different
+    clip with different timings, so the rung is part of the key.
+
+    Computed once per clip and kept: content-addressed audio makes the
+    alignment a pure function of the key, the same for everyone.
+    """
+    if scale not in PRONUNCIATION_SCALES:
+        raise HTTPException(422, f"scale must be one of {PRONUNCIATION_SCALES}")
+    key = audio_object_key(language, text, primary=True, scale=scale)
+
+    row = await session.get(ClipAlignment, key)
+    if row is None:
+        try:
+            obj = _s3_client().get_object(Bucket=get_settings().s3_bucket, Key=key)
+            audio = obj["Body"].read()
+        except ClientError as exc:
+            code = exc.response.get("Error", {}).get("Code")
+            if code in MISSING_CODES:
+                raise HTTPException(404, "Audio not generated for this text")
+            logger.error("Audio store rejected %s: %s", key, code)
+            raise HTTPException(503, "Audio storage unavailable")
+        except BotoCoreError as exc:
+            logger.error("Audio store unreachable for %s: %s", key, type(exc).__name__)
+            raise HTTPException(503, "Audio storage unavailable")
+
+        try:
+            alignment = await aligner.align(audio, content_type="audio/wav", words=words(text))
+        except TranscriptionUnavailable as exc:
+            raise HTTPException(503, str(exc))
+        except TranscriptionError as exc:
+            raise HTTPException(502, str(exc))
+
+        row = ClipAlignment(
+            object_key=key,
+            text=text,
+            words=[
+                {"word": w.word, "start": w.start, "end": w.end} if w else None
+                for w in alignment.words
+            ],
+            model=alignment.model,
+        )
+        session.add(row)
+        try:
+            await session.commit()
+        except IntegrityError:
+            # Two learners asked for the same clip at once and the other
+            # insert won; theirs is the same answer.
+            await session.rollback()
+            row = await session.get(ClipAlignment, key)
+            if row is None:  # pragma: no cover - the race lost and then vanished
+                raise HTTPException(503, "Could not record the alignment")
+
+    return ClipWordsOut(url=f"/api/v1/{key}", scale=scale, words=row.words, model=row.model)
