@@ -45,6 +45,11 @@ async def test_both_sides_of_every_pair_are_unique(client: AsyncClient) -> None:
 
     Two cards reading "how long" would be unplayable rather than hard, which
     is what the `note` field exists to prevent.
+
+    The two sides are checked differently on purpose: the note disambiguates
+    the English, but the board never shows it on the Norwegian, because
+    "hvor lenge (time)" would hand over the match it is meant to test. So the
+    Norwegian has to be unique on its own.
     """
     headers = await login(client)
     for s in (await client.get("/api/v1/games", headers=headers)).json()["sets"]:
