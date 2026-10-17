@@ -61,6 +61,7 @@ Michael: *"I'd like a new section after speaking on the main page. Call it games
 - ✅ Matching: English on the left, Norwegian on the right, both shuffled with a guarantee that **no card faces its own translation**. Pick either side first; a wrong pairing costs one mistake and nothing else; switching sides mid-pick is free.
 - ✅ New tables `game_sets`, `game_pairs`, `game_rounds` (migration `e7b2d91a5c48`), seeded from `data/games_nb.jsonl` by the same hash-gated sync as the deck and the passages. Set rows update in place so rounds keep their target.
 - ✅ A wrong pairing marks **only the two cards picked**. It first marked both pairs, which lit the two right answers as well — Michael: *“I noticed the UI flashed the correct option when I picked incorrectly.”* Cards are keyed by side, not by pair.
+- ✅ The finished board shows the best *including the round just played*. It showed the best from before the set was opened, because the open set was a copy rather than a lookup into the reloaded list.
 - ✅ Best score per set: fewest mistakes, then quickest. Only completed rounds count. Games feeds nothing else — not FSRS, not the glossary, not the CEFR rings. See ADR-042.
 - Next: more sets (numbers, days, prepositions, irregular verbs), and a second game kind when one is wanted.
 
