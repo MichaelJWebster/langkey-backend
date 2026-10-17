@@ -315,3 +315,13 @@ def test_a_transcribe_only_backend_gets_the_null_aligner():
             raise NotImplementedError
 
     assert get_aligner(TranscribeOnly()).name == "none"
+
+
+@pytest.mark.anyio
+async def test_a_service_without_the_endpoint_is_unavailable_not_a_rejection(speech_service):
+    # Found live on 2026-10-17: the running service predated /align and
+    # answered 404, which the client filed as "audio rejected" and the words
+    # route turned into a 502. An older build is the feature being absent.
+    t = speech_service(lambda r: httpx.Response(404, json={"detail": "Not Found"}))
+    with pytest.raises(TranscriptionUnavailable):
+        await t.align(b"wav", content_type="audio/wav", words=["a"])

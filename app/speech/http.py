@@ -102,6 +102,14 @@ class HttpTranscriber:
             raise TranscriptionUnavailable(
                 f"The speech service returned {response.status_code}"
             )
+        if response.status_code in (404, 405):
+            # The service does not offer this endpoint at all -- an older
+            # build that transcribes but cannot align. That is the feature
+            # being unavailable, not this audio being rejected, and the
+            # routes answer it as such (503, nothing counted against anyone).
+            raise TranscriptionUnavailable(
+                f"The speech service does not offer {path} ({response.status_code})"
+            )
         if response.status_code >= 400:
             # 4xx means this audio was rejected -- wrong format, too long --
             # which is about the request, not the service's health.
