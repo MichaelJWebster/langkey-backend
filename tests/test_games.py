@@ -104,6 +104,94 @@ async def test_a_finished_round_becomes_the_best(client: AsyncClient) -> None:
     assert qw["best"] == {"mistakes": 2, "seconds": 41.6}
 
 
+async def test_the_round_reports_whether_it_is_a_new_best(
+    client: AsyncClient,
+) -> None:
+    """Michael asked for a "new best" indicator on the finished board.
+
+    The server answers it, because the tiebreak and the rounding are both
+    here; a UI re-deriving either would drift out of step with the best score
+    shown on the set list.
+    """
+    headers = await login(client)
+
+    async def play(mistakes: int, seconds: float) -> dict:
+        resp = await client.post(
+            "/api/v1/games/question-words/round",
+            headers=headers,
+            json={"mistakes": mistakes, "seconds": seconds},
+        )
+        assert resp.status_code == 200
+        return resp.json()
+
+    # The first round beats nothing. `best` is true -- it is the best there
+    # is -- but `previous` is null, which is how the UI knows not to
+    # celebrate beating a record that did not exist.
+    first = await play(2, 40.0)
+    assert first["best"] is True
+    assert first["previous"] is None
+
+    worse = await play(3, 10.0)
+    assert worse["best"] is False
+    assert worse["previous"] == {"mistakes": 2, "seconds": 40.0}
+
+    better = await play(0, 55.0)
+    assert better["best"] is True
+    assert better["previous"] == {"mistakes": 2, "seconds": 40.0}
+
+    # Quicker at the same accuracy is still an improvement.
+    quicker = await play(0, 30.0)
+    assert quicker["best"] is True
+    assert quicker["previous"] == {"mistakes": 0, "seconds": 55.0}
+
+
+async def test_matching_your_own_best_is_not_beating_it(
+    client: AsyncClient,
+) -> None:
+    headers = await login(client)
+    for _ in range(2):
+        resp = await client.post(
+            "/api/v1/games/question-words/round",
+            headers=headers,
+            json={"mistakes": 1, "seconds": 20.0},
+        )
+    assert resp.json()["best"] is False
+    assert resp.json()["previous"] == {"mistakes": 1, "seconds": 20.0}
+
+
+async def test_a_new_best_is_judged_per_set_and_per_user(
+    client: AsyncClient,
+) -> None:
+    """A round on one set must not be measured against another set's best."""
+    headers = await login(client)
+    await client.post(
+        "/api/v1/games/question-words/round",
+        headers=headers,
+        json={"mistakes": 0, "seconds": 5.0},
+    )
+    async with db.session_factory() as session:
+        session.add(
+            GameSet(
+                slug="other-set",
+                language_code="nb",
+                game="matching",
+                title="Other",
+                description="Another set entirely.",
+                seq=99,
+            )
+        )
+        await session.commit()
+
+    resp = await client.post(
+        "/api/v1/games/other-set/round",
+        headers=headers,
+        json={"mistakes": 9, "seconds": 300.0},
+    )
+    body = resp.json()
+    assert body["best"] is True, "the first round on a set has nothing to beat"
+    assert body["previous"] is None
+
+
 async def test_fewer_mistakes_beats_a_quicker_round(client: AsyncClient) -> None:
     """Accuracy first: a fast round full of wrong guesses is not a better one."""
     headers = await login(client)

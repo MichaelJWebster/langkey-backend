@@ -115,19 +115,49 @@ class RoundIn(BaseModel):
     seconds: float = Field(gt=0)
 
 
-@router.post("/{slug}/round")
+class RoundOut(BaseModel):
+    mistakes: int
+    seconds: float
+    #: True when this round beat everything before it. Decided here rather
+    #: than in the UI because the tiebreak rule and the rounding both live
+    #: here, and a client re-deriving either would eventually disagree.
+    best: bool
+    #: The best round *before* this one, so the UI can say what was beaten.
+    #: Null on the first finished round, which is why `best` alone is not
+    #: enough to celebrate with: a first round beats nothing.
+    previous: BestOut | None
+
+
+@router.post("/{slug}/round", response_model=RoundOut)
 async def record_round(
     slug: str,
     body: RoundIn,
     user: Annotated[User, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_session)],
-) -> dict[str, int | float]:
+) -> RoundOut:
     """Record a round the learner finished. Only complete rounds arrive here:
     a set abandoned halfway is not a result, and counting it would make the
     best score a function of how often he gave up."""
     game_set = await session.scalar(select(GameSet).where(GameSet.slug == slug))
     if game_set is None:
         raise HTTPException(404, "No such game set")
+
+    # Read the standing best before adding the new round -- autoflush would
+    # otherwise push the pending row into this very query and the round would
+    # be compared against itself.
+    prior = await session.scalar(
+        select(GameRound)
+        .where(GameRound.user_id == user.id, GameRound.set_id == game_set.id)
+        .order_by(GameRound.mistakes, GameRound.seconds)
+        .limit(1)
+    )
+    # Strictly better, the same rule the listing sorts by: matching your own
+    # best is not beating it.
+    is_best = prior is None or (body.mistakes, body.seconds) < (
+        prior.mistakes,
+        prior.seconds,
+    )
+
     session.add(
         GameRound(
             user_id=user.id,
@@ -138,4 +168,13 @@ async def record_round(
         )
     )
     await session.commit()
-    return {"mistakes": body.mistakes, "seconds": round(body.seconds, 1)}
+    return RoundOut(
+        mistakes=body.mistakes,
+        seconds=round(body.seconds, 1),
+        best=is_best,
+        previous=(
+            BestOut(mistakes=prior.mistakes, seconds=round(prior.seconds, 1))
+            if prior
+            else None
+        ),
+    )
