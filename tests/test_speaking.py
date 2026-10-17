@@ -5,6 +5,7 @@ from httpx import AsyncClient
 
 from app.audio import PRONUNCIATION_SCALES
 from app.routes import recordings
+from app.routes.speaking import SESSION_PHRASES
 from tests.conftest import login
 # Classes and plain helpers import fine across test modules; fixtures do not,
 # so the two this file needs are re-declared below.
@@ -59,6 +60,24 @@ async def test_practice_draws_on_what_has_been_met(client):
         assert p["text"]
         assert p["translation"]
         assert p["audio_url"].startswith("/api/v1/audio/")
+
+
+async def test_a_session_is_short_enough_to_finish(client):
+    """Michael: *"The speaking pronunciation sections are very long. Could we
+    just include 6-8 questions in them, instead of the 12 we have now?"*
+
+    Pinned because the number is a judgement about how long he will sit
+    recording himself, not an implementation detail: speaking costs more per
+    item than any other exercise, so the length that gets finished beats the
+    length that covers more.
+    """
+    headers = await login(client)
+    await _meet_some_cards(client, headers)
+
+    body = await _practice(client, headers)
+
+    assert len(body["phrases"]) == SESSION_PHRASES
+    assert 6 <= SESSION_PHRASES <= 8, "the range Michael asked for"
 
 
 async def test_every_phrase_carries_the_whole_speed_ladder(client):

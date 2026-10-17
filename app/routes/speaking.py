@@ -34,6 +34,16 @@ router = APIRouter(prefix="/api/v1/speaking", tags=["speaking"])
 # three sentences.
 NEED_WEIGHT = 3.0
 
+# Phrases in one practice session. Michael, on the sessions of 12: *"The
+# speaking pronunciation sections are very long. Could we just include 6-8
+# questions in them, instead of the 12 we have now?"* Speaking costs more per
+# item than any other exercise -- record, wait for the check, listen back --
+# so a dozen is a long sit, and a session he puts off is worth less than a
+# shorter one he finishes. The top of the range he gave, because the
+# weighting towards sounds that are not landing needs a few slots to show up
+# in at all.
+SESSION_PHRASES = 8
+
 
 class SpeedOut(BaseModel):
     scale: float
@@ -102,7 +112,7 @@ async def practice(
     user: Annotated[User, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_session)],
     language: str = "nb",
-    limit: int = 12,
+    limit: int = SESSION_PHRASES,
 ) -> SpeakingSessionOut:
     """A set of phrases to say, favouring the sounds that are not landing."""
     seen = list(
