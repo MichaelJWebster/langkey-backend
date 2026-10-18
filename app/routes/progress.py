@@ -321,7 +321,7 @@ async def skills_breakdown(
 
 
 class SkillOut(BaseModel):
-    skill: str  # vocabulary | listening | reading | writing | speaking
+    skill: str  # vocabulary | listening | reading | writing | speaking | conversation
     practised: bool
     level: str | None  # highest band cleared; None = pre-A1
     next_level: str | None
@@ -511,9 +511,23 @@ async def cefr_progress(
                 detail=detail,
             )
         )
+    # Spoken interaction, separate from spoken production as CEFR has it
+    # (ADR-045). Nothing trains it yet, so it is reported but not estimated,
+    # and it stays out of the overall level below: a skill the app cannot
+    # practise would pin the overall at zero and say nothing about him.
+    skills.append(
+        SkillOut(
+            skill="conversation",
+            practised=False,
+            level=None,
+            next_level="A1",
+            progress=0.0,
+            detail="not trained in LangKey yet",
+        )
+    )
 
     # A CEFR level requires every skill, so the overall estimate follows the
-    # weakest one -- speaking included, now that the app trains it.
+    # weakest one the app trains -- speaking included, conversation not yet.
     weakest = min((effectives[n][0] for n in effectives), default=0.0)
     overall_level, overall_next, overall_progress = estimate(weakest)
 

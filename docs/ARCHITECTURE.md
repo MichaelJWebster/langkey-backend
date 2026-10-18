@@ -7,6 +7,14 @@ and about deployment live here too. It is kept in the backend repo because the
 umbrella directory (`~/work/lang_app`) is not version-controlled, and symlinked
 back to there so the familiar path still works.
 
+## ADR-045 (2026-10-18) — Conversation is its own skill; Reading for interest is its own section
+
+Two splits on the dashboard, both Michael's.
+
+**Speaking and Conversation.** *"Perhaps we should split out the unimplemented conversation part of speaking into a new conversation section... That way we could also score for conversation?"* CEFR already draws this line: its self-assessment grid divides speaking into *spoken production* and *spoken interaction*. ADR-044 had just made the Speaking ring measure pronunciation, which is production, while its milestone box still read "ask and answer simple personal questions, and interact in a simple way", which is interaction. One ring could not honestly stand for both. So Speaking keeps the pronunciation ring under the CEFR production descriptors (A1: describe where you live and people you know), and Conversation is a sixth skill row with the interaction descriptors. It is reported as not trained, and **kept out of the overall level** until something trains it: the overall follows the weakest skill, and a skill the app cannot practise would pin it at zero and say nothing about the learner. Its scoring arrives with the feature. Speaking now opens straight into pronunciation, since a menu of one is a click for nothing.
+
+**Reading for interest.** *"I'd also like to split the Reading for Interest section out of Reading and have it as a section similar to Games under Games on the screen."* The library (novels and folktales, interleaved with English, well above A1) becomes `Library.tsx`, a ringless section row under Games. Games and the library now share one component, `SectionRow`, because the reasoning is the same for both: no can-do statement exists for them, and a ring that looked the same but counted something else would devalue the real ones. Reading opens straight into the A1 passages. **The reading ring is unchanged:** library sentences still count toward it (ADR-041), because reading a novel is reading. Only where the library sits on the screen has moved.
+
 ## ADR-044 (2026-10-18) — The speaking ring: production vocabulary, discounted by clarity
 
 *"I notice we have no percent complete showing for speaking yet. The front page is showing 'not trained in Langkey yet'."* True since ADR-023, and stale since ADR-036: by now there were 513 checked phrases and 2,332 word marks behind him.

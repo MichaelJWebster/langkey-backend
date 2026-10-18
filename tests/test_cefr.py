@@ -23,8 +23,11 @@ async def test_cefr_endpoint(client: AsyncClient) -> None:
     assert body["overall_level"] is None  # fresh account: pre-A1
     assert body["overall_next"] == "A1"
     skills = {s["skill"]: s for s in body["skills"]}
-    assert set(skills) == {"vocabulary", "listening", "reading", "writing", "speaking"}
+    assert set(skills) == {
+        "vocabulary", "listening", "reading", "writing", "speaking", "conversation",
+    }
     assert not skills["speaking"]["practised"]
+    assert not skills["conversation"]["practised"]
     assert skills["vocabulary"]["detail"] == "0 words established"
     assert "Norskprøven" in body["note"]
 
@@ -128,3 +131,26 @@ async def test_clarity_is_taken_over_recent_words_only(client: AsyncClient) -> N
 def test_the_speaking_constants_say_what_the_adr_says() -> None:
     assert SPEAKING_WINDOW == 200
     assert SPEAKING_SATURATION == 100
+
+
+async def test_conversation_is_reported_but_not_yet_estimated(client: AsyncClient) -> None:
+    """Michael: "Perhaps we should split out the unimplemented conversation
+    part of speaking into a new conversation section." CEFR splits spoken
+    production from spoken interaction; pronunciation trains the first."""
+    headers = await login(client)
+    await _speak(takes=SPEAKING_SATURATION, words_per_take=2, said_rate=1.0)
+
+    body = (await client.get("/api/v1/progress/cefr", headers=headers)).json()
+    skills = {s["skill"]: s for s in body["skills"]}
+
+    assert [s["skill"] for s in body["skills"]][-2:] == ["speaking", "conversation"]
+    assert skills["conversation"] == {
+        "skill": "conversation",
+        "practised": False,
+        "level": None,
+        "next_level": "A1",
+        "progress": 0.0,
+        "detail": "not trained in LangKey yet",
+    }
+    # Pronunciation practice moves speaking, never conversation.
+    assert skills["speaking"]["practised"] is True
