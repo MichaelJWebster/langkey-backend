@@ -7,6 +7,16 @@ and about deployment live here too. It is kept in the backend repo because the
 umbrella directory (`~/work/lang_app`) is not version-controlled, and symlinked
 back to there so the familiar path still works.
 
+## ADR-044 (2026-10-18) — The speaking ring: production vocabulary, discounted by clarity
+
+*"I notice we have no percent complete showing for speaking yet. The front page is showing 'not trained in Langkey yet'."* True since ADR-023, and stale since ADR-036: by now there were 513 checked phrases and 2,332 word marks behind him.
+
+Same shape as the other rings, `effective vocabulary × factor`. **The base is production vocabulary** — the words recalled from English, the Writing ring's 82 — not recognition, because speaking is saying words you can recall, not reading them off a card. **The factor is clarity × practice**: the share of the last 200 target words the speech model found exactly (the per-word tally's own exact-match rule, so `klokka → klokke` counts against), times `min(1, checked takes / 100)` so one good take cannot fill the ring. A recent window rather than the whole history, for the reason listening uses its last 20 dictations: the number should move as he improves, and his rate has gone 56% → 73% → 85% across the days.
+
+Conservative on purpose. The model mishears for its own reasons (ADR-025), so clarity is a floor rather than a measurement. And it is **pronunciation only** — the ring cannot see conversation, which LangKey does not train yet. First live value: 82 × 0.73 × 1.0 ≈ 60 effective words, 12% toward A1.
+
+Speaking now counts toward the overall level, which follows the weakest skill because a CEFR level needs all of them. Today that changes nothing: reading, at 7%, is still the weakest.
+
 ## ADR-043 (2026-10-17) — One word at a time: cut from the sentence as spoken, placed by forced alignment
 
 *"When I don't get a sound or word, I'd like to have the ability to play the word against my attempt so I can compare. I'd like to be able to select both simultaneous playing panned hard left and right so one voice comes from one side and one from the other, and also to play each word separately. The words should come from the actual sentence audio used in the reference, because I notice that pronunciation of a single word can differ from how it's pronounced within the sentence."*

@@ -17,9 +17,11 @@ from app.models import (
     RECOGNITION,
     ExerciseAttempt,
     Item,
+    PronunciationAttempt,
     ReviewEvent,
     User,
     UserCard,
+    UserRecording,
 )
 from app.models.reading import ReadingText, Sentence, UserReadingPosition
 from app.routes.exercises import _attempt_score
@@ -351,6 +353,53 @@ async def _established(session: AsyncSession, user_id, language: str, direction:
     ) or 0
 
 
+# Speaking (ADR-044). How many recent words the clarity rate is taken over:
+# enough that one bad take is noise, few enough that it tracks improvement --
+# the same job the last 20 dictations do for listening. 200 words is about
+# five sessions of eight phrases.
+SPEAKING_WINDOW = 200
+# Checked phrases before clarity counts in full, so a single good take cannot
+# fill the ring -- the same job 300 sentences do for reading.
+SPEAKING_SATURATION = 100
+
+
+async def _speaking(session: AsyncSession, user_id, language: str) -> tuple[float, int]:
+    """Recent clarity and how many takes have been checked.
+
+    Clarity is the share of the last SPEAKING_WINDOW target words that the
+    speech model found exactly -- the same exact-match rule the per-word tally
+    uses, so a slip like klokka -> klokke counts against (ADR-036).
+    """
+    recent = (
+        select(PronunciationAttempt.said)
+        .where(
+            PronunciationAttempt.user_id == user_id,
+            PronunciationAttempt.language_code == language,
+        )
+        .order_by(PronunciationAttempt.created_at.desc(), PronunciationAttempt.id.desc())
+        .limit(SPEAKING_WINDOW)
+        .subquery()
+    )
+    words, said = (
+        await session.execute(
+            select(func.count(), func.count().filter(recent.c.said)).select_from(recent)
+        )
+    ).one()
+    takes = (
+        await session.scalar(
+            select(func.count())
+            .select_from(UserRecording)
+            .join(Item, UserRecording.item_id == Item.id)
+            .where(
+                UserRecording.user_id == user_id,
+                UserRecording.transcript.is_not(None),
+                Item.language_code == language,
+            )
+        )
+    ) or 0
+    return (said / words if words else 0.0), takes
+
+
 def _reading_detail(sentences_read: int, passages_done: int) -> str:
     """The line under the reading ring. Names both halves when both exist, so
     it is obvious which activity moved the number."""
@@ -414,6 +463,13 @@ async def cefr_progress(
     # text have been read; below that it discounts the vocabulary estimate.
     reading_factor = min(1.0, (sentences_read + translated) / 300)
 
+    # Speaking is production, so it starts from the words recalled from
+    # English -- the writing vocabulary -- discounted by how clearly they come
+    # out when said. Pronunciation only: LangKey does not train conversation
+    # yet, and this cannot see it.
+    clarity, takes = await _speaking(session, user.id, language)
+    speaking_factor = clarity * min(1.0, takes / SPEAKING_SATURATION)
+
     effectives: dict[str, tuple[float, bool, str]] = {
         "vocabulary": (vocab, vocab > 0, f"{vocab} words established"),
         "listening": (
@@ -433,6 +489,13 @@ async def cefr_progress(
             prod_vocab > 0,
             f"{prod_vocab} words produced from English",
         ),
+        "speaking": (
+            prod_vocab * speaking_factor,
+            takes > 0,
+            f"{round(clarity * 100)}% of recent words heard clearly · {takes} phrases checked"
+            if takes
+            else "no pronunciation practice yet",
+        ),
     }
 
     skills = []
@@ -448,19 +511,9 @@ async def cefr_progress(
                 detail=detail,
             )
         )
-    skills.append(
-        SkillOut(
-            skill="speaking",
-            practised=False,
-            level=None,
-            next_level="A1",
-            progress=0.0,
-            detail="not trained in LangKey yet",
-        )
-    )
 
     # A CEFR level requires every skill, so the overall estimate follows the
-    # weakest practised skill (speaking excluded until the app trains it).
+    # weakest one -- speaking included, now that the app trains it.
     weakest = min((effectives[n][0] for n in effectives), default=0.0)
     overall_level, overall_next, overall_progress = estimate(weakest)
 
