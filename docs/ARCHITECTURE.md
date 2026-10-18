@@ -7,6 +7,14 @@ and about deployment live here too. It is kept in the backend repo because the
 umbrella directory (`~/work/lang_app`) is not version-controlled, and symlinked
 back to there so the familiar path still works.
 
+## ADR-046 (2026-10-18) — Dictation offers the same five speeds as pronunciation
+
+*"For the listening practice we only have 3 speeds. I'd like the same speeds as for the speaking section - ie. 5 speeds."* `DICTATION_SCALES` is now the pronunciation ladder itself (4.0, 3.4, 2.8, 2.2, 1.6), the same list rather than a copy, and the listening buttons use the same names (slowest, very slow, slow, easier, natural). This reverses ADR-033's note that the two ladders should be free to move apart. That was a designer's hedge, and the learner wants one ladder.
+
+**No new audio.** Both ladders use the primary voice, and a clip's key is voice + speed + text, so every dictation clip at every speed is a file the pronunciation ladder had already generated. Checked against the local store: 1,160 of 1,160 example sentences present at all five speeds.
+
+**The suggested speed is unchanged.** The server still suggests 2.8, 2.2 or 1.6 from recent accuracy (`DICTATION_SUGGESTED`). The two slower rungs are the learner's to choose, so adding them slows nobody down unasked. The labels now go by speed rather than position: picked by index, 2.8 would have been "very slow" in listening and "slow" in pronunciation.
+
 ## ADR-045 (2026-10-18) — Conversation is its own skill; Reading for interest is its own section
 
 Two splits on the dashboard, both Michael's.

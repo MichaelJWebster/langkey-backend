@@ -37,7 +37,7 @@ MISSING_CODES = {"NoSuchKey", "NoSuchBucket", "404", "NotFound"}
 LENGTH_SCALE = 1.6
 # Dictation sentences: always the primary (clearest) voice, at a ladder of
 # speeds. The server suggests one from recent accuracy; the learner can switch.
-DICTATION_SCALES = [2.8, 2.2, 1.6]  # very slow / slow / normal
+# Defined below as the pronunciation ladder itself (ADR-046).
 
 # Imitation targets are a different job from listening practice, and need
 # their own voice and speed (ADR-033). To copy a sound you have to hear it
@@ -66,6 +66,18 @@ DICTATION_SCALES = [2.8, 2.2, 1.6]  # very slow / slow / normal
 # move apart.
 PRONUNCIATION_SCALES = [4.0, 3.4, 2.8, 2.2, 1.6]  # slowest first, as the UI shows them
 PRONUNCIATION_SCALE = 3.4
+
+# Dictation offers the same five speeds (ADR-046). Michael: "For the listening
+# practice we only have 3 speeds. I'd like the same speeds as for the speaking
+# section - ie. 5 speeds." The note above about the ladders being free to move
+# apart was a designer's hedge; the learner wants one ladder, so it is one
+# list. Both use the primary voice, so every dictation clip at every speed is
+# the same file the pronunciation ladder already generated -- no new audio.
+DICTATION_SCALES = PRONUNCIATION_SCALES
+# The rungs the server suggests from recent accuracy: struggling, middling,
+# comfortable. Unchanged from the three-speed ladder, so adding the two slower
+# speeds does not slow anyone down unasked; those are the learner's to pick.
+DICTATION_SUGGESTED = (2.8, 2.2, 1.6)
 
 # Primary voice reads headwords; example sentences draw from the pool so the
 # learner hears varied speakers. "nvcc:N" = speaker N of no_NO-nvcc-medium.

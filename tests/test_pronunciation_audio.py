@@ -46,12 +46,12 @@ def test_imitation_is_slower_than_every_listening_clip():
     assert PRONUNCIATION_SCALE > LENGTH_SCALE
 
 
-def test_imitation_ladder_reaches_slower_than_dictation():
-    # Dictation is comprehension practice and wants a pace you have to keep up
-    # with; imitation wants one you can reproduce. The two ladders overlap at
-    # the fast end by coincidence, but imitation must be able to go slower
-    # than dictation ever does.
-    assert max(PRONUNCIATION_SCALES) > max(DICTATION_SCALES)
+def test_dictation_offers_the_same_five_speeds_as_pronunciation():
+    # ADR-046, replacing the rule that imitation must reach slower than
+    # dictation. Michael: "I'd like the same speeds as for the speaking
+    # section - ie. 5 speeds."
+    assert list(DICTATION_SCALES) == list(PRONUNCIATION_SCALES)
+    assert len(DICTATION_SCALES) == 5
 
 
 def test_default_rung_is_on_the_ladder():

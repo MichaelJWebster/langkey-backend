@@ -24,7 +24,7 @@ BUCKET = os.environ.get("LANGKEY_S3_BUCKET", "langkey-content")
 # Calibrated: Piper's length_scale is sub-linear on these voices (keep in
 # sync with app/audio.py).
 LENGTH_SCALE = 1.6
-DICTATION_SCALES = [2.8, 2.2, 1.6]  # slow primary-voice dictation ladder
+DICTATION_SCALES = [4.0, 3.4, 2.8, 2.2, 1.6]  # dictation ladder = imitation ladder (ADR-046)
 PRONUNCIATION_SCALES = [4.0, 3.4, 2.8, 2.2, 1.6]  # imitation ladder, primary voice (ADR-033)
 PRIMARY_VOICE = "talesyntese"
 VOICE_POOL = [PRIMARY_VOICE] + [f"nvcc:{n}" for n in range(10)]

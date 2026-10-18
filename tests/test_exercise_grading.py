@@ -9,7 +9,7 @@ from httpx import AsyncClient
 from sqlalchemy import select
 
 import app.db as db
-from app.audio import DICTATION_SCALES
+from app.audio import DICTATION_SUGGESTED
 from app.models import User
 from app.routes.exercises import _attempt_score, _practice_need, _weighted_sample
 from tests.conftest import login
@@ -56,7 +56,7 @@ async def test_suggested_scale_uses_graded_marks(client: AsyncClient) -> None:
     body = (await client.get("/api/v1/exercises/listening?limit=8", headers=headers)).json()
     dictations = [e for e in body["exercises"] if e["kind"] == "dictation"]
     assert dictations
-    assert all(e["suggested_scale"] == DICTATION_SCALES[1] for e in dictations)
+    assert all(e["suggested_scale"] == DICTATION_SUGGESTED[1] for e in dictations)
 
 
 async def test_practice_need_tracks_recent_marks(client: AsyncClient) -> None:

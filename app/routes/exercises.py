@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.audio import DICTATION_SCALES, audio_url
+from app.audio import DICTATION_SCALES, DICTATION_SUGGESTED, audio_url
 from app.auth import get_current_user
 from app.db import get_session
 from app.glossary import _form_index
@@ -93,14 +93,15 @@ async def _suggested_scale(session: AsyncSession, user_id) -> float:
             .limit(12)
         )
     ).all()
+    struggling, middling, comfortable = DICTATION_SUGGESTED
     if len(recent) < 6:
-        return DICTATION_SCALES[0]  # very slow until there's evidence
+        return struggling  # slow until there's evidence
     accuracy = sum(_attempt_score(c, h, s) for c, h, s in recent) / len(recent)
     if accuracy < 0.55:
-        return DICTATION_SCALES[0]
+        return struggling
     if accuracy < 0.8:
-        return DICTATION_SCALES[1]
-    return DICTATION_SCALES[2]
+        return middling
+    return comfortable
 
 
 async def _practice_need(session: AsyncSession, user_id) -> dict[int, float]:

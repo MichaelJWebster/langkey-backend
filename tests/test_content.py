@@ -2,7 +2,7 @@ from httpx import AsyncClient
 from sqlalchemy import func, select
 
 import app.db as db
-from app.audio import DICTATION_SCALES
+from app.audio import DICTATION_SCALES, DICTATION_SUGGESTED
 from app.content import merge_local_deck
 from app.models import AppMeta, ExerciseAttempt, Item, ItemExample, User
 from app.seed import seed_data
@@ -112,9 +112,11 @@ async def test_listening_session_and_attempts(client: AsyncClient) -> None:
             assert e["target"]
             scales = [sp["scale"] for sp in e["speeds"]]
             assert scales == list(DICTATION_SCALES)
-            assert e["suggested_scale"] == DICTATION_SCALES[0]  # very slow until there's evidence
+            # Slow until there's evidence -- but not the slowest: the two new
+            # rungs are for the learner to choose, not imposed (ADR-046).
+            assert e["suggested_scale"] == DICTATION_SUGGESTED[0] == 2.8
             assert all(sp["url"].startswith("/api/v1/audio/") for sp in e["speeds"])
-            assert len({sp["url"] for sp in e["speeds"]}) == 3
+            assert len({sp["url"] for sp in e["speeds"]}) == 5
         else:
             assert len(e["options"]) == 4
             assert 0 <= e["correct_index"] < 4
