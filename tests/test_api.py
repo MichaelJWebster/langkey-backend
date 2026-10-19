@@ -6,7 +6,7 @@ from tests.conftest import login
 async def test_health(client: AsyncClient) -> None:
     resp = await client.get("/api/v1/health")
     assert resp.status_code == 200
-    assert resp.json() == {"status": "ok"}
+    assert resp.json() == {"status": "ok", "database": "ready"}
 
 
 async def test_login_success(client: AsyncClient) -> None:

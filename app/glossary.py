@@ -13,12 +13,12 @@ reference, not the scheduler.
 import re
 import string
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import Item, ReviewEvent, UserCard, UserGlossaryEntry
+from app.models import AppMeta, Item, ReviewEvent, UserCard, UserGlossaryEntry
 
 IRREGULAR_FORMS = {
     "er": "å være", "var": "å være",
@@ -169,11 +169,23 @@ async def record_encounters(
             )
 
 
+# app_meta key recording that backfill_glossary has finished for this database.
+BACKFILL_DONE_KEY = "glossary_backfill_done"
+
+
 async def backfill_glossary() -> None:
-    """One-off: build glossary entries from review history predating the feature."""
+    """One-off: build glossary entries from review history predating the feature.
+
+    Runs once per database. It costs one round trip per candidate word (about 4,200
+    in production, ~75s against Neon), which made every cold boot too slow for
+    Cloudflare's startup window; a marker in app_meta now records that it has finished,
+    and later boots skip it. New reviews record their glossary entries as they happen.
+    """
     import app.db as db
 
     async with db.session_factory() as session:
+        if await session.get(AppMeta, BACKFILL_DONE_KEY) is not None:
+            return
         rows = await session.execute(
             select(UserCard, func.min(ReviewEvent.reviewed_at))
             .join(ReviewEvent, ReviewEvent.user_card_id == UserCard.id)
@@ -181,4 +193,5 @@ async def backfill_glossary() -> None:
         )
         for card, first_seen in rows:
             await record_encounters(session, card.user_id, card.item, first_seen)
+        session.add(AppMeta(key=BACKFILL_DONE_KEY, value=datetime.now(UTC).isoformat()))
         await session.commit()

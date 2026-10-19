@@ -7,6 +7,18 @@ and about deployment live here too. It is kept in the backend repo because the
 umbrella directory (`~/work/lang_app`) is not version-controlled, and symlinked
 back to there so the familiar path still works.
 
+## ADR-047 (2026-10-19) — Serve first, prepare the database in the background; the glossary backfill runs once
+
+Production was down for every cold visit: *"Failed to start container: The container is not listening in the TCP address 10.0.0.1:8000"*, after ~50 s, on every request. `lifespan` ran migrations → `seed_data()` → `backfill_glossary()` before uvicorn opened its port, and Cloudflare gives up on a container that isn't listening within its startup window. The boot had outgrown that window (the cold-start entry in ROADMAP's known issues, diagnosed 2026-10-11): `backfill_glossary`, a one-off that finished weeks ago, still walked the whole review history on every boot — about 4,200 Neon round trips, ~75 s. On 2026-10-15 Neon also archived the idle `production` branch, so the first connection of a boot had to wait for a restore as well.
+
+**The port opens first** (`app/startup.py`). `lifespan` marks the database as starting, starts `prepare_database([migrate, seed_data, backfill_glossary])` as a background task and returns, so the server listens in ~2 s whatever the database is doing. The steps retry together with backoff (1 s doubling to 30 s), which is safe because all three are idempotent; any exception means "not ready yet", and the last error is kept for the logs.
+
+**Requests wait, then get a 503.** `StartupGateMiddleware` holds `/api/*` requests until the database is ready, for up to 25 s, so an ordinary cold start still looks like a slow first request rather than an error; after that it answers 503 with `Retry-After: 5`. `/api/v1/health` bypasses the gate and reports `"database": "starting"` or `"ready"`. The gate sits inside CORS so its 503s carry CORS headers. Readiness is a polled flag, not an `asyncio.Event`: an Event binds to the first event loop that waits on it, and this object is module-level. It defaults to ready, so tests that drive the app without a lifespan are unaffected.
+
+**The backfill runs once per database.** It records `glossary_backfill_done` in `app_meta` when it finishes, and returns at that marker on every later boot (a test counts the SQL: one SELECT). New reviews have recorded their glossary entries as they happen since the feature shipped, so nothing is lost. The first boot after this deploy pays the full ~75 s once, in the background.
+
+**Not done:** moving migrations and seeding to a deploy step (fix 2 in the cold-start entry). The deck sync still runs on every cold boot; with the backfill gone it is a few seconds, inside the gate's wait. Revisit if cold boots grow again, or if the API ever serves more than one user, when a 25 s wait stops being acceptable.
+
 ## ADR-046 (2026-10-18) — Dictation offers the same five speeds as pronunciation
 
 *"For the listening practice we only have 3 speeds. I'd like the same speeds as for the speaking section - ie. 5 speeds."* `DICTATION_SCALES` is now the pronunciation ladder itself (4.0, 3.4, 2.8, 2.2, 1.6), the same list rather than a copy, and the listening buttons use the same names (slowest, very slow, slow, easier, natural). This reverses ADR-033's note that the two ladders should be free to move apart. That was a designer's hedge, and the learner wants one ladder.
