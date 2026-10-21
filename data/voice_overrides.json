@@ -1,0 +1,889 @@
+{
+  "note": "Example sentences re-voiced because the hash-picked pool voice swallowed the first word (ADR-028, ADR-049). Written by scripts/revoice_onsets.py; read by app/audio.py and docker/piper/generate_audio.py.",
+  "voices": {
+    "Beklager, jeg er sen.": "talesyntese",
+    "Beklager, jeg forstår ikke.": "nvcc:6",
+    "Bestemor baker boller.": "nvcc:9",
+    "Boken er skrevet av henne.": "nvcc:1",
+    "Dessuten liker jeg å lese bøker.": "nvcc:3",
+    "Det koster to tusen kroner.": "nvcc:2",
+    "Det står en mann ved døra.": "nvcc:0",
+    "Det tar bare fem minutter.": "talesyntese",
+    "Du kan kjøpe medisin på apoteket.": "talesyntese",
+    "Du ser bra ut i dag.": "nvcc:5",
+    "En kaffe og en bolle, takk.": "nvcc:3",
+    "Eplet er søtt og godt.": "talesyntese",
+    "Gratulerer med den nye jobben!": "nvcc:0",
+    "Han kledde seg fin.": "nvcc:8",
+    "Han leser avisen til frokosten.": "nvcc:3",
+    "Han svarer ikke på telefonen.": "nvcc:2",
+    "Har du brødre eller søstre?": "nvcc:6",
+    "Himmelen er grå i dag.": "talesyntese",
+    "Hvorfor lærer du norsk?": "nvcc:1",
+    "Jeg begynte for en måned siden.": "nvcc:6",
+    "Jeg bor i tredje etasje.": "nvcc:8",
+    "Jeg drikker kaffe i en kopp.": "nvcc:7",
+    "Jeg dusjer om morgenen.": "nvcc:7",
+    "Jeg er fornøyd med maten.": "nvcc:1",
+    "Jeg er kjempesulten etter skolen.": "nvcc:5",
+    "Jeg finner ikke nøklene mine.": "nvcc:9",
+    "Jeg forstår ikke. Kan du forklare?": "nvcc:7",
+    "Jeg føler meg bedre i dag.": "nvcc:8",
+    "Jeg føler meg litt kvalm.": "nvcc:5",
+    "Jeg føler meg psykologisk sliten.": "nvcc:3",
+    "Jeg gleder meg til helgen!": "talesyntese",
+    "Jeg greide å fullføre oppgaven.": "nvcc:9",
+    "Jeg har et eple.": "nvcc:5",
+    "Jeg har ikke nok penger.": "nvcc:3",
+    "Jeg har med et skjerf.": "nvcc:7",
+    "Jeg hører på musikk.": "nvcc:2",
+    "Jeg kjøper en gave til søsteren min.": "nvcc:1",
+    "Jeg kjøper frukt hver uke.": "talesyntese",
+    "Jeg kjøpte laks på et fiskemarked.": "nvcc:6",
+    "Jeg kommer fra Oslo.": "nvcc:7",
+    "Jeg kommer fra en liten by.": "nvcc:5",
+    "Jeg lager middag i kveld.": "nvcc:1",
+    "Jeg leser mange bøker.": "nvcc:8",
+    "Jeg liker studiet veldig godt.": "nvcc:3",
+    "Jeg liker å gå på et bakeri.": "nvcc:9",
+    "Jeg må betale et gebyr.": "nvcc:0",
+    "Jeg må skrive under her.": "nvcc:2",
+    "Jeg møtte henne i parken.": "nvcc:1",
+    "Jeg pusser bordet på kjøkkenbenken.": "nvcc:9",
+    "Jeg sender hilsen Maria til deg.": "nvcc:0",
+    "Jeg ser en liten fugl.": "nvcc:1",
+    "Jeg ser et ansikt.": "talesyntese",
+    "Jeg ser på TV om kvelden.": "talesyntese",
+    "Jeg ser på dem.": "nvcc:2",
+    "Jeg skal høre en forelesning.": "nvcc:1",
+    "Jeg skal koke egg.": "nvcc:1",
+    "Jeg skal lage mat.": "talesyntese",
+    "Jeg skal lage middag.": "talesyntese",
+    "Jeg skal møte en venn i byen.": "talesyntese",
+    "Jeg skal reise til Oslo.": "talesyntese",
+    "Jeg skal spise middag klokken seks.": "nvcc:3",
+    "Jeg skal til et kjøpesenter.": "nvcc:5",
+    "Jeg skal til sentrum i morgen.": "nvcc:8",
+    "Jeg skriver en e-post.": "talesyntese",
+    "Jeg slutter på jobb klokka fire.": "talesyntese",
+    "Jeg snakker litt norsk.": "talesyntese",
+    "Jeg snakket med resepsjonisten.": "nvcc:5",
+    "Jeg spiller et instrument.": "nvcc:0",
+    "Jeg spiste et eple.": "nvcc:2",
+    "Jeg spiste middag før filmen.": "nvcc:8",
+    "Jeg sto ved vinduet.": "talesyntese",
+    "Jeg studerer et semester.": "nvcc:1",
+    "Jeg studerer på et universitet.": "talesyntese",
+    "Jeg studerer tysk på skolen.": "talesyntese",
+    "Jeg studerer ved et institutt.": "talesyntese",
+    "Jeg står i en kø.": "nvcc:5",
+    "Jeg står opp klokka sju.": "talesyntese",
+    "Jeg står opp tidlig.": "nvcc:5",
+    "Jeg sykler til jobben på sykkelen min.": "nvcc:5",
+    "Jeg tar en flybuss til flyplassen.": "nvcc:6",
+    "Jeg tar en kølapp ved disken.": "talesyntese",
+    "Jeg tar et besøk hos henne.": "nvcc:7",
+    "Jeg tar med matpakke på jobben.": "nvcc:8",
+    "Jeg tenker på deg.": "nvcc:1",
+    "Jeg tok feil buss.": "nvcc:1",
+    "Jeg trenger en dagsbillett, takk.": "nvcc:1",
+    "Jeg trenger hjelp fra en konsulent.": "nvcc:5",
+    "Jeg trenger hjelp, snakk med ekspeditøren.": "talesyntese",
+    "Jeg trenger nye klær til vinteren.": "talesyntese",
+    "Jeg tror det er fint.": "talesyntese",
+    "Jeg truffet henne i går.": "nvcc:6",
+    "Jeg vil ha en kaffe.": "nvcc:6",
+    "Jeg vil ha et kakestykke, takk.": "nvcc:0",
+    "Jeg vil ha noe å spise.": "nvcc:2",
+    "Kan du kjøpe et brød?": "talesyntese",
+    "Kan du sende meg en melding?": "nvcc:1",
+    "Kan du åpne vinduet?": "nvcc:7",
+    "Kan jeg få en kaffe, takk?": "talesyntese",
+    "Kan jeg få se menyen?": "talesyntese",
+    "Kan jeg låne pennen din?": "nvcc:1",
+    "Kylling med ris er enkelt og godt.": "nvcc:5",
+    "Når står du opp?": "nvcc:6",
+    "Om sommeren bader vi på stranda.": "talesyntese",
+    "Om sommeren sykler jeg overalt.": "nvcc:0",
+    "Om vinteren går vi på ski i marka.": "nvcc:7",
+    "Selvfølgelig kan jeg hjelpe deg.": "nvcc:9",
+    "Si fra hvis du trenger noe.": "talesyntese",
+    "Suppe passer bra på kalde dager.": "nvcc:0",
+    "Svaret ditt er riktig.": "talesyntese",
+    "Så hyggelig å se deg igjen!": "nvcc:6",
+    "Toget går om fem minutter.": "nvcc:9",
+    "Tre kaffe, takk.": "nvcc:8",
+    "Unnskyld, hva heter du igjen?": "nvcc:3",
+    "Unnskyld, hvor er toalettet?": "nvcc:3",
+    "Vi bor i Oslo.": "talesyntese",
+    "Vi drar på hytta i påsken.": "nvcc:9",
+    "Vi går gjennom skogen.": "talesyntese",
+    "Vi går i ei gågate.": "nvcc:0",
+    "Vi går ofte på tur.": "nvcc:3",
+    "Vi går tur i parken.": "talesyntese",
+    "Vi må lage ei inventarliste for rommet.": "nvcc:3",
+    "Vi ses på mandag!": "talesyntese",
+    "Vi ses senere!": "nvcc:2",
+    "Vi skal på en festival i sommer.": "nvcc:3",
+    "Vi spiser lunsj sammen på jobben.": "nvcc:0",
+    "Vi tar av oss skoene inne.": "nvcc:7"
+  },
+  "details": {
+    "Beklager, jeg er sen.": {
+      "was": "nvcc:0",
+      "onset_was": 0.599,
+      "onset": 1.0,
+      "date": "2026-10-22"
+    },
+    "Beklager, jeg forstår ikke.": {
+      "was": "nvcc:8",
+      "onset_was": 0.587,
+      "onset": 0.81,
+      "date": "2026-10-22"
+    },
+    "Bestemor baker boller.": {
+      "was": "nvcc:5",
+      "onset_was": 0.446,
+      "onset": 0.774,
+      "date": "2026-10-22"
+    },
+    "Boken er skrevet av henne.": {
+      "was": "talesyntese",
+      "onset_was": 0.564,
+      "onset": 1.0,
+      "date": "2026-10-22"
+    },
+    "Dessuten liker jeg å lese bøker.": {
+      "was": "nvcc:4",
+      "onset_was": 0.361,
+      "onset": 0.929,
+      "date": "2026-10-22"
+    },
+    "Det koster to tusen kroner.": {
+      "was": "nvcc:4",
+      "onset_was": 0.597,
+      "onset": 1.0,
+      "date": "2026-10-22"
+    },
+    "Det står en mann ved døra.": {
+      "was": "nvcc:4",
+      "onset_was": 0.233,
+      "onset": 0.762,
+      "date": "2026-10-22"
+    },
+    "Det tar bare fem minutter.": {
+      "was": "nvcc:3",
+      "onset_was": 0.474,
+      "onset": 1.0,
+      "date": "2026-10-22"
+    },
+    "Du kan kjøpe medisin på apoteket.": {
+      "was": "nvcc:4",
+      "onset_was": 0.462,
+      "onset": 1.0,
+      "date": "2026-10-22"
+    },
+    "Du ser bra ut i dag.": {
+      "was": "nvcc:9",
+      "onset_was": 0.582,
+      "onset": 0.755,
+      "date": "2026-10-22"
+    },
+    "En kaffe og en bolle, takk.": {
+      "was": "nvcc:7",
+      "onset_was": 0.276,
+      "onset": 0.938,
+      "date": "2026-10-22"
+    },
+    "Eplet er søtt og godt.": {
+      "was": "nvcc:4",
+      "onset_was": 0.479,
+      "onset": 0.929,
+      "date": "2026-10-22"
+    },
+    "Gratulerer med den nye jobben!": {
+      "was": "nvcc:4",
+      "onset_was": 0.485,
+      "onset": 1.0,
+      "date": "2026-10-22"
+    },
+    "Han kledde seg fin.": {
+      "was": "nvcc:2",
+      "onset_was": 0.479,
+      "onset": 0.78,
+      "date": "2026-10-22"
+    },
+    "Han leser avisen til frokosten.": {
+      "was": "nvcc:4",
+      "onset_was": 0.522,
+      "onset": 1.0,
+      "date": "2026-10-22"
+    },
+    "Han svarer ikke på telefonen.": {
+      "was": "nvcc:0",
+      "onset_was": 0.588,
+      "onset": 0.874,
+      "date": "2026-10-22"
+    },
+    "Har du brødre eller søstre?": {
+      "was": "nvcc:4",
+      "onset_was": 0.447,
+      "onset": 1.0,
+      "date": "2026-10-22"
+    },
+    "Himmelen er grå i dag.": {
+      "was": "nvcc:4",
+      "onset_was": 0.594,
+      "onset": 0.765,
+      "date": "2026-10-22"
+    },
+    "Hvorfor lærer du norsk?": {
+      "was": "nvcc:3",
+      "onset_was": 0.508,
+      "onset": 0.861,
+      "date": "2026-10-22"
+    },
+    "Jeg begynte for en måned siden.": {
+      "was": "nvcc:1",
+      "onset_was": 0.539,
+      "onset": 1.0,
+      "date": "2026-10-22"
+    },
+    "Jeg bor i tredje etasje.": {
+      "was": "nvcc:4",
+      "onset_was": 0.265,
+      "onset": 1.0,
+      "date": "2026-10-22"
+    },
+    "Jeg drikker kaffe i en kopp.": {
+      "was": "nvcc:1",
+      "onset_was": 0.587,
+      "onset": 0.939,
+      "date": "2026-10-22"
+    },
+    "Jeg dusjer om morgenen.": {
+      "was": "nvcc:1",
+      "onset_was": 0.578,
+      "onset": 1.0,
+      "date": "2026-10-22"
+    },
+    "Jeg er fornøyd med maten.": {
+      "was": "nvcc:9",
+      "onset_was": 0.592,
+      "onset": 0.876,
+      "date": "2026-10-22"
+    },
+    "Jeg er kjempesulten etter skolen.": {
+      "was": "nvcc:3",
+      "onset_was": 0.541,
+      "onset": 1.0,
+      "date": "2026-10-22"
+    },
+    "Jeg finner ikke nøklene mine.": {
+      "was": "nvcc:0",
+      "onset_was": 0.427,
+      "onset": 0.815,
+      "date": "2026-10-22"
+    },
+    "Jeg forstår ikke. Kan du forklare?": {
+      "was": "nvcc:0",
+      "onset_was": 0.414,
+      "onset": 1.0,
+      "date": "2026-10-22"
+    },
+    "Jeg føler meg bedre i dag.": {
+      "was": "nvcc:2",
+      "onset_was": 0.529,
+      "onset": 0.96,
+      "date": "2026-10-22"
+    },
+    "Jeg føler meg litt kvalm.": {
+      "was": "nvcc:4",
+      "onset_was": 0.51,
+      "onset": 1.0,
+      "date": "2026-10-22"
+    },
+    "Jeg føler meg psykologisk sliten.": {
+      "was": "nvcc:9",
+      "onset_was": 0.482,
+      "onset": 1.0,
+      "date": "2026-10-22"
+    },
+    "Jeg gleder meg til helgen!": {
+      "was": "nvcc:1",
+      "onset_was": 0.428,
+      "onset": 0.798,
+      "date": "2026-10-22"
+    },
+    "Jeg greide å fullføre oppgaven.": {
+      "was": "nvcc:4",
+      "onset_was": 0.504,
+      "onset": 0.959,
+      "date": "2026-10-22"
+    },
+    "Jeg har et eple.": {
+      "was": "nvcc:4",
+      "onset_was": 0.546,
+      "onset": 0.994,
+      "date": "2026-10-22"
+    },
+    "Jeg har ikke nok penger.": {
+      "was": "nvcc:7",
+      "onset_was": 0.597,
+      "onset": 1.0,
+      "date": "2026-10-22"
+    },
+    "Jeg har med et skjerf.": {
+      "was": "nvcc:0",
+      "onset_was": 0.559,
+      "onset": 1.0,
+      "date": "2026-10-22"
+    },
+    "Jeg hører på musikk.": {
+      "was": "nvcc:3",
+      "onset_was": 0.492,
+      "onset": 0.908,
+      "date": "2026-10-22"
+    },
+    "Jeg kjøper en gave til søsteren min.": {
+      "was": "nvcc:0",
+      "onset_was": 0.519,
+      "onset": 0.738,
+      "date": "2026-10-22"
+    },
+    "Jeg kjøper frukt hver uke.": {
+      "was": "nvcc:0",
+      "onset_was": 0.551,
+      "onset": 0.859,
+      "date": "2026-10-22"
+    },
+    "Jeg kjøpte laks på et fiskemarked.": {
+      "was": "nvcc:8",
+      "onset_was": 0.568,
+      "onset": 0.901,
+      "date": "2026-10-22"
+    },
+    "Jeg kommer fra Oslo.": {
+      "was": "nvcc:9",
+      "onset_was": 0.337,
+      "onset": 1.0,
+      "date": "2026-10-22"
+    },
+    "Jeg kommer fra en liten by.": {
+      "was": "nvcc:7",
+      "onset_was": 0.409,
+      "onset": 0.872,
+      "date": "2026-10-22"
+    },
+    "Jeg lager middag i kveld.": {
+      "was": "nvcc:4",
+      "onset_was": 0.55,
+      "onset": 0.925,
+      "date": "2026-10-22"
+    },
+    "Jeg leser mange bøker.": {
+      "was": "nvcc:4",
+      "onset_was": 0.485,
+      "onset": 1.0,
+      "date": "2026-10-22"
+    },
+    "Jeg liker studiet veldig godt.": {
+      "was": "nvcc:1",
+      "onset_was": 0.55,
+      "onset": 1.0,
+      "date": "2026-10-22"
+    },
+    "Jeg liker å gå på et bakeri.": {
+      "was": "nvcc:1",
+      "onset_was": 0.594,
+      "onset": 0.797,
+      "date": "2026-10-22"
+    },
+    "Jeg må betale et gebyr.": {
+      "was": "nvcc:9",
+      "onset_was": 0.512,
+      "onset": 0.81,
+      "date": "2026-10-22"
+    },
+    "Jeg må skrive under her.": {
+      "was": "nvcc:4",
+      "onset_was": 0.513,
+      "onset": 0.961,
+      "date": "2026-10-22"
+    },
+    "Jeg møtte henne i parken.": {
+      "was": "nvcc:4",
+      "onset_was": 0.463,
+      "onset": 1.0,
+      "date": "2026-10-22"
+    },
+    "Jeg pusser bordet på kjøkkenbenken.": {
+      "was": "nvcc:7",
+      "onset_was": 0.368,
+      "onset": 1.0,
+      "date": "2026-10-22"
+    },
+    "Jeg sender hilsen Maria til deg.": {
+      "was": "nvcc:7",
+      "onset_was": 0.538,
+      "onset": 0.88,
+      "date": "2026-10-22"
+    },
+    "Jeg ser en liten fugl.": {
+      "was": "nvcc:3",
+      "onset_was": 0.513,
+      "onset": 0.755,
+      "date": "2026-10-22"
+    },
+    "Jeg ser et ansikt.": {
+      "was": "nvcc:1",
+      "onset_was": 0.545,
+      "onset": 0.9,
+      "date": "2026-10-22"
+    },
+    "Jeg ser på TV om kvelden.": {
+      "was": "nvcc:2",
+      "onset_was": 0.469,
+      "onset": 1.0,
+      "date": "2026-10-22"
+    },
+    "Jeg ser på dem.": {
+      "was": "nvcc:9",
+      "onset_was": 0.599,
+      "onset": 0.776,
+      "date": "2026-10-22"
+    },
+    "Jeg skal høre en forelesning.": {
+      "was": "nvcc:5",
+      "onset_was": 0.536,
+      "onset": 0.82,
+      "date": "2026-10-22"
+    },
+    "Jeg skal koke egg.": {
+      "was": "nvcc:4",
+      "onset_was": 0.302,
+      "onset": 0.952,
+      "date": "2026-10-22"
+    },
+    "Jeg skal lage mat.": {
+      "was": "nvcc:0",
+      "onset_was": 0.556,
+      "onset": 0.762,
+      "date": "2026-10-22"
+    },
+    "Jeg skal lage middag.": {
+      "was": "nvcc:3",
+      "onset_was": 0.555,
+      "onset": 1.0,
+      "date": "2026-10-22"
+    },
+    "Jeg skal møte en venn i byen.": {
+      "was": "nvcc:2",
+      "onset_was": 0.59,
+      "onset": 0.999,
+      "date": "2026-10-22"
+    },
+    "Jeg skal reise til Oslo.": {
+      "was": "nvcc:7",
+      "onset_was": 0.568,
+      "onset": 1.0,
+      "date": "2026-10-22"
+    },
+    "Jeg skal spise middag klokken seks.": {
+      "was": "nvcc:4",
+      "onset_was": 0.43,
+      "onset": 0.793,
+      "date": "2026-10-22"
+    },
+    "Jeg skal til et kjøpesenter.": {
+      "was": "nvcc:9",
+      "onset_was": 0.398,
+      "onset": 0.784,
+      "date": "2026-10-22"
+    },
+    "Jeg skal til sentrum i morgen.": {
+      "was": "nvcc:3",
+      "onset_was": 0.594,
+      "onset": 0.964,
+      "date": "2026-10-22"
+    },
+    "Jeg skriver en e-post.": {
+      "was": "nvcc:1",
+      "onset_was": 0.407,
+      "onset": 0.847,
+      "date": "2026-10-22"
+    },
+    "Jeg slutter på jobb klokka fire.": {
+      "was": "nvcc:0",
+      "onset_was": 0.516,
+      "onset": 0.869,
+      "date": "2026-10-22"
+    },
+    "Jeg snakker litt norsk.": {
+      "was": "nvcc:4",
+      "onset_was": 0.412,
+      "onset": 0.76,
+      "date": "2026-10-22"
+    },
+    "Jeg snakket med resepsjonisten.": {
+      "was": "nvcc:9",
+      "onset_was": 0.569,
+      "onset": 0.856,
+      "date": "2026-10-22"
+    },
+    "Jeg spiller et instrument.": {
+      "was": "nvcc:3",
+      "onset_was": 0.579,
+      "onset": 0.916,
+      "date": "2026-10-22"
+    },
+    "Jeg spiste et eple.": {
+      "was": "nvcc:4",
+      "onset_was": 0.221,
+      "onset": 0.843,
+      "date": "2026-10-22"
+    },
+    "Jeg spiste middag før filmen.": {
+      "was": "nvcc:2",
+      "onset_was": 0.573,
+      "onset": 0.889,
+      "date": "2026-10-22"
+    },
+    "Jeg sto ved vinduet.": {
+      "was": "nvcc:2",
+      "onset_was": 0.289,
+      "onset": 0.676,
+      "date": "2026-10-22"
+    },
+    "Jeg studerer et semester.": {
+      "was": "nvcc:8",
+      "onset_was": 0.513,
+      "onset": 0.708,
+      "date": "2026-10-22"
+    },
+    "Jeg studerer på et universitet.": {
+      "was": "nvcc:1",
+      "onset_was": 0.229,
+      "onset": 0.934,
+      "date": "2026-10-22"
+    },
+    "Jeg studerer tysk på skolen.": {
+      "was": "nvcc:4",
+      "onset_was": 0.331,
+      "onset": 0.841,
+      "date": "2026-10-22"
+    },
+    "Jeg studerer ved et institutt.": {
+      "was": "nvcc:5",
+      "onset_was": 0.4,
+      "onset": 0.77,
+      "date": "2026-10-22"
+    },
+    "Jeg står i en kø.": {
+      "was": "nvcc:2",
+      "onset_was": 0.391,
+      "onset": 0.799,
+      "date": "2026-10-22"
+    },
+    "Jeg står opp klokka sju.": {
+      "was": "nvcc:8",
+      "onset_was": 0.522,
+      "onset": 1.0,
+      "date": "2026-10-22"
+    },
+    "Jeg står opp tidlig.": {
+      "was": "nvcc:2",
+      "onset_was": 0.491,
+      "onset": 0.808,
+      "date": "2026-10-22"
+    },
+    "Jeg sykler til jobben på sykkelen min.": {
+      "was": "nvcc:7",
+      "onset_was": 0.497,
+      "onset": 1.0,
+      "date": "2026-10-22"
+    },
+    "Jeg tar en flybuss til flyplassen.": {
+      "was": "nvcc:9",
+      "onset_was": 0.565,
+      "onset": 0.868,
+      "date": "2026-10-22"
+    },
+    "Jeg tar en kølapp ved disken.": {
+      "was": "nvcc:7",
+      "onset_was": 0.421,
+      "onset": 0.9,
+      "date": "2026-10-22"
+    },
+    "Jeg tar et besøk hos henne.": {
+      "was": "nvcc:9",
+      "onset_was": 0.429,
+      "onset": 0.807,
+      "date": "2026-10-22"
+    },
+    "Jeg tar med matpakke på jobben.": {
+      "was": "nvcc:1",
+      "onset_was": 0.431,
+      "onset": 0.772,
+      "date": "2026-10-22"
+    },
+    "Jeg tenker på deg.": {
+      "was": "nvcc:3",
+      "onset_was": 0.417,
+      "onset": 0.917,
+      "date": "2026-10-22"
+    },
+    "Jeg tok feil buss.": {
+      "was": "nvcc:5",
+      "onset_was": 0.476,
+      "onset": 0.976,
+      "date": "2026-10-22"
+    },
+    "Jeg trenger en dagsbillett, takk.": {
+      "was": "nvcc:8",
+      "onset_was": 0.516,
+      "onset": 0.865,
+      "date": "2026-10-22"
+    },
+    "Jeg trenger hjelp fra en konsulent.": {
+      "was": "nvcc:2",
+      "onset_was": 0.597,
+      "onset": 1.0,
+      "date": "2026-10-22"
+    },
+    "Jeg trenger hjelp, snakk med ekspeditøren.": {
+      "was": "nvcc:2",
+      "onset_was": 0.368,
+      "onset": 1.0,
+      "date": "2026-10-22"
+    },
+    "Jeg trenger nye klær til vinteren.": {
+      "was": "nvcc:9",
+      "onset_was": 0.594,
+      "onset": 0.768,
+      "date": "2026-10-22"
+    },
+    "Jeg tror det er fint.": {
+      "was": "nvcc:4",
+      "onset_was": 0.38,
+      "onset": 1.0,
+      "date": "2026-10-22"
+    },
+    "Jeg truffet henne i går.": {
+      "was": "nvcc:2",
+      "onset_was": 0.346,
+      "onset": 0.885,
+      "date": "2026-10-22"
+    },
+    "Jeg vil ha en kaffe.": {
+      "was": "nvcc:4",
+      "onset_was": 0.539,
+      "onset": 0.965,
+      "date": "2026-10-22"
+    },
+    "Jeg vil ha et kakestykke, takk.": {
+      "was": "nvcc:4",
+      "onset_was": 0.438,
+      "onset": 1.0,
+      "date": "2026-10-22"
+    },
+    "Jeg vil ha noe å spise.": {
+      "was": "nvcc:3",
+      "onset_was": 0.51,
+      "onset": 1.0,
+      "date": "2026-10-22"
+    },
+    "Kan du kjøpe et brød?": {
+      "was": "nvcc:0",
+      "onset_was": 0.532,
+      "onset": 0.879,
+      "date": "2026-10-22"
+    },
+    "Kan du sende meg en melding?": {
+      "was": "nvcc:4",
+      "onset_was": 0.42,
+      "onset": 0.874,
+      "date": "2026-10-22"
+    },
+    "Kan du åpne vinduet?": {
+      "was": "nvcc:8",
+      "onset_was": 0.576,
+      "onset": 0.772,
+      "date": "2026-10-22"
+    },
+    "Kan jeg få en kaffe, takk?": {
+      "was": "nvcc:9",
+      "onset_was": 0.493,
+      "onset": 0.793,
+      "date": "2026-10-22"
+    },
+    "Kan jeg få se menyen?": {
+      "was": "nvcc:1",
+      "onset_was": 0.515,
+      "onset": 0.932,
+      "date": "2026-10-22"
+    },
+    "Kan jeg låne pennen din?": {
+      "was": "nvcc:3",
+      "onset_was": 0.596,
+      "onset": 0.958,
+      "date": "2026-10-22"
+    },
+    "Kylling med ris er enkelt og godt.": {
+      "was": "nvcc:4",
+      "onset_was": 0.47,
+      "onset": 0.831,
+      "date": "2026-10-22"
+    },
+    "Når står du opp?": {
+      "was": "nvcc:1",
+      "onset_was": 0.521,
+      "onset": 1.0,
+      "date": "2026-10-22"
+    },
+    "Om sommeren bader vi på stranda.": {
+      "was": "nvcc:7",
+      "onset_was": 0.307,
+      "onset": 1.0,
+      "date": "2026-10-22"
+    },
+    "Om sommeren sykler jeg overalt.": {
+      "was": "nvcc:5",
+      "onset_was": 0.348,
+      "onset": 0.759,
+      "date": "2026-10-22"
+    },
+    "Om vinteren går vi på ski i marka.": {
+      "was": "nvcc:4",
+      "onset_was": 0.34,
+      "onset": 1.0,
+      "date": "2026-10-22"
+    },
+    "Selvfølgelig kan jeg hjelpe deg.": {
+      "was": "nvcc:4",
+      "onset_was": 0.416,
+      "onset": 1.0,
+      "date": "2026-10-22"
+    },
+    "Si fra hvis du trenger noe.": {
+      "was": "nvcc:4",
+      "onset_was": 0.195,
+      "onset": 1.0,
+      "date": "2026-10-22"
+    },
+    "Suppe passer bra på kalde dager.": {
+      "was": "nvcc:1",
+      "onset_was": 0.537,
+      "onset": 1.0,
+      "date": "2026-10-22"
+    },
+    "Svaret ditt er riktig.": {
+      "was": "nvcc:4",
+      "onset_was": 0.271,
+      "onset": 0.754,
+      "date": "2026-10-22"
+    },
+    "Så hyggelig å se deg igjen!": {
+      "was": "nvcc:4",
+      "onset_was": 0.46,
+      "onset": 1.0,
+      "date": "2026-10-22"
+    },
+    "Toget går om fem minutter.": {
+      "was": "nvcc:4",
+      "onset_was": 0.305,
+      "onset": 1.0,
+      "date": "2026-10-22"
+    },
+    "Tre kaffe, takk.": {
+      "was": "nvcc:4",
+      "onset_was": 0.485,
+      "onset": 0.944,
+      "date": "2026-10-22"
+    },
+    "Unnskyld, hva heter du igjen?": {
+      "was": "nvcc:4",
+      "onset_was": 0.315,
+      "onset": 0.841,
+      "date": "2026-10-22"
+    },
+    "Unnskyld, hvor er toalettet?": {
+      "was": "nvcc:9",
+      "onset_was": 0.509,
+      "onset": 0.846,
+      "date": "2026-10-22"
+    },
+    "Vi bor i Oslo.": {
+      "was": "nvcc:3",
+      "onset_was": 0.551,
+      "onset": 1.0,
+      "date": "2026-10-22"
+    },
+    "Vi drar på hytta i påsken.": {
+      "was": "nvcc:4",
+      "onset_was": 0.343,
+      "onset": 1.0,
+      "date": "2026-10-22"
+    },
+    "Vi går gjennom skogen.": {
+      "was": "nvcc:9",
+      "onset_was": 0.525,
+      "onset": 0.979,
+      "date": "2026-10-22"
+    },
+    "Vi går i ei gågate.": {
+      "was": "nvcc:8",
+      "onset_was": 0.516,
+      "onset": 0.788,
+      "date": "2026-10-22"
+    },
+    "Vi går ofte på tur.": {
+      "was": "nvcc:8",
+      "onset_was": 0.571,
+      "onset": 0.769,
+      "date": "2026-10-22"
+    },
+    "Vi går tur i parken.": {
+      "was": "nvcc:4",
+      "onset_was": 0.382,
+      "onset": 1.0,
+      "date": "2026-10-22"
+    },
+    "Vi må lage ei inventarliste for rommet.": {
+      "was": "nvcc:4",
+      "onset_was": 0.529,
+      "onset": 0.899,
+      "date": "2026-10-22"
+    },
+    "Vi ses på mandag!": {
+      "was": "nvcc:3",
+      "onset_was": 0.57,
+      "onset": 0.793,
+      "date": "2026-10-22"
+    },
+    "Vi ses senere!": {
+      "was": "nvcc:0",
+      "onset_was": 0.575,
+      "onset": 1.0,
+      "date": "2026-10-22"
+    },
+    "Vi skal på en festival i sommer.": {
+      "was": "nvcc:4",
+      "onset_was": 0.434,
+      "onset": 0.999,
+      "date": "2026-10-22"
+    },
+    "Vi spiser lunsj sammen på jobben.": {
+      "was": "nvcc:4",
+      "onset_was": 0.412,
+      "onset": 0.974,
+      "date": "2026-10-22"
+    },
+    "Vi tar av oss skoene inne.": {
+      "was": "nvcc:1",
+      "onset_was": 0.596,
+      "onset": 1.0,
+      "date": "2026-10-22"
+    }
+  }
+}

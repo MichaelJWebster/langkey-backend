@@ -7,6 +7,16 @@ and about deployment live here too. It is kept in the backend repo because the
 umbrella directory (`~/work/lang_app`) is not version-controlled, and symlinked
 back to there so the familiar path still works.
 
+## ADR-049 (2026-10-22) — Re-voice the swallowed openings, one sentence at a time
+
+*"Please revoice the mumbled word clips."* ADR-028 found Piper's nvcc speakers under-articulating the first word and recorded the clips rather than fixing them, because the voice is inside the content hash and re-picking by rule reshuffles the corpus. By now the deck had grown to 1,150 example sentences and the gate flagged 126 (11%), 40 of them `nvcc:4`.
+
+**An override per sentence, not a new rule.** `data/voice_overrides.json` maps a sentence to the pool voice that reads it. `voice_for_text` checks it before the hash, so a re-voiced sentence gets a new key and every other clip keeps its own. It covers the pool clip only, because the copy ladder is always the primary voice (ADR-033). The generator reads the same file through a compose mount and prints how many overrides it loaded. Without the mount it would quietly prune every re-voiced clip and synthesise the mumbled one again.
+
+**Chosen by measurement.** `scripts/revoice_onsets.py` synthesises each flagged sentence on the other pool voices, in an order hashed per sentence so the replacements spread across speakers (35 landed on talesyntese, 8–15 on each nvcc speaker). It keeps the first whose onset reaches 0.75, a margin over the gate's 0.60 so a fixed clip does not sit on the line. `nvcc:4` is never a replacement. Result: 126 of 126 re-voiced, and the gate reads 0 of 1,150, so `audio_onset_issues.json` is now empty. Piper is not deterministic, so a borderline sentence can pass on one run and fail on the next ("Jeg studerer ved et institutt." did both).
+
+**Re-voiced onto the primary voice, the clip already exists.** It is the ladder's 1.6 rung, the same key, and it may have a cached alignment. The script keeps the existing clip rather than overwriting it with a new take. For production, sync from MinIO only the keys R2 lacks, for the same reason.
+
 ## ADR-048 (2026-10-22) — No reference clip waits more than 0.5 s to speak
 
 *"Many of the reference sound clips have a long empty space at the beginning. Could we enforce a gap of only 0.5 seconds for clips where the gap is longer?"* — and then, *"record the rule for the 0.5s max beginning gap for all future work."* It is a rule, not a cleanup: every clip, from any voice at any speed, now and later.

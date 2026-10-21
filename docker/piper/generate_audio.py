@@ -10,6 +10,7 @@ a stable per-sentence pick from the pool (primary + 10 nvcc speakers).
 
 import hashlib
 import io
+import json
 import os
 import tempfile
 import wave
@@ -49,9 +50,18 @@ s3 = boto3.client(
 )
 
 
+# Per-sentence re-voicing (app/audio.py, ADR-049), mounted from the backend's data/.
+OVERRIDES_PATH = os.environ.get("LANGKEY_VOICE_OVERRIDES", "/data/voice_overrides.json")
+VOICE_OVERRIDES: dict[str, str] = (
+    json.load(open(OVERRIDES_PATH))["voices"] if os.path.exists(OVERRIDES_PATH) else {}
+)
+
+
 def voice_for_text(text: str, primary: bool = False) -> str:
     if primary:
         return PRIMARY_VOICE
+    if text.strip() in VOICE_OVERRIDES:
+        return VOICE_OVERRIDES[text.strip()]
     pick = int(hashlib.sha256(f"voice|{text.strip()}".encode()).hexdigest()[:8], 16)
     return VOICE_POOL[pick % len(VOICE_POOL)]
 
@@ -131,6 +141,9 @@ def main() -> None:
     have = existing_keys()
     todo = sorted((key, *expected[key]) for key in expected.keys() - have)
     stale = sorted(have - expected.keys())
+    # Without the overrides mounted, every re-voiced clip would be pruned and
+    # regenerated on the voice that swallowed its first word.
+    print(f"{len(VOICE_OVERRIDES)} voice overrides from {OVERRIDES_PATH}", flush=True)
     print(
         f"{len(variants)} variants, {len(have)} clips exist, generating {len(todo)}, pruning {len(stale)}",
         flush=True,

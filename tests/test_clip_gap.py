@@ -14,7 +14,16 @@ import wave
 from array import array
 from pathlib import Path
 
-from app.audio import CLIP_FORMAT, LEADING_GAP_MAX, audio_object_key, trim_leading_silence
+from app.audio import (
+    CLIP_FORMAT,
+    LEADING_GAP_MAX,
+    PRIMARY_VOICE,
+    VOICE_OVERRIDES,
+    VOICE_OVERRIDES_PATH,
+    audio_object_key,
+    trim_leading_silence,
+    voice_for_text,
+)
 from scripts.trim_clip_gaps import legacy_key, shifted
 
 RATE = 22050
@@ -71,6 +80,7 @@ def test_alignments_move_with_the_cut():
 def test_the_generator_trims_and_keys_like_the_app(monkeypatch):
     # docker/piper is its own image and cannot import app/, so it carries
     # copies; this keeps them from drifting.
+    monkeypatch.setenv("LANGKEY_VOICE_OVERRIDES", str(VOICE_OVERRIDES_PATH))
     for name in ("boto3", "duckdb", "piper"):
         monkeypatch.setitem(sys.modules, name, types.SimpleNamespace(client=lambda *a, **k: None,
                                                                      PiperVoice=None, SynthesisConfig=None))
@@ -80,9 +90,19 @@ def test_the_generator_trims_and_keys_like_the_app(monkeypatch):
     spec.loader.exec_module(gen)
 
     assert gen.CLIP_FORMAT == CLIP_FORMAT
-    for text, primary, scale in [("Jeg bor i Oslo.", True, 3.4), ("et hus", False, 1.6)]:
+    revoiced = next(iter(VOICE_OVERRIDES))
+    cases = [("Jeg bor i Oslo.", True, 3.4), ("et hus", False, 1.6), (revoiced, False, 1.6)]
+    for text, primary, scale in cases:
         assert gen.audio_object_key("nb", text, primary, scale) == audio_object_key(
             "nb", text, primary=primary, scale=scale
         )
     data = clip(2.0)
     assert gen.trim_leading_silence(data) == trim_leading_silence(data)
+
+
+def test_a_revoiced_sentence_uses_its_override():
+    # ADR-049: per sentence, and only the pool clip -- the copy ladder stays
+    # on the primary voice.
+    text, voice = next(iter(VOICE_OVERRIDES.items()))
+    assert voice_for_text(text) == voice
+    assert voice_for_text(text, primary=True) == PRIMARY_VOICE

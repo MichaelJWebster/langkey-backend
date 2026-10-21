@@ -10,10 +10,12 @@ data, and <audio>/Audio() requests don't send our bearer token.
 
 import hashlib
 import io
+import json
 import logging
 import re
 import wave
 from array import array
+from pathlib import Path
 
 from botocore.exceptions import BotoCoreError, ClientError
 from fastapi import APIRouter, HTTPException, Request
@@ -137,9 +139,22 @@ def trim_leading_silence(data: bytes, keep: float = LEADING_GAP_MAX) -> tuple[by
     return out.getvalue(), cut / rate
 
 
+# Sentences whose hash-picked pool voice swallowed the first word (ADR-028),
+# re-voiced on one that does not (ADR-049). Per sentence, so fixing a clip
+# moves that clip's key and no other; changing the pick rule itself would
+# reshuffle the corpus. Written by scripts/revoice_onsets.py; the generator
+# reads the same file (docker-compose mounts data/).
+VOICE_OVERRIDES_PATH = Path(__file__).parent.parent / "data" / "voice_overrides.json"
+VOICE_OVERRIDES: dict[str, str] = (
+    json.loads(VOICE_OVERRIDES_PATH.read_text())["voices"] if VOICE_OVERRIDES_PATH.exists() else {}
+)
+
+
 def voice_for_text(text: str, primary: bool = False) -> str:
     if primary:
         return PRIMARY_VOICE
+    if text.strip() in VOICE_OVERRIDES:
+        return VOICE_OVERRIDES[text.strip()]
     pick = int(hashlib.sha256(f"voice|{text.strip()}".encode()).hexdigest()[:8], 16)
     return VOICE_POOL[pick % len(VOICE_POOL)]
 
