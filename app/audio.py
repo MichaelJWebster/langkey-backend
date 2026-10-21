@@ -9,8 +9,11 @@ data, and <audio>/Audio() requests don't send our bearer token.
 """
 
 import hashlib
+import io
 import logging
 import re
+import wave
+from array import array
 
 from botocore.exceptions import BotoCoreError, ClientError
 from fastapi import APIRouter, HTTPException, Request
@@ -85,6 +88,55 @@ PRIMARY_VOICE = "talesyntese"
 VOICE_POOL = [PRIMARY_VOICE] + [f"nvcc:{n}" for n in range(10)]
 
 
+# At most this much silence before the first word (Michael: "Many of the
+# reference sound clips have a long empty space at the beginning. Could we
+# enforce a gap of only 0.5 seconds for clips where the gap is longer?"). Piper
+# leads some talesyntese clips with up to 4.2 s of near-silence, about one in
+# twenty at every speed; nvcc clips never exceed it. Shorter gaps are left as
+# they are -- this caps the wait, it does not pad.
+LEADING_GAP_MAX = 0.5
+# A 20 ms frame above this counts as speech. The same threshold as the rate
+# measurements above; the leading gaps sit at -45 to -50 dBFS peak, hiss rather
+# than sound, and the 0.5 s kept ahead of the onset covers any soft consonant.
+SPEECH_DBFS = -45
+# Part of every clip's key, so a clip whose bytes changed gets a new URL. The
+# audio is served immutable for a year and alignments are cached by key, so
+# rewriting a clip under its old key would leave a browser playing the old
+# bytes against the new timings. Bump it when the processing changes.
+CLIP_FORMAT = "lead0.5"
+
+
+def trim_leading_silence(data: bytes, keep: float = LEADING_GAP_MAX) -> tuple[bytes, float]:
+    """Cut a WAV's leading silence down to `keep` seconds.
+
+    Returns the clip and how many seconds were cut (0.0, and the clip
+    untouched, when the gap is already short enough or no frame is speech).
+    Assumes Piper's output: 16-bit mono PCM.
+    """
+    with wave.open(io.BytesIO(data)) as w:
+        params = w.getparams()
+        samples = array("h", w.readframes(w.getnframes()))
+    rate = params.framerate
+    size = int(rate * 0.02)
+    threshold = 32768 * 10 ** (SPEECH_DBFS / 20)
+    onset = next(
+        (
+            i
+            for i in range(0, len(samples) - size + 1, size)
+            if (sum(x * x for x in samples[i : i + size]) / size) ** 0.5 > threshold
+        ),
+        None,
+    )
+    cut = 0 if onset is None else max(0, onset - int(keep * rate))
+    if cut == 0:
+        return data, 0.0
+    out = io.BytesIO()
+    with wave.open(out, "wb") as w:
+        w.setparams(params)
+        w.writeframes(samples[cut:].tobytes())
+    return out.getvalue(), cut / rate
+
+
 def voice_for_text(text: str, primary: bool = False) -> str:
     if primary:
         return PRIMARY_VOICE
@@ -97,7 +149,7 @@ def audio_object_key(
 ) -> str:
     voice = voice_for_text(text, primary)
     s = scale or LENGTH_SCALE
-    digest = hashlib.sha256(f"{voice}|{s}|{text.strip()}".encode()).hexdigest()[:20]
+    digest = hashlib.sha256(f"{voice}|{s}|{text.strip()}|{CLIP_FORMAT}".encode()).hexdigest()[:20]
     return f"audio/{language}/{digest}.wav"
 
 

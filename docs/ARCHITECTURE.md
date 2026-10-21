@@ -7,6 +7,18 @@ and about deployment live here too. It is kept in the backend repo because the
 umbrella directory (`~/work/lang_app`) is not version-controlled, and symlinked
 back to there so the familiar path still works.
 
+## ADR-048 (2026-10-22) — No reference clip waits more than 0.5 s to speak
+
+*"Many of the reference sound clips have a long empty space at the beginning. Could we enforce a gap of only 0.5 seconds for clips where the gap is longer?"* — and then, *"record the rule for the 0.5s max beginning gap for all future work."* It is a rule, not a cleanup: every clip, from any voice at any speed, now and later.
+
+**What was there.** Measured over all 11,096 clips: median gap 0.10 s, but 466 over 0.5 s and the worst 4.2 s (`et prøverom` at 4.0). All of them are talesyntese, roughly one in twenty at *every* rung, so it is Piper's primary voice and not the slow scales. nvcc: none. The gap is hiss at −45 to −50 dBFS peak, not quiet speech.
+
+**The rule.** Speech starts at the first 20 ms frame above −45 dBFS (the threshold of the ADR-033 rate measurements). Anything more than `LEADING_GAP_MAX` = 0.5 s before that is cut; a shorter gap is left alone, never padded. The generator trims before upload (`trim_leading_silence`, duplicated in `docker/piper` like the key derivation, and a test holds the two together), so the rule is enforced where clips are made rather than remembered.
+
+**A new key, not new bytes under the old key.** Clips are served `immutable` for a year and alignments are cached by key (ADR-043). Rewriting a clip in place would leave a browser that had played it holding the old bytes, cut by word timings for the new ones. So `CLIP_FORMAT` joins the digest and every clip moved. `scripts/trim_clip_gaps.py` copies each one to its new key, trimmed, and carries its alignment over shifted by the cut. That is exact in principle; measured against re-aligning the trimmed clip, it agrees to 25–60 ms, which is the aligner's own frame jitter. It is additive, so old keys keep the deployed code working until the new code is live, and `--prune` removes them afterwards. The onset-issue list (`data/audio_onset_issues.json`) is re-keyed with them.
+
+**Revisit when** a voice's quiet onset is longer than 0.5 s of real sound below −45 dBFS. The trim would then eat it. None does today: the kept 0.5 s covers every soft consonant measured.
+
 ## ADR-047 (2026-10-19) — Serve first, prepare the database in the background; the glossary backfill runs once
 
 Production was down for every cold visit: *"Failed to start container: The container is not listening in the TCP address 10.0.0.1:8000"*, after ~50 s, on every request. `lifespan` ran migrations → `seed_data()` → `backfill_glossary()` before uvicorn opened its port, and Cloudflare gives up on a container that isn't listening within its startup window. The boot had outgrown that window (the cold-start entry in ROADMAP's known issues, diagnosed 2026-10-11): `backfill_glossary`, a one-off that finished weeks ago, still walked the whole review history on every boot — about 4,200 Neon round trips, ~75 s. On 2026-10-15 Neon also archived the idle `production` branch, so the first connection of a boot had to wait for a restore as well.

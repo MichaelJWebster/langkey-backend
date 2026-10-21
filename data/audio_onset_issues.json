@@ -8,7 +8,7 @@
       "voice": "nvcc:4",
       "primary": false,
       "scale": 1.6,
-      "key": "audio/nb/82f2aa5b11e246d41b5d.wav",
+      "key": "audio/nb/a6e355058b1008c8c887.wav",
       "onset_strength": 0.195
     },
     {
@@ -16,7 +16,7 @@
       "voice": "nvcc:4",
       "primary": false,
       "scale": 1.6,
-      "key": "audio/nb/340a50b64af0e3f0b9f9.wav",
+      "key": "audio/nb/ac3e1f0debc60d9ebc77.wav",
       "onset_strength": 0.233
     },
     {
@@ -24,7 +24,7 @@
       "voice": "nvcc:4",
       "primary": false,
       "scale": 1.6,
-      "key": "audio/nb/dcf11ba45a517039a4b2.wav",
+      "key": "audio/nb/e561a57f9e700811a4f3.wav",
       "onset_strength": 0.271
     },
     {
@@ -32,7 +32,7 @@
       "voice": "nvcc:7",
       "primary": false,
       "scale": 1.6,
-      "key": "audio/nb/8f8c965730c37cd70079.wav",
+      "key": "audio/nb/4d8dad9bc558f0d31e40.wav",
       "onset_strength": 0.276
     },
     {
@@ -40,7 +40,7 @@
       "voice": "nvcc:4",
       "primary": false,
       "scale": 1.6,
-      "key": "audio/nb/92a7068f96f8fd6b0c96.wav",
+      "key": "audio/nb/42b3d54ce828fd16b538.wav",
       "onset_strength": 0.305
     },
     {
@@ -48,7 +48,7 @@
       "voice": "nvcc:7",
       "primary": false,
       "scale": 1.6,
-      "key": "audio/nb/c764b6d51736660d2bfd.wav",
+      "key": "audio/nb/a2d6ad52316162debfd6.wav",
       "onset_strength": 0.307
     },
     {
@@ -56,7 +56,7 @@
       "voice": "nvcc:4",
       "primary": false,
       "scale": 1.6,
-      "key": "audio/nb/118f599f6bd132d21b8d.wav",
+      "key": "audio/nb/c41b81f7e78b0691bb91.wav",
       "onset_strength": 0.315
     },
     {
@@ -64,7 +64,7 @@
       "voice": "nvcc:4",
       "primary": false,
       "scale": 1.6,
-      "key": "audio/nb/35882ffd8a85a0c37d19.wav",
+      "key": "audio/nb/c84da5679d748ba0f97b.wav",
       "onset_strength": 0.34
     },
     {
@@ -72,7 +72,7 @@
       "voice": "nvcc:4",
       "primary": false,
       "scale": 1.6,
-      "key": "audio/nb/e42db6ed9e56017909fd.wav",
+      "key": "audio/nb/5a973bf4b78ef5dc4a7e.wav",
       "onset_strength": 0.343
     },
     {
@@ -80,7 +80,7 @@
       "voice": "nvcc:5",
       "primary": false,
       "scale": 1.6,
-      "key": "audio/nb/eb9c4e4730b24febe12a.wav",
+      "key": "audio/nb/191de74ba55188d47473.wav",
       "onset_strength": 0.348
     },
     {
@@ -88,7 +88,7 @@
       "voice": "nvcc:4",
       "primary": false,
       "scale": 1.6,
-      "key": "audio/nb/723dd3e176a3007f01fa.wav",
+      "key": "audio/nb/fe1a8cde8da21cd6c38a.wav",
       "onset_strength": 0.382
     },
     {
@@ -96,7 +96,7 @@
       "voice": "nvcc:1",
       "primary": false,
       "scale": 1.6,
-      "key": "audio/nb/852798ae93ae966f99ba.wav",
+      "key": "audio/nb/03bc2bb737124de32de7.wav",
       "onset_strength": 0.407
     },
     {
@@ -104,7 +104,7 @@
       "voice": "nvcc:7",
       "primary": false,
       "scale": 1.6,
-      "key": "audio/nb/e1b377eeafa4864797bb.wav",
+      "key": "audio/nb/dca3565b2e593f4f1935.wav",
       "onset_strength": 0.409
     },
     {
@@ -112,7 +112,7 @@
       "voice": "nvcc:4",
       "primary": false,
       "scale": 1.6,
-      "key": "audio/nb/13f65622010dfc5b713a.wav",
+      "key": "audio/nb/4f8fe3d2df510cd4e44d.wav",
       "onset_strength": 0.412
     },
     {
@@ -120,7 +120,7 @@
       "voice": "nvcc:4",
       "primary": false,
       "scale": 1.6,
-      "key": "audio/nb/423fe0c3a7bc0df39720.wav",
+      "key": "audio/nb/dbcc60f78f6638248e5a.wav",
       "onset_strength": 0.412
     },
     {
@@ -128,7 +128,7 @@
       "voice": "nvcc:0",
       "primary": false,
       "scale": 1.6,
-      "key": "audio/nb/65e6ed7a5dde51b0ea35.wav",
+      "key": "audio/nb/4e8cd1224ca2d254032f.wav",
       "onset_strength": 0.414
     },
     {
@@ -136,7 +136,7 @@
       "voice": "nvcc:4",
       "primary": false,
       "scale": 1.6,
-      "key": "audio/nb/c4e95cd0520cc6b5cb29.wav",
+      "key": "audio/nb/a7cae152c2e8bc1171f6.wav",
       "onset_strength": 0.416
     },
     {
@@ -144,7 +144,7 @@
       "voice": "nvcc:3",
       "primary": false,
       "scale": 1.6,
-      "key": "audio/nb/3c33dcde897e96fc6d07.wav",
+      "key": "audio/nb/a3ce526ff1f86c4e651d.wav",
       "onset_strength": 0.417
     },
     {
@@ -152,7 +152,7 @@
       "voice": "nvcc:4",
       "primary": false,
       "scale": 1.6,
-      "key": "audio/nb/e0fc3406cfcaba1ec563.wav",
+      "key": "audio/nb/b33ebda79620c1ad45b7.wav",
       "onset_strength": 0.42
     },
     {
@@ -160,7 +160,7 @@
       "voice": "nvcc:0",
       "primary": false,
       "scale": 1.6,
-      "key": "audio/nb/b56902653f321900721a.wav",
+      "key": "audio/nb/6e575948332623b6eac2.wav",
       "onset_strength": 0.427
     },
     {
@@ -168,7 +168,7 @@
       "voice": "nvcc:1",
       "primary": false,
       "scale": 1.6,
-      "key": "audio/nb/6463dd88650ea0e50a12.wav",
+      "key": "audio/nb/286b3d6eecd64bb9966e.wav",
       "onset_strength": 0.431
     },
     {
@@ -176,7 +176,7 @@
       "voice": "nvcc:5",
       "primary": false,
       "scale": 1.6,
-      "key": "audio/nb/a02886d4e413be4d11b2.wav",
+      "key": "audio/nb/4488f610fcee01415162.wav",
       "onset_strength": 0.446
     },
     {
@@ -184,7 +184,7 @@
       "voice": "nvcc:4",
       "primary": false,
       "scale": 1.6,
-      "key": "audio/nb/33f721e6654298991bcf.wav",
+      "key": "audio/nb/65e3d37ad10765038c2e.wav",
       "onset_strength": 0.447
     },
     {
@@ -192,7 +192,7 @@
       "voice": "nvcc:4",
       "primary": false,
       "scale": 1.6,
-      "key": "audio/nb/9443ee2c752bc20fc87c.wav",
+      "key": "audio/nb/dff257a3497313bc1825.wav",
       "onset_strength": 0.46
     },
     {
@@ -200,7 +200,7 @@
       "voice": "nvcc:4",
       "primary": false,
       "scale": 1.6,
-      "key": "audio/nb/57b40dabf3c256d32856.wav",
+      "key": "audio/nb/1428a59ecb6467e5f954.wav",
       "onset_strength": 0.462
     },
     {
@@ -208,7 +208,7 @@
       "voice": "nvcc:2",
       "primary": false,
       "scale": 1.6,
-      "key": "audio/nb/8ec0d9ac08292d8cd38b.wav",
+      "key": "audio/nb/bc439715be7895b20d39.wav",
       "onset_strength": 0.469
     },
     {
@@ -216,7 +216,7 @@
       "voice": "nvcc:4",
       "primary": false,
       "scale": 1.6,
-      "key": "audio/nb/5381dca47ad6dc2a8700.wav",
+      "key": "audio/nb/8308efcd7377fa8ea626.wav",
       "onset_strength": 0.47
     },
     {
@@ -224,7 +224,7 @@
       "voice": "nvcc:3",
       "primary": false,
       "scale": 1.6,
-      "key": "audio/nb/44cc7f901f9cc5e830fc.wav",
+      "key": "audio/nb/ae8190c6c69a57f1eadb.wav",
       "onset_strength": 0.474
     },
     {
@@ -232,7 +232,7 @@
       "voice": "nvcc:5",
       "primary": false,
       "scale": 1.6,
-      "key": "audio/nb/fdb89a8986b35da0e41b.wav",
+      "key": "audio/nb/0e9872df1ca8475c9339.wav",
       "onset_strength": 0.476
     },
     {
@@ -240,7 +240,7 @@
       "voice": "nvcc:4",
       "primary": false,
       "scale": 1.6,
-      "key": "audio/nb/8e1a43d583622657d37e.wav",
+      "key": "audio/nb/e85544b59d9704722272.wav",
       "onset_strength": 0.479
     },
     {
@@ -248,7 +248,7 @@
       "voice": "nvcc:4",
       "primary": false,
       "scale": 1.6,
-      "key": "audio/nb/fdfbff9ae6f5c15d5e65.wav",
+      "key": "audio/nb/01ff8c6fc86bff6a18b9.wav",
       "onset_strength": 0.485
     },
     {
@@ -256,7 +256,7 @@
       "voice": "nvcc:4",
       "primary": false,
       "scale": 1.6,
-      "key": "audio/nb/f09eb16e191d9affbe96.wav",
+      "key": "audio/nb/ded054fcd5a5ffc46cf3.wav",
       "onset_strength": 0.485
     },
     {
@@ -264,7 +264,7 @@
       "voice": "nvcc:2",
       "primary": false,
       "scale": 1.6,
-      "key": "audio/nb/4d08ac6292e2f0dfa749.wav",
+      "key": "audio/nb/ed1b05f6e0850aaa4c48.wav",
       "onset_strength": 0.491
     },
     {
@@ -272,7 +272,7 @@
       "voice": "nvcc:3",
       "primary": false,
       "scale": 1.6,
-      "key": "audio/nb/ef0056d4b4112491352f.wav",
+      "key": "audio/nb/81b2fcd897a1fce5fdc2.wav",
       "onset_strength": 0.492
     },
     {
@@ -280,7 +280,7 @@
       "voice": "nvcc:9",
       "primary": false,
       "scale": 1.6,
-      "key": "audio/nb/c1f24056a2a7453fb57e.wav",
+      "key": "audio/nb/28536cb47223dcd46d99.wav",
       "onset_strength": 0.493
     },
     {
@@ -288,7 +288,7 @@
       "voice": "nvcc:7",
       "primary": false,
       "scale": 1.6,
-      "key": "audio/nb/3065db882702f3f84b77.wav",
+      "key": "audio/nb/63894cb7c47e4c4b6973.wav",
       "onset_strength": 0.497
     },
     {
@@ -296,7 +296,7 @@
       "voice": "nvcc:3",
       "primary": false,
       "scale": 1.6,
-      "key": "audio/nb/e252d6c87cd5ad3abc6c.wav",
+      "key": "audio/nb/b6bb0167c919236d1417.wav",
       "onset_strength": 0.508
     },
     {
@@ -304,7 +304,7 @@
       "voice": "nvcc:9",
       "primary": false,
       "scale": 1.6,
-      "key": "audio/nb/4aa372dbd4a42ac05623.wav",
+      "key": "audio/nb/7666d52e5a2404a63ae5.wav",
       "onset_strength": 0.509
     },
     {
@@ -312,7 +312,7 @@
       "voice": "nvcc:1",
       "primary": false,
       "scale": 1.6,
-      "key": "audio/nb/d805cfb755b442fa4a65.wav",
+      "key": "audio/nb/0aa022bfa0e6f23e29d6.wav",
       "onset_strength": 0.515
     },
     {
@@ -320,7 +320,7 @@
       "voice": "nvcc:0",
       "primary": false,
       "scale": 1.6,
-      "key": "audio/nb/17e41930b13382df86b9.wav",
+      "key": "audio/nb/0c3f75f902ba74ce0128.wav",
       "onset_strength": 0.516
     },
     {
@@ -328,7 +328,7 @@
       "voice": "nvcc:0",
       "primary": false,
       "scale": 1.6,
-      "key": "audio/nb/3c5f138c68561a33062e.wav",
+      "key": "audio/nb/25c31293da3bb6eb0d89.wav",
       "onset_strength": 0.519
     },
     {
@@ -336,7 +336,7 @@
       "voice": "nvcc:1",
       "primary": false,
       "scale": 1.6,
-      "key": "audio/nb/5a2fe4dc8ab277ff0462.wav",
+      "key": "audio/nb/994a9e3e25851d92c970.wav",
       "onset_strength": 0.521
     },
     {
@@ -344,7 +344,7 @@
       "voice": "nvcc:4",
       "primary": false,
       "scale": 1.6,
-      "key": "audio/nb/78199241cab35cb0ca17.wav",
+      "key": "audio/nb/650cbb0f35374bbb3a40.wav",
       "onset_strength": 0.522
     },
     {
@@ -352,7 +352,7 @@
       "voice": "nvcc:8",
       "primary": false,
       "scale": 1.6,
-      "key": "audio/nb/b48964d3c50fbda84a06.wav",
+      "key": "audio/nb/e68b1999555e7893e902.wav",
       "onset_strength": 0.522
     },
     {
@@ -360,7 +360,7 @@
       "voice": "nvcc:2",
       "primary": false,
       "scale": 1.6,
-      "key": "audio/nb/3e37e3c4d004d6a9a4b4.wav",
+      "key": "audio/nb/8d812843b4a225b8de86.wav",
       "onset_strength": 0.529
     },
     {
@@ -368,7 +368,7 @@
       "voice": "nvcc:0",
       "primary": false,
       "scale": 1.6,
-      "key": "audio/nb/9bee65abb8acc6bab511.wav",
+      "key": "audio/nb/b45e41221509b23573b8.wav",
       "onset_strength": 0.532
     },
     {
@@ -376,7 +376,7 @@
       "voice": "nvcc:1",
       "primary": false,
       "scale": 1.6,
-      "key": "audio/nb/107e548154911e2f5560.wav",
+      "key": "audio/nb/a85688f4f1e51915fdfd.wav",
       "onset_strength": 0.537
     },
     {
@@ -384,7 +384,7 @@
       "voice": "nvcc:4",
       "primary": false,
       "scale": 1.6,
-      "key": "audio/nb/b3ac6e6cd6ff755a3fb8.wav",
+      "key": "audio/nb/15190a112eeb92a9fd3b.wav",
       "onset_strength": 0.539
     },
     {
@@ -392,7 +392,7 @@
       "voice": "nvcc:1",
       "primary": false,
       "scale": 1.6,
-      "key": "audio/nb/56b1c2af487f0cab7dc4.wav",
+      "key": "audio/nb/ac858b890c10eda87581.wav",
       "onset_strength": 0.539
     },
     {
@@ -400,7 +400,7 @@
       "voice": "nvcc:4",
       "primary": false,
       "scale": 1.6,
-      "key": "audio/nb/449922920c81cfec4264.wav",
+      "key": "audio/nb/a13a773d009d68bf38a4.wav",
       "onset_strength": 0.55
     },
     {
@@ -408,7 +408,7 @@
       "voice": "nvcc:3",
       "primary": false,
       "scale": 1.6,
-      "key": "audio/nb/dbec9dfa2901c1c49348.wav",
+      "key": "audio/nb/dc969ce996a8758dc7f8.wav",
       "onset_strength": 0.551
     },
     {
@@ -416,7 +416,7 @@
       "voice": "nvcc:0",
       "primary": false,
       "scale": 1.6,
-      "key": "audio/nb/73170ddc4ee0d934c5a1.wav",
+      "key": "audio/nb/f3736448ed32255fdb3f.wav",
       "onset_strength": 0.551
     },
     {
@@ -424,7 +424,7 @@
       "voice": "nvcc:3",
       "primary": false,
       "scale": 1.6,
-      "key": "audio/nb/c6a4b911da271264db01.wav",
+      "key": "audio/nb/b28976839db78a5561f6.wav",
       "onset_strength": 0.555
     },
     {
@@ -432,7 +432,7 @@
       "voice": "nvcc:3",
       "primary": false,
       "scale": 1.6,
-      "key": "audio/nb/a016d56b1ad978690e39.wav",
+      "key": "audio/nb/2401cecae52471358548.wav",
       "onset_strength": 0.57
     },
     {
@@ -440,7 +440,7 @@
       "voice": "nvcc:8",
       "primary": false,
       "scale": 1.6,
-      "key": "audio/nb/d2d53b5f04f668e77733.wav",
+      "key": "audio/nb/41f2d0b848424bb0f568.wav",
       "onset_strength": 0.571
     },
     {
@@ -448,7 +448,7 @@
       "voice": "nvcc:0",
       "primary": false,
       "scale": 1.6,
-      "key": "audio/nb/bd4bf85c227a6a5ebcca.wav",
+      "key": "audio/nb/4ca5ac432db4b64d5a77.wav",
       "onset_strength": 0.575
     },
     {
@@ -456,7 +456,7 @@
       "voice": "nvcc:8",
       "primary": false,
       "scale": 1.6,
-      "key": "audio/nb/ed63c126f112aad92157.wav",
+      "key": "audio/nb/702f8d2ebad3bbd08fbe.wav",
       "onset_strength": 0.576
     },
     {
@@ -464,7 +464,7 @@
       "voice": "nvcc:1",
       "primary": false,
       "scale": 1.6,
-      "key": "audio/nb/a25929878fee78572369.wav",
+      "key": "audio/nb/282d46e489510e4c382a.wav",
       "onset_strength": 0.578
     },
     {
@@ -472,7 +472,7 @@
       "voice": "nvcc:8",
       "primary": false,
       "scale": 1.6,
-      "key": "audio/nb/2f2f9c5140989eb384f1.wav",
+      "key": "audio/nb/e504c3f147802af5d4ea.wav",
       "onset_strength": 0.587
     },
     {
@@ -480,7 +480,7 @@
       "voice": "nvcc:0",
       "primary": false,
       "scale": 1.6,
-      "key": "audio/nb/ad8b83226d8fa5b9837b.wav",
+      "key": "audio/nb/0a98c80bf6d2a1a1366e.wav",
       "onset_strength": 0.588
     },
     {
@@ -488,7 +488,7 @@
       "voice": "nvcc:2",
       "primary": false,
       "scale": 1.6,
-      "key": "audio/nb/86d72d168b1b7b6e228a.wav",
+      "key": "audio/nb/b4eb667abcfba1cf67c4.wav",
       "onset_strength": 0.59
     },
     {
@@ -496,7 +496,7 @@
       "voice": "nvcc:9",
       "primary": false,
       "scale": 1.6,
-      "key": "audio/nb/2979feb472edcc390483.wav",
+      "key": "audio/nb/090ee4b0add0036d0c0e.wav",
       "onset_strength": 0.594
     },
     {
@@ -504,7 +504,7 @@
       "voice": "nvcc:1",
       "primary": false,
       "scale": 1.6,
-      "key": "audio/nb/aca5846cd802fd872a9b.wav",
+      "key": "audio/nb/82d6686d0ec6ee0d4d63.wav",
       "onset_strength": 0.596
     },
     {
@@ -512,7 +512,7 @@
       "voice": "nvcc:3",
       "primary": false,
       "scale": 1.6,
-      "key": "audio/nb/3ab801100162cfbca148.wav",
+      "key": "audio/nb/cdaeea1d40a91b43cd05.wav",
       "onset_strength": 0.596
     },
     {
@@ -520,7 +520,7 @@
       "voice": "nvcc:4",
       "primary": false,
       "scale": 1.6,
-      "key": "audio/nb/a3b86c458356f7113f30.wav",
+      "key": "audio/nb/cf3e55024d39453442a8.wav",
       "onset_strength": 0.597
     },
     {
@@ -528,7 +528,7 @@
       "voice": "nvcc:7",
       "primary": false,
       "scale": 1.6,
-      "key": "audio/nb/aaae3be6a6755b61aa44.wav",
+      "key": "audio/nb/782972b6c96666e72970.wav",
       "onset_strength": 0.597
     },
     {
@@ -536,7 +536,7 @@
       "voice": "nvcc:0",
       "primary": false,
       "scale": 1.6,
-      "key": "audio/nb/9a317c46c61145da4c04.wav",
+      "key": "audio/nb/32abcf0833437c9261cc.wav",
       "onset_strength": 0.599
     }
   ]

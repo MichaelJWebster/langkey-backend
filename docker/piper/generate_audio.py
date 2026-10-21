@@ -13,6 +13,7 @@ import io
 import os
 import tempfile
 import wave
+from array import array
 
 import boto3
 import duckdb
@@ -26,6 +27,11 @@ BUCKET = os.environ.get("LANGKEY_S3_BUCKET", "langkey-content")
 LENGTH_SCALE = 1.6
 DICTATION_SCALES = [4.0, 3.4, 2.8, 2.2, 1.6]  # dictation ladder = imitation ladder (ADR-046)
 PRONUNCIATION_SCALES = [4.0, 3.4, 2.8, 2.2, 1.6]  # imitation ladder, primary voice (ADR-033)
+# Leading silence is capped at 0.5 s and the key carries the format (keep in
+# sync with app/audio.py, which explains both).
+LEADING_GAP_MAX = 0.5
+SPEECH_DBFS = -45
+CLIP_FORMAT = "lead0.5"
 PRIMARY_VOICE = "talesyntese"
 VOICE_POOL = [PRIMARY_VOICE] + [f"nvcc:{n}" for n in range(10)]
 
@@ -52,8 +58,34 @@ def voice_for_text(text: str, primary: bool = False) -> str:
 
 def audio_object_key(language: str, text: str, primary: bool = False, scale: float = LENGTH_SCALE) -> str:
     voice = voice_for_text(text, primary)
-    digest = hashlib.sha256(f"{voice}|{scale}|{text.strip()}".encode()).hexdigest()[:20]
+    digest = hashlib.sha256(f"{voice}|{scale}|{text.strip()}|{CLIP_FORMAT}".encode()).hexdigest()[:20]
     return f"audio/{language}/{digest}.wav"
+
+
+def trim_leading_silence(data: bytes, keep: float = LEADING_GAP_MAX) -> tuple[bytes, float]:
+    """Cut a WAV's leading silence down to `keep` seconds (as app/audio.py)."""
+    with wave.open(io.BytesIO(data)) as w:
+        params = w.getparams()
+        samples = array("h", w.readframes(w.getnframes()))
+    rate = params.framerate
+    size = int(rate * 0.02)
+    threshold = 32768 * 10 ** (SPEECH_DBFS / 20)
+    onset = next(
+        (
+            i
+            for i in range(0, len(samples) - size + 1, size)
+            if (sum(x * x for x in samples[i : i + size]) / size) ** 0.5 > threshold
+        ),
+        None,
+    )
+    cut = 0 if onset is None else max(0, onset - int(keep * rate))
+    if cut == 0:
+        return data, 0.0
+    out = io.BytesIO()
+    with wave.open(out, "wb") as w:
+        w.setparams(params)
+        w.writeframes(samples[cut:].tobytes())
+    return out.getvalue(), cut / rate
 
 
 def deck_variants() -> dict[tuple[str, bool, float], None]:
@@ -116,8 +148,8 @@ def main() -> None:
             buf = io.BytesIO()
             with wave.open(buf, "wb") as wav:
                 voices[model_name].synthesize_wav(text, wav, syn_config=config)
-            buf.seek(0)
-            s3.upload_fileobj(buf, BUCKET, key, ExtraArgs={"ContentType": "audio/wav"})
+            clip, _ = trim_leading_silence(buf.getvalue())
+            s3.upload_fileobj(io.BytesIO(clip), BUCKET, key, ExtraArgs={"ContentType": "audio/wav"})
             if i % 100 == 0 or i == len(todo):
                 print(f"  {i}/{len(todo)}", flush=True)
 
