@@ -7,6 +7,20 @@ and about deployment live here too. It is kept in the backend repo because the
 umbrella directory (`~/work/lang_app`) is not version-controlled, and symlinked
 back to there so the familiar path still works.
 
+## ADR-050 (2026-10-22) — Grammar practice: exercises in the backend, rule diagrams in the frontend
+
+*"I'd like to have some exercises with grammar in a new section grammar practice."* Six A1 topics, with V2 word order split into seven rules plus a review, each rule pictured above its exercises.
+
+**What is marked lives in the backend; what is drawn lives in the frontend.** `data/grammar_nb.json` holds topics → units → exercises and is synced into `grammar_units` and `grammar_exercises` by the same hash-gated, update-in-place sync as the passages and games, so `grammar_attempts` keeps pointing at the exercise it was for across edits. The diagrams are React (`grammarRules.tsx`), keyed `topic/unit`: they are layout, colour and tooltips, and expressing them as data would mean inventing a diagram language for six pictures. An exercise's `ref` names a `data-row` in its diagram, which is the one coupling between the two.
+
+**Checked in the browser, not self-marked.** Unlike a free translation (ADR-041), a grammar answer is near-unique, so each exercise carries its accepted answers and the client posts whether the learner matched, as dictation does. Case, punctuation and spacing are ignored; æ ø å are not (ADR-040). Content gates catch the unwinnable exercise before the learner does: a build's answer must use exactly its tiles, a choice must offer its answer, a "move the cue to the front" answer must start with the cue.
+
+**Rounds of ten, not FSRS.** Missed last time first, then never answered, then the rest; topped up from reshuffles when a unit has fewer than ten. A rule drilled is not a fact with a recall interval. Grammar moves no CEFR ring: there is no can-do statement for word order on its own (same reasoning as ADR-042).
+
+**Terms are explained where they appear.** Instructions mark grammar words as `[[key]]`; the frontend turns them into hover/tap tooltips with a plain-English definition and a Norwegian example. The backend's `GRAMMAR_TERMS` and the frontend's `TERMS` must agree; a backend test checks the content against the former.
+
+**Revisit when** the other five topics are split into rules (only `RULES` entries and content are needed), or a second language arrives: the diagrams are Norwegian-specific and would want the same `topic/unit` keys per language.
+
 ## ADR-049 (2026-10-22) — Re-voice the swallowed openings, one sentence at a time
 
 *"Please revoice the mumbled word clips."* ADR-028 found Piper's nvcc speakers under-articulating the first word and recorded the clips rather than fixing them, because the voice is inside the content hash and re-picking by rule reshuffles the corpus. By now the deck had grown to 1,150 example sentences and the gate flagged 126 (11%), 40 of them `nvcc:4`.

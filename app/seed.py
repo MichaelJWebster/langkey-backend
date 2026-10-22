@@ -21,11 +21,14 @@ from app.config import get_settings
 from app.content import (
     DeckEntry,
     GameEntry,
+    GrammarUnitEntry,
     PassageEntry,
     deck_hash,
     games_hash,
+    grammar_hash,
     load_deck,
     load_games,
+    load_grammar,
     load_passages,
     passages_hash,
 )
@@ -39,6 +42,8 @@ from app.models import (
     ItemExample,
     GamePair,
     GameSet,
+    GrammarExercise,
+    GrammarUnit,
     Language,
     Passage,
     PassageGloss,
@@ -308,6 +313,82 @@ async def _sync_games(
         meta.value = fingerprint
 
 
+async def _sync_grammar(
+    session: AsyncSession, language: str, entries: list[GrammarUnitEntry]
+) -> None:
+    """Bring `grammar_units` and `grammar_exercises` in line with the content file.
+
+    Units are matched by (topic, unit) and exercises by slug, and both are
+    updated in place: `grammar_attempts` points at exercises, and an answer
+    that forgets which exercise it was for is worth nothing. An exercise can
+    move between units without losing its history, because its slug is what
+    identifies it.
+
+    Anything dropped from the file keeps its row and simply stops being
+    served: a unit's exercises are only ever read through the unit, and a
+    retired exercise is detached from it by having its `seq` pushed out of
+    range rather than by deleting it.
+    """
+    fingerprint = grammar_hash(entries)
+    meta_key = f"grammar_hash:{language}"
+    meta = await session.get(AppMeta, meta_key)
+    if meta is not None and meta.value == fingerprint:
+        return
+
+    units = {
+        (row.topic, row.unit): row
+        for row in await session.scalars(
+            select(GrammarUnit).where(GrammarUnit.language_code == language)
+        )
+    }
+    exercises = {
+        row.slug: row
+        for row in await session.scalars(
+            select(GrammarExercise)
+            .join(GrammarUnit, GrammarUnit.id == GrammarExercise.unit_id)
+            .where(GrammarUnit.language_code == language)
+        )
+    }
+
+    kept_units: set[int] = set()
+    for seq, e in enumerate(entries, start=1):
+        row = units.get((e["topic"], e["unit"]))
+        if row is None:
+            row = GrammarUnit(language_code=language, topic=e["topic"], unit=e["unit"])
+            session.add(row)
+        row.topic_title = e["topic_title"]
+        row.topic_blurb = e["topic_blurb"]
+        row.title = e["title"]
+        row.blurb = e["blurb"]
+        row.review = e["review"]
+        row.seq = seq
+        await session.flush()
+        kept_units.add(row.id)
+
+        for ex_seq, ex in enumerate(e["exercises"], start=1):
+            data = {k: v for k, v in ex.items() if k not in ("slug", "kind")}
+            ex_row = exercises.pop(ex["slug"], None)
+            if ex_row is None:
+                ex_row = GrammarExercise(slug=ex["slug"])
+                session.add(ex_row)
+            ex_row.unit_id = row.id
+            ex_row.seq = ex_seq
+            ex_row.kind = ex["kind"]
+            ex_row.data = data
+
+    # Whatever is left was dropped from the file: keep it, stop serving it.
+    for ex_row in exercises.values():
+        ex_row.seq = -1
+    for key, row in units.items():
+        if row.id not in kept_units:
+            row.seq = -1
+
+    if meta is None:
+        session.add(AppMeta(key=meta_key, value=fingerprint))
+    else:
+        meta.value = fingerprint
+
+
 async def seed_data() -> None:
     async with db.session_factory() as session:
         for code, name in LANGUAGES.items():
@@ -338,6 +419,9 @@ async def seed_data() -> None:
                 session, code, await asyncio.to_thread(load_passages, code)
             )
             await _sync_games(session, code, await asyncio.to_thread(load_games, code))
+            await _sync_grammar(
+                session, code, await asyncio.to_thread(load_grammar, code)
+            )
         await session.commit()
 
 

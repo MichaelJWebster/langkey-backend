@@ -1,0 +1,1523 @@
+{
+ "topics": [
+  {
+   "slug": "v2",
+   "title": "V2 word order",
+   "blurb": "The verb is always the second part of the sentence.",
+   "units": [
+    {
+     "slug": "subj",
+     "title": "Subject first",
+     "blurb": "The everyday order. Same as English so far.",
+     "exercises": [
+      {
+       "slug": "v2-subj-01",
+       "kind": "choose",
+       "instr": "Which word is the [[subject]]?",
+       "prompt": "Jeg spiser frokost.",
+       "options": [
+        "Jeg",
+        "spiser",
+        "frokost"
+       ],
+       "answers": [
+        "Jeg"
+       ],
+       "why": "jeg is the one doing the eating."
+      },
+      {
+       "slug": "v2-subj-02",
+       "kind": "choose",
+       "instr": "Which word is the [[verb]]?",
+       "prompt": "Hun drikker te.",
+       "options": [
+        "Hun",
+        "drikker",
+        "te"
+       ],
+       "answers": [
+        "drikker"
+       ],
+       "why": "drikker (drinks) is the action."
+      },
+      {
+       "slug": "v2-subj-03",
+       "kind": "choose",
+       "instr": "Which part is the [[object]]?",
+       "prompt": "Per leser en bok.",
+       "options": [
+        "Per",
+        "leser",
+        "en bok"
+       ],
+       "answers": [
+        "en bok"
+       ],
+       "why": "Per reads what? en bok. That is the object."
+      },
+      {
+       "slug": "v2-subj-04",
+       "kind": "build",
+       "instr": "Build the sentence. Start with the subject.",
+       "tiles": [
+        "frokost",
+        "Jeg",
+        "klokka sju",
+        "spiser"
+       ],
+       "answers": [
+        "Jeg spiser frokost klokka sju"
+       ],
+       "why": "Subject jeg, verb spiser, object frokost, then the time."
+      },
+      {
+       "slug": "v2-subj-05",
+       "kind": "build",
+       "instr": "Build the sentence. Start with the subject.",
+       "tiles": [
+        "i Bergen",
+        "bor",
+        "Vi"
+       ],
+       "answers": [
+        "Vi bor i Bergen"
+       ],
+       "why": "Subject vi, verb bor, then the place."
+      },
+      {
+       "slug": "v2-subj-06",
+       "kind": "build",
+       "instr": "Build the sentence. Start with the subject.",
+       "tiles": [
+        "en bok",
+        "Per",
+        "leser"
+       ],
+       "answers": [
+        "Per leser en bok"
+       ],
+       "why": "Subject, verb, object."
+      },
+      {
+       "slug": "v2-subj-07",
+       "kind": "choose",
+       "instr": "Pick the correct order.",
+       "prompt": "Hun ___.",
+       "options": [
+        "kaffe drikker",
+        "drikker kaffe"
+       ],
+       "answers": [
+        "drikker kaffe"
+       ],
+       "why": "The verb comes straight after the subject."
+      },
+      {
+       "slug": "v2-subj-08",
+       "kind": "fix",
+       "instr": "One part is in the wrong place. Type the corrected sentence.",
+       "prompt": "Jeg norsk snakker.",
+       "answers": [
+        "Jeg snakker norsk."
+       ],
+       "why": "The verb snakker must come second, before the object."
+      },
+      {
+       "slug": "v2-subj-09",
+       "kind": "fix",
+       "instr": "One part is in the wrong place. Type the corrected sentence.",
+       "prompt": "Barna fotball spiller i parken.",
+       "answers": [
+        "Barna spiller fotball i parken."
+       ],
+       "why": "spiller is the verb, so it goes right after barna."
+      },
+      {
+       "slug": "v2-subj-10",
+       "kind": "build",
+       "instr": "Build the sentence. Start with the subject.",
+       "tiles": [
+        "til jobben",
+        "Mamma",
+        "hver dag",
+        "går"
+       ],
+       "answers": [
+        "Mamma går til jobben hver dag",
+        "Mamma går hver dag til jobben"
+       ],
+       "why": "Subject, verb, then where and when."
+      }
+     ]
+    },
+    {
+     "slug": "adv",
+     "title": "Small adverbs: ofte, alltid, aldri",
+     "blurb": "They go after the verb, not before it as in English.",
+     "exercises": [
+      {
+       "slug": "v2-adv-01",
+       "kind": "build",
+       "instr": "Build \"I always drink coffee\". Start with the subject.",
+       "tiles": [
+        "kaffe",
+        "alltid",
+        "Jeg",
+        "drikker"
+       ],
+       "answers": [
+        "Jeg drikker alltid kaffe"
+       ],
+       "why": "Verb drikker, then alltid."
+      },
+      {
+       "slug": "v2-adv-02",
+       "kind": "transform",
+       "instr": "Add the word ofte.",
+       "prompt": "Vi spiser fisk.",
+       "cue": "+ ofte",
+       "answers": [
+        "Vi spiser ofte fisk."
+       ],
+       "why": "ofte goes straight after the verb spiser."
+      },
+      {
+       "slug": "v2-adv-03",
+       "kind": "choose",
+       "instr": "Pick the correct order.",
+       "prompt": "Hun ___ te.",
+       "options": [
+        "ofte drikker",
+        "drikker ofte"
+       ],
+       "answers": [
+        "drikker ofte"
+       ],
+       "why": "The adverb follows the verb."
+      },
+      {
+       "slug": "v2-adv-04",
+       "kind": "transform",
+       "instr": "Add the word aldri.",
+       "prompt": "Han kommer for sent.",
+       "cue": "+ aldri",
+       "answers": [
+        "Han kommer aldri for sent."
+       ],
+       "why": "aldri goes after kommer."
+      },
+      {
+       "slug": "v2-adv-05",
+       "kind": "fix",
+       "instr": "One part is in the wrong place. Type the corrected sentence.",
+       "prompt": "Jeg alltid går til jobben.",
+       "answers": [
+        "Jeg går alltid til jobben."
+       ],
+       "why": "In Norwegian the verb comes first, then alltid."
+      },
+      {
+       "slug": "v2-adv-06",
+       "kind": "choose",
+       "instr": "Which word is the [[adverb]]?",
+       "prompt": "Vi ser ofte på TV.",
+       "options": [
+        "Vi",
+        "ser",
+        "ofte",
+        "på TV"
+       ],
+       "answers": [
+        "ofte"
+       ],
+       "why": "ofte says how often."
+      },
+      {
+       "slug": "v2-adv-07",
+       "kind": "transform",
+       "instr": "Add the word alltid.",
+       "prompt": "Hun er glad.",
+       "cue": "+ alltid",
+       "answers": [
+        "Hun er alltid glad."
+       ],
+       "why": "alltid goes after er."
+      },
+      {
+       "slug": "v2-adv-08",
+       "kind": "build",
+       "instr": "Build \"He never drinks coffee\". Start with the subject.",
+       "tiles": [
+        "aldri",
+        "Han",
+        "kaffe",
+        "drikker"
+       ],
+       "answers": [
+        "Han drikker aldri kaffe"
+       ],
+       "why": "Verb drikker, then aldri, then the object."
+      },
+      {
+       "slug": "v2-adv-09",
+       "kind": "fix",
+       "instr": "One part is in the wrong place. Type the corrected sentence.",
+       "prompt": "Vi ofte handler på Rema.",
+       "answers": [
+        "Vi handler ofte på Rema."
+       ],
+       "why": "handler is the verb, so ofte comes after it."
+      },
+      {
+       "slug": "v2-adv-10",
+       "kind": "transform",
+       "instr": "Add the word også.",
+       "prompt": "Jeg snakker engelsk.",
+       "cue": "+ også",
+       "answers": [
+        "Jeg snakker også engelsk."
+       ],
+       "why": "også (also) goes after the verb too."
+      }
+     ]
+    },
+    {
+     "slug": "time",
+     "title": "Time first",
+     "blurb": "Start with a time, and the subject moves behind the verb.",
+     "exercises": [
+      {
+       "slug": "v2-time-01",
+       "kind": "transform",
+       "instr": "Move the cue to the front.",
+       "prompt": "Jeg spiser frokost klokka sju.",
+       "cue": "Klokka sju …",
+       "answers": [
+        "Klokka sju spiser jeg frokost."
+       ],
+       "why": "Klokka sju takes the front, spiser stays second, jeg moves after it."
+      },
+      {
+       "slug": "v2-time-02",
+       "kind": "transform",
+       "instr": "Move the cue to the front.",
+       "prompt": "Vi spiser middag på lørdag.",
+       "cue": "På lørdag …",
+       "answers": [
+        "På lørdag spiser vi middag."
+       ],
+       "why": "På lørdag in front, spiser second, then vi."
+      },
+      {
+       "slug": "v2-time-03",
+       "kind": "choose",
+       "instr": "Pick the correct order.",
+       "prompt": "I dag ___ hjemme.",
+       "options": [
+        "jeg jobber",
+        "jobber jeg"
+       ],
+       "answers": [
+        "jobber jeg"
+       ],
+       "why": "I dag fills the front, so the verb comes next."
+      },
+      {
+       "slug": "v2-time-04",
+       "kind": "build",
+       "instr": "Build the sentence. Start with \"Om morgenen\".",
+       "tiles": [
+        "kaffe",
+        "drikker",
+        "Om morgenen",
+        "jeg"
+       ],
+       "answers": [
+        "Om morgenen drikker jeg kaffe"
+       ],
+       "why": "Time, verb, subject, object."
+      },
+      {
+       "slug": "v2-time-05",
+       "kind": "fix",
+       "instr": "One part is in the wrong place. Type the corrected sentence.",
+       "prompt": "I morgen vi reiser til Oslo.",
+       "answers": [
+        "I morgen reiser vi til Oslo."
+       ],
+       "why": "reiser must be second, right after I morgen."
+      },
+      {
+       "slug": "v2-time-06",
+       "kind": "choose",
+       "instr": "Which part is the [[adverbial|adverbial phrase]]?",
+       "prompt": "I dag leser hun en bok.",
+       "options": [
+        "I dag",
+        "leser",
+        "hun",
+        "en bok"
+       ],
+       "answers": [
+        "I dag"
+       ],
+       "why": "I dag says when."
+      },
+      {
+       "slug": "v2-time-07",
+       "kind": "transform",
+       "instr": "Move the cue to the front.",
+       "prompt": "Hun trener om kvelden.",
+       "cue": "Om kvelden …",
+       "answers": [
+        "Om kvelden trener hun."
+       ],
+       "why": "Om kvelden first, then trener, then hun."
+      },
+      {
+       "slug": "v2-time-08",
+       "kind": "transform",
+       "instr": "Move the cue to the front.",
+       "prompt": "Jeg har norskkurs på tirsdag.",
+       "cue": "På tirsdag …",
+       "answers": [
+        "På tirsdag har jeg norskkurs."
+       ],
+       "why": "På tirsdag first, then har, then jeg."
+      },
+      {
+       "slug": "v2-time-09",
+       "kind": "fix",
+       "instr": "One part is in the wrong place. Type the corrected sentence.",
+       "prompt": "Nå jeg bor i Trondheim.",
+       "answers": [
+        "Nå bor jeg i Trondheim."
+       ],
+       "why": "Nå is one part in front, so bor comes second."
+      },
+      {
+       "slug": "v2-time-10",
+       "kind": "build",
+       "instr": "Build the sentence. Start with \"I går\".",
+       "tiles": [
+        "vi",
+        "I går",
+        "pizza",
+        "spiste"
+       ],
+       "answers": [
+        "I går spiste vi pizza"
+       ],
+       "why": "Time, verb, subject, object."
+      }
+     ]
+    },
+    {
+     "slug": "place",
+     "title": "Place first",
+     "blurb": "The same swap, starting with where.",
+     "exercises": [
+      {
+       "slug": "v2-place-01",
+       "kind": "transform",
+       "instr": "Move the cue to the front.",
+       "prompt": "Hun jobber hjemme.",
+       "cue": "Hjemme …",
+       "answers": [
+        "Hjemme jobber hun."
+       ],
+       "why": "Hjemme first, jobber second, hun after."
+      },
+      {
+       "slug": "v2-place-02",
+       "kind": "transform",
+       "instr": "Move the cue to the front.",
+       "prompt": "Det regner mye i Bergen.",
+       "cue": "I Bergen …",
+       "answers": [
+        "I Bergen regner det mye."
+       ],
+       "why": "det is the subject, so it moves behind regner."
+      },
+      {
+       "slug": "v2-place-03",
+       "kind": "choose",
+       "instr": "Pick the correct order.",
+       "prompt": "På kontoret ___ kaffe.",
+       "options": [
+        "vi drikker",
+        "drikker vi"
+       ],
+       "answers": [
+        "drikker vi"
+       ],
+       "why": "På kontoret fills the front; the verb comes next."
+      },
+      {
+       "slug": "v2-place-04",
+       "kind": "fix",
+       "instr": "One part is in the wrong place. Type the corrected sentence.",
+       "prompt": "På skolen vi lærer norsk.",
+       "answers": [
+        "På skolen lærer vi norsk."
+       ],
+       "why": "lærer must be second."
+      },
+      {
+       "slug": "v2-place-05",
+       "kind": "build",
+       "instr": "Build the sentence. Start with \"I Oslo\".",
+       "tiles": [
+        "det",
+        "I Oslo",
+        "mange turister",
+        "er"
+       ],
+       "answers": [
+        "I Oslo er det mange turister"
+       ],
+       "why": "Place, verb er, subject det."
+      },
+      {
+       "slug": "v2-place-06",
+       "kind": "transform",
+       "instr": "Move the cue to the front.",
+       "prompt": "Jeg kjøper brød på butikken.",
+       "cue": "På butikken …",
+       "answers": [
+        "På butikken kjøper jeg brød."
+       ],
+       "why": "På butikken first, kjøper second, then jeg."
+      },
+      {
+       "slug": "v2-place-07",
+       "kind": "choose",
+       "instr": "Which part tells you where?",
+       "prompt": "I parken leker barna.",
+       "options": [
+        "I parken",
+        "leker",
+        "barna"
+       ],
+       "answers": [
+        "I parken"
+       ],
+       "why": "I parken is a place adverbial. barna is the subject."
+      },
+      {
+       "slug": "v2-place-08",
+       "kind": "transform",
+       "instr": "Move the cue to the front.",
+       "prompt": "Katten sover i sofaen.",
+       "cue": "I sofaen …",
+       "answers": [
+        "I sofaen sover katten."
+       ],
+       "why": "I sofaen first, sover second, katten after."
+      },
+      {
+       "slug": "v2-place-09",
+       "kind": "fix",
+       "instr": "One part is in the wrong place. Type the corrected sentence.",
+       "prompt": "I Norge folk drikker mye kaffe.",
+       "answers": [
+        "I Norge drikker folk mye kaffe."
+       ],
+       "why": "drikker must come right after I Norge."
+      },
+      {
+       "slug": "v2-place-10",
+       "kind": "build",
+       "instr": "Build \"He lives there\". Start with \"Der\".",
+       "tiles": [
+        "han",
+        "Der",
+        "bor"
+       ],
+       "answers": [
+        "Der bor han"
+       ],
+       "why": "Der (there) in front, bor second, han after."
+      }
+     ]
+    },
+    {
+     "slug": "two",
+     "title": "Two verbs: vil, kan, skal, må",
+     "blurb": "Only the first verb counts for slot 2.",
+     "exercises": [
+      {
+       "slug": "v2-two-01",
+       "kind": "build",
+       "instr": "Build the sentence. Start with the subject.",
+       "tiles": [
+        "se",
+        "Jeg",
+        "en film",
+        "vil"
+       ],
+       "answers": [
+        "Jeg vil se en film"
+       ],
+       "why": "vil second, then the infinitive se."
+      },
+      {
+       "slug": "v2-two-02",
+       "kind": "transform",
+       "instr": "Move the cue to the front.",
+       "prompt": "Jeg vil se en film i kveld.",
+       "cue": "I kveld …",
+       "answers": [
+        "I kveld vil jeg se en film."
+       ],
+       "why": "I kveld first, vil second, jeg, then se."
+      },
+      {
+       "slug": "v2-two-03",
+       "kind": "choose",
+       "instr": "Pick the correct order.",
+       "prompt": "I morgen ___ jobbe.",
+       "options": [
+        "jeg skal",
+        "skal jeg"
+       ],
+       "answers": [
+        "skal jeg"
+       ],
+       "why": "skal is the conjugated verb, so it comes second."
+      },
+      {
+       "slug": "v2-two-04",
+       "kind": "fix",
+       "instr": "One part is in the wrong place. Type the corrected sentence.",
+       "prompt": "I helgen jeg skal besøke mormor.",
+       "answers": [
+        "I helgen skal jeg besøke mormor."
+       ],
+       "why": "skal must come right after I helgen."
+      },
+      {
+       "slug": "v2-two-05",
+       "kind": "transform",
+       "instr": "Move the cue to the front.",
+       "prompt": "Vi må handle mat i dag.",
+       "cue": "I dag …",
+       "answers": [
+        "I dag må vi handle mat."
+       ],
+       "why": "I dag first, må second, vi, then handle."
+      },
+      {
+       "slug": "v2-two-06",
+       "kind": "choose",
+       "instr": "Which is the [[finite|conjugated verb]]?",
+       "prompt": "Jeg kan snakke norsk.",
+       "options": [
+        "kan",
+        "snakke"
+       ],
+       "answers": [
+        "kan"
+       ],
+       "why": "kan carries the time. snakke is the infinitive."
+      },
+      {
+       "slug": "v2-two-07",
+       "kind": "build",
+       "instr": "Build \"We are going to take the bus\". Start with the subject.",
+       "tiles": [
+        "bussen",
+        "Vi",
+        "ta",
+        "skal"
+       ],
+       "answers": [
+        "Vi skal ta bussen"
+       ],
+       "why": "skal second, then ta."
+      },
+      {
+       "slug": "v2-two-08",
+       "kind": "fix",
+       "instr": "One verb is in the wrong form. Type the corrected sentence.",
+       "prompt": "Jeg vil kjøper ei ny jakke.",
+       "answers": [
+        "Jeg vil kjøpe ei ny jakke."
+       ],
+       "why": "After vil the second verb is the infinitive: kjøpe."
+      },
+      {
+       "slug": "v2-two-09",
+       "kind": "transform",
+       "instr": "Move the cue to the front.",
+       "prompt": "Du kan parkere her.",
+       "cue": "Her …",
+       "answers": [
+        "Her kan du parkere."
+       ],
+       "why": "Her first, kan second, du, then parkere."
+      },
+      {
+       "slug": "v2-two-10",
+       "kind": "choose",
+       "instr": "Pick the correct order.",
+       "prompt": "Etter jobben ___ trene.",
+       "options": [
+        "vil jeg",
+        "jeg vil"
+       ],
+       "answers": [
+        "vil jeg"
+       ],
+       "why": "Etter jobben fills the front; vil comes next."
+      }
+     ]
+    },
+    {
+     "slug": "obj",
+     "title": "Object first",
+     "blurb": "Put the thing first to stress it. The rule still holds.",
+     "exercises": [
+      {
+       "slug": "v2-obj-01",
+       "kind": "transform",
+       "instr": "Move the cue to the front.",
+       "prompt": "Jeg liker ikke kaffe.",
+       "cue": "Kaffe …",
+       "answers": [
+        "Kaffe liker jeg ikke."
+       ],
+       "why": "Kaffe first, liker second, jeg, then ikke."
+      },
+      {
+       "slug": "v2-obj-02",
+       "kind": "transform",
+       "instr": "Move the cue to the front.",
+       "prompt": "Vi spiser fisk på fredag.",
+       "cue": "Fisk …",
+       "answers": [
+        "Fisk spiser vi på fredag."
+       ],
+       "why": "Fisk first, spiser second, vi after."
+      },
+      {
+       "slug": "v2-obj-03",
+       "kind": "choose",
+       "instr": "Pick the correct order.",
+       "prompt": "Den boka ___.",
+       "options": [
+        "jeg har lest",
+        "har jeg lest"
+       ],
+       "answers": [
+        "har jeg lest"
+       ],
+       "why": "har is the conjugated verb, so it comes right after Den boka."
+      },
+      {
+       "slug": "v2-obj-04",
+       "kind": "build",
+       "instr": "Build the sentence. Start with \"Norsk\".",
+       "tiles": [
+        "jeg",
+        "Norsk",
+        "snakker",
+        "litt"
+       ],
+       "answers": [
+        "Norsk snakker jeg litt"
+       ],
+       "why": "Object, verb, subject, then litt."
+      },
+      {
+       "slug": "v2-obj-05",
+       "kind": "fix",
+       "instr": "One part is in the wrong place. Type the corrected sentence.",
+       "prompt": "Te jeg drikker om kvelden.",
+       "answers": [
+        "Te drikker jeg om kvelden."
+       ],
+       "why": "drikker must be second."
+      },
+      {
+       "slug": "v2-obj-06",
+       "kind": "choose",
+       "instr": "Which word is the [[object]]?",
+       "prompt": "Pizza elsker barna.",
+       "options": [
+        "Pizza",
+        "elsker",
+        "barna"
+       ],
+       "answers": [
+        "Pizza"
+       ],
+       "why": "The children (barna) do the loving. Pizza is what they love."
+      },
+      {
+       "slug": "v2-obj-07",
+       "kind": "transform",
+       "instr": "Move the cue to the front.",
+       "prompt": "Jeg har sett den filmen.",
+       "cue": "Den filmen …",
+       "answers": [
+        "Den filmen har jeg sett."
+       ],
+       "why": "Den filmen first, har second, jeg, then sett."
+      },
+      {
+       "slug": "v2-obj-08",
+       "kind": "choose",
+       "instr": "Which word is the [[subject]]?",
+       "prompt": "Melk kjøper mamma på butikken.",
+       "options": [
+        "Melk",
+        "kjøper",
+        "mamma",
+        "på butikken"
+       ],
+       "answers": [
+        "mamma"
+       ],
+       "why": "Mum does the buying. Melk is the object."
+      },
+      {
+       "slug": "v2-obj-09",
+       "kind": "transform",
+       "instr": "Move the cue to the front.",
+       "prompt": "Hun liker epler.",
+       "cue": "Epler …",
+       "answers": [
+        "Epler liker hun."
+       ],
+       "why": "Epler first, liker second, hun after."
+      },
+      {
+       "slug": "v2-obj-10",
+       "kind": "fix",
+       "instr": "One part is in the wrong place. Type the corrected sentence.",
+       "prompt": "Den jakka jeg kjøpte i går.",
+       "answers": [
+        "Den jakka kjøpte jeg i går."
+       ],
+       "why": "kjøpte must come right after Den jakka."
+      }
+     ]
+    },
+    {
+     "slug": "conj",
+     "title": "og, men, eller",
+     "blurb": "Linking words don’t take a slot. No swap after them.",
+     "exercises": [
+      {
+       "slug": "v2-conj-01",
+       "kind": "choose",
+       "instr": "Pick the correct order.",
+       "prompt": "Jeg er trøtt, men ___ i dag.",
+       "options": [
+        "jeg jobber",
+        "jobber jeg"
+       ],
+       "answers": [
+        "jeg jobber"
+       ],
+       "why": "men doesn’t take a slot, so the subject comes first."
+      },
+      {
+       "slug": "v2-conj-02",
+       "kind": "choose",
+       "instr": "Pick the correct order.",
+       "prompt": "Jeg bor i Oslo, og ___ i Bergen.",
+       "options": [
+        "min bror bor",
+        "bor min bror"
+       ],
+       "answers": [
+        "min bror bor"
+       ],
+       "why": "After og the sentence starts with its subject."
+      },
+      {
+       "slug": "v2-conj-03",
+       "kind": "choose",
+       "instr": "Pick the correct order.",
+       "prompt": "Jeg er trøtt. I dag ___ hjemme.",
+       "options": [
+        "jobber jeg",
+        "jeg jobber"
+       ],
+       "answers": [
+        "jobber jeg"
+       ],
+       "why": "I dag is not a linking word. It takes the front, so the verb comes next."
+      },
+      {
+       "slug": "v2-conj-04",
+       "kind": "build",
+       "instr": "Finish \"Jeg vil komme, …\" (but I don’t have time).",
+       "tiles": [
+        "har",
+        "men",
+        "tid",
+        "jeg",
+        "ikke"
+       ],
+       "answers": [
+        "men jeg har ikke tid"
+       ],
+       "why": "men, then subject jeg, then verb har."
+      },
+      {
+       "slug": "v2-conj-05",
+       "kind": "choose",
+       "instr": "Pick the correct order.",
+       "prompt": "Hun liker katter, men ___ hunder.",
+       "options": [
+        "hun liker ikke",
+        "liker hun ikke"
+       ],
+       "answers": [
+        "hun liker ikke"
+       ],
+       "why": "No swap after men."
+      },
+      {
+       "slug": "v2-conj-06",
+       "kind": "transform",
+       "instr": "Join the two sentences with og.",
+       "prompt": "Vi spiser middag. Vi ser på TV.",
+       "answers": [
+        "Vi spiser middag, og vi ser på TV."
+       ],
+       "why": "og joins them and the second sentence keeps its normal order."
+      },
+      {
+       "slug": "v2-conj-07",
+       "kind": "transform",
+       "instr": "Join the two sentences with men.",
+       "prompt": "Jeg liker kaffe. Jeg drikker ikke te.",
+       "answers": [
+        "Jeg liker kaffe, men jeg drikker ikke te."
+       ],
+       "why": "men joins them; jeg drikker stays in normal order."
+      },
+      {
+       "slug": "v2-conj-08",
+       "kind": "choose",
+       "instr": "Which word is the [[conjunction|linking word]]?",
+       "prompt": "Han er syk, men han jobber.",
+       "options": [
+        "Han",
+        "syk",
+        "men",
+        "jobber"
+       ],
+       "answers": [
+        "men"
+       ],
+       "why": "men (but) joins the two parts."
+      },
+      {
+       "slug": "v2-conj-09",
+       "kind": "fix",
+       "instr": "One part is in the wrong place. Type the corrected sentence.",
+       "prompt": "Jeg er sulten, men har jeg ikke mat.",
+       "answers": [
+        "Jeg er sulten, men jeg har ikke mat."
+       ],
+       "why": "After men, the subject jeg comes before the verb."
+      },
+      {
+       "slug": "v2-conj-10",
+       "kind": "choose",
+       "instr": "Pick the correct order.",
+       "prompt": "Hun snakker norsk, og ___ engelsk.",
+       "options": [
+        "snakker hun også",
+        "hun snakker også"
+       ],
+       "answers": [
+        "hun snakker også"
+       ],
+       "why": "After og, subject first, then verb, then også."
+      }
+     ]
+    },
+    {
+     "slug": "mix",
+     "title": "Mixed review",
+     "blurb": "All the patterns together.",
+     "review": true
+    }
+   ]
+  },
+  {
+   "slug": "q",
+   "title": "Yes/no questions",
+   "blurb": "Verb first, then the subject.",
+   "units": [
+    {
+     "slug": "main",
+     "title": "Yes/no questions",
+     "blurb": "Verb first, then the subject.",
+     "exercises": [
+      {
+       "slug": "q-01",
+       "kind": "transform",
+       "instr": "Turn the statement into a question.",
+       "prompt": "Du snakker norsk.",
+       "answers": [
+        "Snakker du norsk?"
+       ],
+       "why": "The verb snakker moves to the start; du follows.",
+       "ref": "q-basic"
+      },
+      {
+       "slug": "q-02",
+       "kind": "transform",
+       "instr": "Turn the statement into a question.",
+       "prompt": "Hun kan svømme.",
+       "answers": [
+        "Kan hun svømme?"
+       ],
+       "why": "Only kan moves. svømme stays after the subject.",
+       "ref": "q-modal"
+      },
+      {
+       "slug": "q-03",
+       "kind": "build",
+       "instr": "Build the question.",
+       "tiles": [
+        "frokost",
+        "du",
+        "spist",
+        "Har"
+       ],
+       "answers": [
+        "Har du spist frokost"
+       ],
+       "why": "Har (conjugated) first, then du, then spist.",
+       "ref": "q-perf"
+      },
+      {
+       "slug": "q-04",
+       "kind": "choose",
+       "instr": "You do speak Norwegian. How do you answer?",
+       "prompt": "Snakker du ikke norsk?",
+       "options": [
+        "Ja",
+        "Nei",
+        "Jo"
+       ],
+       "answers": [
+        "Jo"
+       ],
+       "why": "Answering yes to a negative question takes jo.",
+       "ref": "q-jo"
+      },
+      {
+       "slug": "q-05",
+       "kind": "transform",
+       "instr": "Answer yes, in a full sentence.",
+       "prompt": "Bor du i Bergen?",
+       "answers": [
+        "Ja, jeg bor i Bergen."
+       ],
+       "why": "The answer is a statement, so the subject comes first again.",
+       "ref": "q-basic"
+      },
+      {
+       "slug": "q-06",
+       "kind": "transform",
+       "instr": "Turn the statement into a question.",
+       "prompt": "Dere bor i Oslo.",
+       "answers": [
+        "Bor dere i Oslo?"
+       ],
+       "why": "bor first, then dere.",
+       "ref": "q-basic"
+      },
+      {
+       "slug": "q-07",
+       "kind": "transform",
+       "instr": "Turn the statement into a question.",
+       "prompt": "Han har en bil.",
+       "answers": [
+        "Har han en bil?"
+       ],
+       "why": "har first, then han.",
+       "ref": "q-basic"
+      },
+      {
+       "slug": "q-08",
+       "kind": "choose",
+       "instr": "Pick the correct question: \"Do you like fish?\"",
+       "options": [
+        "Du liker fisk?",
+        "Liker du fisk?"
+       ],
+       "answers": [
+        "Liker du fisk?"
+       ],
+       "why": "Verb first in a yes/no question.",
+       "ref": "q-basic"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "slug": "neg",
+   "title": "Negation",
+   "blurb": "Where ikke goes.",
+   "units": [
+    {
+     "slug": "main",
+     "title": "Negation",
+     "blurb": "Where ikke goes.",
+     "exercises": [
+      {
+       "slug": "neg-01",
+       "kind": "transform",
+       "instr": "Make the sentence negative.",
+       "prompt": "Jeg kommer i dag.",
+       "answers": [
+        "Jeg kommer ikke i dag."
+       ],
+       "why": "ikke goes right after kommer.",
+       "ref": "neg-basic"
+      },
+      {
+       "slug": "neg-02",
+       "kind": "transform",
+       "instr": "Make the sentence negative.",
+       "prompt": "Hun har spist.",
+       "answers": [
+        "Hun har ikke spist."
+       ],
+       "why": "ikke follows the conjugated verb har, before spist.",
+       "ref": "neg-perf"
+      },
+      {
+       "slug": "neg-03",
+       "kind": "transform",
+       "instr": "Make the sentence negative.",
+       "prompt": "I dag jobber jeg.",
+       "answers": [
+        "I dag jobber jeg ikke."
+       ],
+       "why": "The subject has moved behind the verb, so ikke comes after jeg.",
+       "ref": "neg-inv"
+      },
+      {
+       "slug": "neg-04",
+       "kind": "build",
+       "instr": "Build \"I don’t like fish\".",
+       "tiles": [
+        "fisk",
+        "ikke",
+        "Jeg",
+        "liker"
+       ],
+       "answers": [
+        "Jeg liker ikke fisk"
+       ],
+       "why": "Verb, then ikke, then the object.",
+       "ref": "neg-obj"
+      },
+      {
+       "slug": "neg-05",
+       "kind": "choose",
+       "instr": "\"I don’t know him.\"",
+       "prompt": "Jeg kjenner ___.",
+       "options": [
+        "ikke ham",
+        "ham ikke"
+       ],
+       "answers": [
+        "ham ikke"
+       ],
+       "why": "A small unstressed pronoun slips in front of ikke.",
+       "ref": "neg-pron"
+      },
+      {
+       "slug": "neg-06",
+       "kind": "transform",
+       "instr": "Make the sentence negative.",
+       "prompt": "Vi kan komme.",
+       "answers": [
+        "Vi kan ikke komme."
+       ],
+       "why": "ikke after kan, before komme.",
+       "ref": "neg-perf"
+      },
+      {
+       "slug": "neg-07",
+       "kind": "transform",
+       "instr": "Answer no, in a full sentence.",
+       "prompt": "Liker du fisk?",
+       "answers": [
+        "Nei, jeg liker ikke fisk."
+       ],
+       "why": "Subject, verb, ikke, object.",
+       "ref": "neg-obj"
+      },
+      {
+       "slug": "neg-08",
+       "kind": "transform",
+       "instr": "Make the sentence negative.",
+       "prompt": "Han snakker norsk.",
+       "answers": [
+        "Han snakker ikke norsk."
+       ],
+       "why": "ikke goes right after snakker.",
+       "ref": "neg-basic"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "slug": "noun",
+   "title": "Nouns",
+   "blurb": "en, ei, et and their endings.",
+   "units": [
+    {
+     "slug": "main",
+     "title": "Nouns",
+     "blurb": "en, ei, et and their endings.",
+     "exercises": [
+      {
+       "slug": "noun-01",
+       "kind": "choose",
+       "instr": "Which gender?",
+       "prompt": "___ hus",
+       "options": [
+        "en",
+        "ei",
+        "et"
+       ],
+       "answers": [
+        "et"
+       ],
+       "why": "hus is an et-word: et hus, huset.",
+       "ref": "n-et1"
+      },
+      {
+       "slug": "noun-02",
+       "kind": "fill",
+       "instr": "Fill in \"the cat\".",
+       "prompt": "Jeg har en katt. ___ er svart.",
+       "hint": "(katt)",
+       "answers": [
+        "Katten"
+       ],
+       "why": "katt is an en-word, so \"the cat\" is katten.",
+       "ref": "n-en"
+      },
+      {
+       "slug": "noun-03",
+       "kind": "fill",
+       "instr": "Fill in the plural.",
+       "prompt": "Vi har to ___.",
+       "hint": "(en bil)",
+       "answers": [
+        "biler"
+       ],
+       "why": "en-words add -er in the plural.",
+       "ref": "n-en"
+      },
+      {
+       "slug": "noun-04",
+       "kind": "fill",
+       "instr": "Fill in \"the girl\".",
+       "prompt": "Hun heter Ida. ___ er sju år.",
+       "hint": "(ei jente)",
+       "answers": [
+        "Jenta",
+        "Jenten"
+       ],
+       "why": "ei-words take -a: jenta (jenten is also correct).",
+       "ref": "n-ei"
+      },
+      {
+       "slug": "noun-05",
+       "kind": "fill",
+       "instr": "Fill in \"the children\".",
+       "prompt": "___ leker ute.",
+       "hint": "(et barn)",
+       "answers": [
+        "Barna"
+       ],
+       "why": "barn is irregular: the children is barna.",
+       "ref": "n-irr"
+      },
+      {
+       "slug": "noun-06",
+       "kind": "choose",
+       "instr": "Which gender?",
+       "prompt": "___ jente",
+       "options": [
+        "en",
+        "ei",
+        "et"
+       ],
+       "answers": [
+        "ei"
+       ],
+       "why": "jente is an ei-word (en jente is also allowed).",
+       "ref": "n-ei"
+      },
+      {
+       "slug": "noun-07",
+       "kind": "fill",
+       "instr": "Fill in \"the apple\".",
+       "prompt": "___ er rødt.",
+       "hint": "(et eple)",
+       "answers": [
+        "Eplet"
+       ],
+       "why": "et-words add -t after -e: eplet.",
+       "ref": "n-et"
+      },
+      {
+       "slug": "noun-08",
+       "kind": "fill",
+       "instr": "Fill in the plural.",
+       "prompt": "Jeg har tre ___.",
+       "hint": "(et hus)",
+       "answers": [
+        "hus"
+       ],
+       "why": "One-syllable et-words take no plural ending.",
+       "ref": "n-et1"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "slug": "tense",
+   "title": "Tenses",
+   "blurb": "Change the time of a simple sentence.",
+   "units": [
+    {
+     "slug": "main",
+     "title": "Tenses",
+     "blurb": "Change the time of a simple sentence.",
+     "exercises": [
+      {
+       "slug": "tense-01",
+       "kind": "transform",
+       "instr": "Change to the past.",
+       "prompt": "Jeg spiser frokost.",
+       "answers": [
+        "Jeg spiste frokost."
+       ],
+       "why": "spise has one consonant before -e, so the past is spiste.",
+       "ref": "t-weak"
+      },
+      {
+       "slug": "tense-02",
+       "kind": "transform",
+       "instr": "Change to the perfect (har + …).",
+       "prompt": "Vi bor i Oslo.",
+       "answers": [
+        "Vi har bodd i Oslo."
+       ],
+       "why": "bo ends in a vowel: bodde, har bodd.",
+       "ref": "t-weak"
+      },
+      {
+       "slug": "tense-03",
+       "kind": "transform",
+       "instr": "Change to the future with skal.",
+       "prompt": "Han jobber hjemme.",
+       "answers": [
+        "Han skal jobbe hjemme."
+       ],
+       "why": "skal + the infinitive (no -r).",
+       "ref": "t-line"
+      },
+      {
+       "slug": "tense-04",
+       "kind": "transform",
+       "instr": "Change to the past.",
+       "prompt": "Hun er trøtt.",
+       "answers": [
+        "Hun var trøtt."
+       ],
+       "why": "være is irregular: er, var, vært.",
+       "ref": "t-strong"
+      },
+      {
+       "slug": "tense-05",
+       "kind": "transform",
+       "instr": "Put the cue first and change to the past.",
+       "prompt": "Jeg drikker kaffe.",
+       "cue": "I går …",
+       "answers": [
+        "I går drakk jeg kaffe."
+       ],
+       "why": "The past of drikke is drakk, and I går in front sends jeg behind the verb.",
+       "ref": "t-strong"
+      },
+      {
+       "slug": "tense-06",
+       "kind": "transform",
+       "instr": "Change to the past.",
+       "prompt": "Vi jobber mye.",
+       "answers": [
+        "Vi jobbet mye."
+       ],
+       "why": "jobbe has two consonants before -e: jobbet.",
+       "ref": "t-weak"
+      },
+      {
+       "slug": "tense-07",
+       "kind": "transform",
+       "instr": "Change to the perfect (har + …).",
+       "prompt": "Jeg ser filmen.",
+       "answers": [
+        "Jeg har sett filmen."
+       ],
+       "why": "se is irregular: ser, så, har sett.",
+       "ref": "t-strong"
+      },
+      {
+       "slug": "tense-08",
+       "kind": "transform",
+       "instr": "Change to the past.",
+       "prompt": "De går hjem.",
+       "answers": [
+        "De gikk hjem."
+       ],
+       "why": "gå is irregular: går, gikk, har gått.",
+       "ref": "t-strong"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "slug": "pron",
+   "title": "Pronouns & determiners",
+   "blurb": "jeg/meg, min/mitt, denne/dette.",
+   "units": [
+    {
+     "slug": "main",
+     "title": "Pronouns & determiners",
+     "blurb": "jeg/meg, min/mitt, denne/dette.",
+     "exercises": [
+      {
+       "slug": "pron-01",
+       "kind": "transform",
+       "instr": "Replace the name with a pronoun.",
+       "prompt": "Jeg ser Kari.",
+       "answers": [
+        "Jeg ser henne."
+       ],
+       "why": "Kari is the object here, so hun becomes henne.",
+       "ref": "p-obj"
+      },
+      {
+       "slug": "pron-02",
+       "kind": "choose",
+       "instr": "Pick the word for \"it\".",
+       "prompt": "Huset er nytt. ___ er stort.",
+       "options": [
+        "Den",
+        "Det"
+       ],
+       "answers": [
+        "Det"
+       ],
+       "why": "hus is an et-word, so \"it\" is det.",
+       "ref": "p-it"
+      },
+      {
+       "slug": "pron-03",
+       "kind": "fill",
+       "instr": "Fill in \"my car\".",
+       "prompt": "Det er ___.",
+       "hint": "(en bil)",
+       "answers": [
+        "bilen min",
+        "min bil"
+       ],
+       "why": "The usual order is the noun with -en, then min.",
+       "ref": "p-pos"
+      },
+      {
+       "slug": "pron-04",
+       "kind": "fill",
+       "instr": "Fill in \"my book\".",
+       "prompt": "Hvor er ___?",
+       "hint": "(ei bok)",
+       "answers": [
+        "boka mi",
+        "boken min",
+        "mi bok",
+        "min bok"
+       ],
+       "why": "bok is an ei-word: boka mi.",
+       "ref": "p-poss"
+      },
+      {
+       "slug": "pron-05",
+       "kind": "fill",
+       "instr": "Fill in \"this house\".",
+       "prompt": "Jeg liker ___.",
+       "hint": "(et hus)",
+       "answers": [
+        "dette huset"
+       ],
+       "why": "dette for et-words, and the noun keeps -et.",
+       "ref": "p-dem"
+      },
+      {
+       "slug": "pron-06",
+       "kind": "choose",
+       "instr": "\"Can you help us?\"",
+       "prompt": "Kan du hjelpe ___?",
+       "options": [
+        "vi",
+        "oss",
+        "dere"
+       ],
+       "answers": [
+        "oss"
+       ],
+       "why": "After a verb, vi becomes oss.",
+       "ref": "p-obj"
+      },
+      {
+       "slug": "pron-07",
+       "kind": "transform",
+       "instr": "Replace the names with a pronoun.",
+       "prompt": "Per og Kari kommer.",
+       "answers": [
+        "De kommer."
+       ],
+       "why": "Per and Kari do the coming, so the subject form de.",
+       "ref": "p-obj"
+      },
+      {
+       "slug": "pron-08",
+       "kind": "fill",
+       "instr": "Fill in \"my house\".",
+       "prompt": "Velkommen til ___!",
+       "hint": "(et hus)",
+       "answers": [
+        "huset mitt",
+        "mitt hus"
+       ],
+       "why": "hus is an et-word, so mitt.",
+       "ref": "p-poss"
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

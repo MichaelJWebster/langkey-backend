@@ -146,6 +146,75 @@ def games_hash(entries: list[GameEntry]) -> str:
     return hashlib.sha256(payload.encode()).hexdigest()
 
 
+GrammarUnitEntry = dict[str, Any]
+# keys: topic, topic_title, topic_blurb, unit, title, blurb, review,
+#       exercises[{slug, kind, instr, prompt?, cue?, hint?, tiles?, options?,
+#                  answers[str], why, ref?}]
+
+#: The kinds of grammar exercise the UI knows how to draw. "fix" and
+#: "transform" are both a typed sentence; they differ in what the box starts
+#: with (the faulty sentence, or nothing).
+GRAMMAR_KINDS = ("choose", "build", "transform", "fix", "fill")
+
+#: Grammar words an instruction may mark up as `[[key]]` or `[[key|label]]`.
+#: Each is explained in a tooltip, so a learner who has never met "object" or
+#: "adverbial phrase" is not shut out of the exercise by its wording. The
+#: explanations live in the frontend (`grammarTerms.ts`); keep the two lists
+#: the same.
+GRAMMAR_TERMS = (
+    "subject", "verb", "finite", "object", "adverbial", "adverb", "infinitive",
+    "conjunction", "inversion", "slot", "front", "rest", "noun", "pronoun",
+    "gender", "definite", "plural", "possessive", "past", "perfect",
+)
+
+_EXERCISE_FIELDS = (
+    "kind", "instr", "prompt", "cue", "hint", "tiles", "options", "answers", "why", "ref",
+)
+
+
+def load_grammar(language: str = "nb") -> list[GrammarUnitEntry]:
+    """Grammar practice units from the local JSON, in authored order.
+
+    Nested (topic -> unit -> exercise) rather than JSONL because the structure
+    is the content: a unit's place in its topic is the teaching order. Flattened
+    here to one entry per unit, which is what the sync stores. Local-only like
+    the passages.
+
+    A unit with `review: true` carries no exercises of its own; it draws on
+    every other unit in its topic at request time.
+    """
+    path = DATA_DIR / f"grammar_{language}.json"
+    if not path.exists():
+        return []
+    doc = json.loads(path.read_text())
+    entries: list[GrammarUnitEntry] = []
+    for topic in doc["topics"]:
+        for unit in topic["units"]:
+            entries.append(
+                {
+                    "topic": topic["slug"],
+                    "topic_title": topic["title"],
+                    "topic_blurb": topic.get("blurb", ""),
+                    "unit": unit["slug"],
+                    "title": unit["title"],
+                    "blurb": unit.get("blurb", ""),
+                    "review": bool(unit.get("review", False)),
+                    "exercises": [
+                        {"slug": ex["slug"]}
+                        | {k: ex[k] for k in _EXERCISE_FIELDS if ex.get(k) is not None}
+                        for ex in unit.get("exercises") or ()
+                    ],
+                }
+            )
+    return entries
+
+
+def grammar_hash(entries: list[GrammarUnitEntry]) -> str:
+    """Stable fingerprint, used to skip no-op DB syncs."""
+    payload = json.dumps(entries, sort_keys=True, ensure_ascii=False)
+    return hashlib.sha256(payload.encode()).hexdigest()
+
+
 def _s3_client(*, fail_fast: bool = False):
     """Shared S3/R2 client.
 

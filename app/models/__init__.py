@@ -18,6 +18,7 @@ from app.models.learning import (
 )
 from app.models.games import GAMES, GamePair, GameRound, GameSet
 from app.models.glossary import UserGlossaryEntry
+from app.models.grammar import GrammarAttempt, GrammarExercise, GrammarUnit
 from app.models.meta import AppMeta
 from app.models.passages import (
     MARKS,
@@ -47,6 +48,9 @@ __all__ = [
     "GamePair",
     "GameRound",
     "GameSet",
+    "GrammarAttempt",
+    "GrammarExercise",
+    "GrammarUnit",
     "Item",
     "ItemCategory",
     "ItemExample",

@@ -16,6 +16,7 @@ from app.routes import (
     exercises,
     games,
     glossary,
+    grammar,
     hello,
     passages,
     progress,
@@ -76,6 +77,7 @@ app.include_router(exercises.router)
 app.include_router(texts.router)
 app.include_router(passages.router)
 app.include_router(games.router)
+app.include_router(grammar.router)
 app.include_router(recordings.router)
 app.include_router(speaking.router)
 

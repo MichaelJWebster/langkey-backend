@@ -51,6 +51,20 @@ below is sized for the current single learner; none of it should need rewriting 
 - ✅ Pipeline scripts (backend repo): `find_texts` (bokselskap/Gutenberg discovery) → `prepare_text` (extract → segment → translate via local Ollama gemma3:12b with echo-retry QC) → staging JSON review → `import_text`. First text: Askeladden som kapaad med Troldet (1904 orthography).
 - Next candidates: more folk tales, then a Hamsun novel (multi-chapter via multiple URLs → sections); per-sentence audio; Claude repair pass on draft translations.
 
+## ✅ M2.9 — Grammar practice (2026-10-22)
+
+Michael: *"I'd like to have some exercises with grammar in a new section grammar practice"*, then *"a diagrammatic or graphical representation of the grammar rules to be pinned to the top of the page and exercises under it"*, *"different sections within V2 word order"* and *"one exercise at a time ... 10 exercises before we ask if the user wants to continue, or go back"*.
+
+- ✅ **Grammar practice** row on the skills list, above Games. No CEFR ring, for the reason Games has none (ADR-042).
+- ✅ Six A1 topics: V2 word order, yes/no questions, negation, nouns (en/ei/et, definite, plural), tenses, pronouns & determiners. Designed as a clickable prototype first (claude.ai/artifact/HtZGE7VjNFv1p7iSm343FK), then built as prototyped.
+- ✅ **V2 is split into seven rules plus a mixed review**: subject first, small adverbs, time first, place first, two verbs, object first, og/men/eller. Each card on the V2 menu carries its own diagram, whose column headings name the role of each part (Subject · Verb · Object · Time …) and mark the verb as slot 2. 10 exercises per rule; the review draws on all 70. The other five topics are one unit each with 8 exercises, to be refined by Michael later.
+- ✅ **The rule is pinned above the exercise.** Desktop: full diagram in the sticky header, Hide/Show remembered. Phone: a compact strip of the rule in the header; the full diagram slides in from the right (tap the strip or the edge tab, or swipe from the edge) and swipes, taps or Escapes away. "See the rule" on a wrong answer opens it at the row that explains it and flashes that row.
+- ✅ **Tooltips on every grammar word** (subject, verb, conjugated verb, object, adverbial phrase, adverb, infinitive, linking word, inversion, slot 2, …): hover on a mouse, tap on a touch screen. Content marks them up as `[[key]]`/`[[key|label]]`; a backend test holds the keys to a known list.
+- ✅ Rounds of ten, one exercise at a time, Next between them. Four kinds: choose, build (word tiles), transform/fix (typed, with æ ø å buttons), fill. Marked in the browser: case, punctuation and spacing ignored, a missing æ ø å wrong but named as such (ADR-040). Results screen: score, the misses with their answers, **Practise 10 more** or back to the menu. Missed exercises lead the next round.
+- ✅ New tables `grammar_units`, `grammar_exercises`, `grammar_attempts` (migration `a3f8c61d2e47`), synced from `data/grammar_nb.json` by slug, updated in place so answers keep their exercise. Content gates in `tests/test_grammar.py`: a build's answer uses exactly its tiles, a choice offers its answer, a cue is where the answer starts, a fix starts from something wrong. See ADR-050.
+- Found on the way: StrictMode's double fetch returned two differently shuffled rounds and the first card kept its typed box from the other one. Stale fetches are ignored and cards are keyed per round.
+- Next: Michael to review the other five topics and split them into rules the way V2 is.
+
 ## ✅ M2.8 — Games (2026-10-17)
 
 Michael: *"I'd like a new section after speaking on the main page. Call it games. In games I will have several sections with different gamified learning features."*
