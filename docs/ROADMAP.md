@@ -201,7 +201,7 @@ each step is useful on its own and makes the next one cheaper.
    "Hva er manna ennå?") rather than signalling doubt.
 
    Levers not yet tried: `nb-whisper-large` (6 GB — bigger did not help from small to
-   medium, but large is a real jump); scoring the audio's *likelihood against the known
+   medium, but large is a real jump; *tried 2026-10-24, below*); scoring the audio's *likelihood against the known
    target* instead of free-decoding and comparing strings, which is forced alignment and
    therefore ADR-025's wav2vec2 CTC-GOP path rather than this one; and fuzzy or phonetic
    comparison if free decoding stays. Prompt-conditioning is now tried and rejected on
@@ -243,6 +243,30 @@ each step is useful on its own and makes the next one cheaper.
    `/Volumes/nvm_2tb/home/michaelw/work/langkey-speech-venv` (~1 GB with torch) so the
    API's `.venv` stays free of ML dependencies. **Remaining:** improve accuracy enough
    to trust, then wire the frontend.
+
+   **`nb-whisper-large`, measured 2026-10-24 on every saved take — not worth the
+   switch.** 569 takes (506 sentences) from 2026-10-04 to 10-22, run through
+   `speech_service/transcriber.py` and scored with `app/pronunciation.compare`;
+   `scripts/bench_stt.py` reproduces it. The harness exercises the production path: a
+   fresh `medium` run matched all 547 transcripts the app had stored. "Gist" is a
+   sentence with at least 80% of its target words found exactly or nearly — the
+   measure the conversation feature cares about.
+
+   | sentences | exact | words found | + near misses | gist | median / p90 per take |
+   |---|---|---|---|---|---|
+   | `medium` | 34% | 66% | 71% | 56% | 0.92 s / 1.10 s |
+   | `large` | 37% | 68% | 73% | 60% | 1.46 s / 1.78 s |
+
+   The gist gain is real but small (`large` better on 54 sentences, `medium` on 32;
+   sign test p = 0.02); the exact-match gain is not (58 against 39, p = 0.07). On the 63
+   single headwords `large` is worse, 43% exact against 48%. It is 1.6× slower on
+   Metal and twice the weight to host. The two models trade errors rather than one
+   dominating: `large` turns *"Kandar hjalp meg veldig"* back into *Kan du hjelpe meg,
+   vær så snill?*, and makes *"At en frykt gjenoppretter henne"* of *Det er fire stoler
+   her*. **168 of the 506 sentences lose their gist on both** — that third is out of
+   reach of model size. `medium` stays. The 34% exact figure is below the 49% of
+   2026-10-06, which was 43 sentences against today's 506; it is not drift in the
+   pipeline, since today's `medium` reproduces every transcript it stored at the time.
 3. **Say-it drills.** The crudest possible judgement: did the transcript match the target
    sentence? Closes the loop and lights up the Speaking card on the Aurora dashboard
    (ADR-023), which is disabled until this ships.
@@ -262,7 +286,16 @@ each step is useful on its own and makes the next one cheaper.
    route to real feedback.
 5. **Conversation last.** Turn-by-turn: record → NB-Whisper → constrained character with a
    couple of tools → reply text → Piper audio. The most work, and steps 1–2 build most of
-   what it needs. Not an open-ended agent (ADR-026).
+   what it needs. Not an open-ended agent (ADR-026). The 2026-10-24 benchmark (step 2)
+   says a bigger recogniser will not carry it — a third of sentences lose their gist on
+   both `medium` and `large` — so the turn has to absorb mishearings instead: show the
+   transcript before the character replies, with retry or type-a-fix; tell the
+   character it is talking to an A1 learner through a recogniser that mishears; and
+   surface decoder confidence (`confidence` is `None` today, because the HF pipeline
+   hides logprobs) so a doubtful turn gets *"Unnskyld, kan du si det igjen?"* rather
+   than an answer to something never said. An audio-native model that hears meaning
+   directly is the only real alternative, worth a bake-off on this corpus once the
+   feature exists.
 
 Open questions: hosting for NB-Whisper once it leaves the Mac (Workers AI
 whisper-large-v3-turbo at $0.0005/audio-min is the cheap fallback, but generic Whisper
