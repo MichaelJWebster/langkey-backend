@@ -37,7 +37,12 @@ from scripts.translation_gates import (
 
 STAGING_DIR = Path(__file__).parent.parent / "data" / "texts_staging"
 OLLAMA_URL = "http://127.0.0.1:11434"
-DEFAULT_MODEL = "gemma3:12b"
+# Measured 2026-10-24 on 48 library sentences (4 Mysterier paragraphs, 1
+# Ungdomslandet, 9 folktales), graded blind by Claude Opus 5: gemma4:26b
+# accuracy 4.46/5 with 5 meaning errors at 0.51 s/sentence, against 4.08 / 11
+# / 1.16 s for gemma4:12b and 3.88 / 15 / 1.17 s for gemma3:12b (ADR-021's
+# pick). A mixture-of-experts model (~4B active), ~13.4 GB in memory.
+DEFAULT_MODEL = "gemma4:26b"
 
 PROMPT = (
     "Translate these Norwegian sentences into English. The text may use "
@@ -115,6 +120,12 @@ def ollama(model: str, prompt: str) -> str:
                 "model": model,
                 "prompt": prompt,
                 "stream": False,
+                # Models with a thinking mode (Gemma 4, Qwen 3.x) otherwise
+                # reason to themselves first: measured 2026-10-24, gemma4:12b
+                # spent 47 s and its whole token budget thinking about one
+                # paragraph and returned no translation; with this off, 4.7 s.
+                # Models without the mode accept it and ignore it.
+                "think": False,
                 "options": {"temperature": 0.2, "num_ctx": 8192},
             }
         ).encode(),

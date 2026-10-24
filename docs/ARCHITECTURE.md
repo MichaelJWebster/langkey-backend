@@ -7,6 +7,22 @@ and about deployment live here too. It is kept in the backend repo because the
 umbrella directory (`~/work/lang_app`) is not version-controlled, and symlinked
 back to there so the familiar path still works.
 
+## ADR-052 (2026-10-24) — Reading-library translation moves to Gemma 4 26B, with thinking off
+
+Michael: *"Would gemma 4 models work better on the reading library translation script? They're faster."* Measured on 48 library sentences in 14 paragraphs (four from *Mysterier*, one from *Ungdomslandet*, nine folktales in Dano-Norwegian spelling), each translated through `scripts/prepare_text.py`'s own `translate_paragraph`, and graded sentence by sentence by Claude Opus 5 with the three candidates side by side, shuffled and unnamed:
+
+| model | accuracy /5 | fluency /5 | meaning errors (acc ≤ 3) | fully accurate | s/sentence |
+|---|---|---|---|---|---|
+| gemma3:12b (ADR-021) | 3.88 | 3.75 | 15 | 35% | 1.17 |
+| gemma4:12b | 4.08 | 4.00 | 11 | 42% | 1.16 |
+| **gemma4:26b** | **4.46** | **4.38** | **5** | **62%** | **0.51** |
+
+The deterministic gates (ADR-029) found nothing in any of them. Gemma 4 12B is a little better and no faster; Gemma 4 26B — a mixture-of-experts model with about 4B parameters active per token, ~13.4 GB in memory — has a third of the meaning errors and is more than twice as fast, so it becomes `DEFAULT_MODEL`, which `check_translation.py --repair` and `retitle.py` also use. The errors it still makes are the archaic ones (*paataget* = feigned, *Best han gikk* = just as he walked), which is where ADR-021 already found Claude best.
+
+**Thinking off.** The first run hung: Gemma 4 has a thinking mode, on by default in Ollama, and spent 47 s and its whole token budget reasoning about one paragraph without returning a translation. `prepare_text.ollama` now sends `"think": false`, which models without the mode accept and ignore.
+
+Existing translations are untouched: every library sentence is still a `gemma3:12b` draft, and `sentence_translations` is versioned per translator (ADR-021), so re-translating is a separate decision. Revisit: re-translate the library with gemma4:26b, and re-run this comparison when a new local model appears.
+
 ## ADR-051 (2026-10-24) — Conversation v1: scripted dialogues, answers judged by CTC, every turn kept as corpus
 
 Michael: *"Please build out the conversation section. Each conversation could consist of between 5 and 10 question and answer pairs… create an interaction section, perhaps one that looks like a text message conversation on a modern android phone, and try and order so a user engages in the easier conversations first."* Built to `docs/plans/conversation-corpus.md`, which rests on the 2026-10-24 benchmarks in ROADMAP M3 steps 2 and 5: recognition of learner speech only works when the answer space is small, known in advance and distinct.
