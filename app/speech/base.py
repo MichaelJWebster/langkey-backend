@@ -59,6 +59,48 @@ class Alignment:
     model: str
 
 
+@dataclass(frozen=True)
+class CandidateScore:
+    """How well a take supports one candidate text.
+
+    `ctc` is log P(text | audio) under the CTC model, summed over every
+    alignment, or None where the text could not be scored (no letters the
+    model knows, or more letters than the audio has frames). `letters` is
+    there so callers compare per letter: the raw sum favours shorter texts.
+    """
+
+    text: str
+    ctc: float | None
+    letters: int
+
+    @property
+    def per_letter(self) -> float | None:
+        return self.ctc / self.letters if self.ctc is not None and self.letters else None
+
+
+@dataclass(frozen=True)
+class CandidateScores:
+    candidates: tuple[CandidateScore, ...]
+    model: str
+
+
+@runtime_checkable
+class CandidateScorer(Protocol):
+    """Score candidate texts against a take (ROADMAP M3 step 5).
+
+    The conversation turn's recogniser: the turn knows its expected answers,
+    and the question is which of them the audio supports, not what the
+    learner said. Returns one entry per text sent, in order. Same
+    TranscriptionUnavailable / TranscriptionError pair as the others.
+    """
+
+    name: str
+
+    async def score(
+        self, audio: bytes, *, content_type: str, candidates: list[str]
+    ) -> CandidateScores: ...
+
+
 @runtime_checkable
 class WordAligner(Protocol):
     """Place known words in a clip (ADR-043).

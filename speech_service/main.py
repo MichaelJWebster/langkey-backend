@@ -8,7 +8,7 @@ from typing import Annotated
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from pydantic import BaseModel
 
-from speech_service import aligner, transcriber
+from speech_service import aligner, scorer, transcriber
 from speech_service.config import get_speech_settings
 
 logging.basicConfig(level=logging.INFO)
@@ -42,6 +42,21 @@ class AlignmentOut(BaseModel):
     #: One entry per word sent, in order; null where a word could not be
     #: placed (no letters the model knows, or audio too short to carry it).
     words: list[WordSpanOut | None]
+    model: str
+    duration_ms: int | None = None
+
+
+class CandidateScoreOut(BaseModel):
+    text: str
+    #: log P(text | audio), summed; null where the text could not be scored.
+    ctc: float | None
+    #: Letters the model scored, so the caller can compare per letter.
+    letters: int
+
+
+class ScoresOut(BaseModel):
+    #: One entry per candidate sent, in order.
+    candidates: list[CandidateScoreOut]
     model: str
     duration_ms: int | None = None
 
@@ -123,3 +138,40 @@ async def align(
         log.exception("alignment failed")
         raise HTTPException(500, f"Alignment failed: {exc}") from exc
     return AlignmentOut(**result)
+
+
+#: More than a turn's answers plus a transcript ever needs; a bound, not a target.
+MAX_CANDIDATES = 32
+
+
+@app.post("/score", response_model=ScoresOut)
+async def score(
+    audio: Annotated[UploadFile, File()],
+    candidates: Annotated[str, Form()],
+) -> ScoresOut:
+    """How well the audio supports each of `candidates` (a JSON list of
+    texts), as CTC log-likelihoods with letter counts. The conversation turn
+    picks among its expected answers with this (speech_service/scorer.py)."""
+    data = await audio.read()
+    if not data:
+        raise HTTPException(400, "Empty audio")
+    if len(data) > MAX_BYTES:
+        raise HTTPException(413, f"Audio larger than {MAX_BYTES // (1024 * 1024)} MB")
+    try:
+        texts = json.loads(candidates)
+    except ValueError:
+        raise HTTPException(400, "candidates must be a JSON list")
+    if not isinstance(texts, list) or not all(isinstance(t, str) for t in texts):
+        raise HTTPException(400, "candidates must be a JSON list of strings")
+    if not texts:
+        raise HTTPException(400, "No candidates to score")
+    if len(texts) > MAX_CANDIDATES:
+        raise HTTPException(400, f"At most {MAX_CANDIDATES} candidates")
+
+    settings = get_speech_settings()
+    try:
+        result = scorer.score(data, texts, settings)
+    except Exception as exc:  # noqa: BLE001 - same contract as /transcribe
+        log.exception("scoring failed")
+        raise HTTPException(500, f"Scoring failed: {exc}") from exc
+    return ScoresOut(**result)

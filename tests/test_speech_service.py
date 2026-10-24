@@ -262,3 +262,54 @@ def test_tokens_drop_what_the_model_cannot_spell_rather_than_failing():
     ids, groups = aligner._tokens(["ab", "42", "å"], vocab, delimiter=0)
     assert ids == [1, 2, 0, 3]
     assert groups == [(0, 1), None, (3, 3)]
+
+
+@pytest.mark.anyio
+async def test_score_returns_one_entry_per_candidate(service, monkeypatch):
+    from speech_service import scorer
+
+    monkeypatch.setattr(
+        scorer,
+        "score",
+        lambda audio, texts, settings: {
+            "candidates": [{"text": t, "ctc": -1.0 * len(t), "letters": len(t)} for t in texts],
+            "model": settings.aligner,
+            "duration_ms": 5,
+        },
+    )
+    resp = await service.post(
+        "/score",
+        files={"audio": ("take.webm", b"bytes", "audio/webm")},
+        data={"candidates": '["Hei", "Hei på deg"]'},
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert [c["text"] for c in body["candidates"]] == ["Hei", "Hei på deg"]
+    assert "wav2vec2" in body["model"]
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("candidates", ["not json", '{"a": 1}', "[1, 2]", "[]"])
+async def test_score_rejects_a_bad_candidate_list(service, candidates):
+    resp = await service.post(
+        "/score",
+        files={"audio": ("take.webm", b"bytes", "audio/webm")},
+        data={"candidates": candidates},
+    )
+    assert resp.status_code == 400
+
+
+@pytest.mark.anyio
+async def test_a_scoring_failure_is_a_server_error(service, monkeypatch):
+    from speech_service import scorer
+
+    def explode(*args, **kwargs):
+        raise RuntimeError("model fell over")
+
+    monkeypatch.setattr(scorer, "score", explode)
+    resp = await service.post(
+        "/score",
+        files={"audio": ("take.webm", b"bytes", "audio/webm")},
+        data={"candidates": '["Hei"]'},
+    )
+    assert resp.status_code == 500

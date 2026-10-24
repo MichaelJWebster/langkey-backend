@@ -5,7 +5,12 @@ the route answers 503 and says so, rather than the app failing to start or a
 say-it drill silently marking everything wrong.
 """
 
-from app.speech.base import Alignment, Transcript, TranscriptionUnavailable
+from app.speech.base import (
+    Alignment,
+    CandidateScores,
+    Transcript,
+    TranscriptionUnavailable,
+)
 
 
 class NullTranscriber:
@@ -21,6 +26,13 @@ class NullTranscriber:
     async def align(
         self, audio: bytes, *, content_type: str, words: list[str]
     ) -> Alignment:
+        raise TranscriptionUnavailable(
+            "No speech-to-text backend is configured (LANGKEY_STT_BACKEND)"
+        )
+
+    async def score(
+        self, audio: bytes, *, content_type: str, candidates: list[str]
+    ) -> CandidateScores:
         raise TranscriptionUnavailable(
             "No speech-to-text backend is configured (LANGKEY_STT_BACKEND)"
         )

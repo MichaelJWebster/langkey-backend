@@ -131,39 +131,11 @@ def slot_variants(target: str, headwords: list[str], k: int) -> list[str]:
 
 
 def ctc_scorer(settings):
-    """log P(text | audio) under the aligner's CTC model, for several texts
-    against one take, with each text's letter count. None where a text has
-    no letters the model knows (digits) or more letters than the audio has
-    frames."""
-    import torch
+    """The production scorer (speech_service/scorer.py), so this benchmark
+    measures exactly what the conversation turn runs."""
+    from speech_service.scorer import make_scorer
 
-    from app.pronunciation import words
-    from speech_service import aligner, transcriber
-
-    ctc, processor = aligner.load(settings)
-    vocab = processor.tokenizer.get_vocab()
-    blank = processor.tokenizer.pad_token_id
-    delimiter = vocab.get("|")
-
-    def scores(samples, texts: list[str]) -> list[tuple[float | None, int]]:
-        with torch.no_grad():
-            inputs = processor(samples, sampling_rate=transcriber.SAMPLE_RATE, return_tensors="pt")
-            logp = torch.log_softmax(ctc(inputs.input_values).logits[0].float(), dim=-1)
-        frames = logp.shape[0]
-        out: list[tuple[float | None, int]] = []
-        for t in texts:
-            ids, _ = aligner._tokens(words(t), vocab, delimiter)
-            if not ids or len(ids) > frames:
-                out.append((None, len(ids)))
-                continue
-            loss = torch.nn.functional.ctc_loss(
-                logp.unsqueeze(1), torch.tensor([ids]), torch.tensor([frames]),
-                torch.tensor([len(ids)]), blank=blank, reduction="sum",
-            )
-            out.append((-float(loss), len(ids)))
-        return out
-
-    return scores
+    return make_scorer(settings)
 
 
 def read_jsonl(path: Path) -> list[dict]:

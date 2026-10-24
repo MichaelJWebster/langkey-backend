@@ -13,6 +13,8 @@ import httpx
 
 from app.speech.base import (
     Alignment,
+    CandidateScore,
+    CandidateScores,
     Transcript,
     TranscriptionError,
     TranscriptionUnavailable,
@@ -74,6 +76,33 @@ class HttpTranscriber:
             )
         except (ValueError, KeyError, TypeError) as exc:
             log.warning("speech service sent an unreadable alignment: %s", exc)
+            raise TranscriptionError("The speech service sent an unreadable reply") from exc
+
+    async def score(
+        self, audio: bytes, *, content_type: str, candidates: list[str]
+    ) -> CandidateScores:
+        response = await self._post(
+            "/score", audio, content_type=content_type,
+            data={"candidates": json.dumps(candidates, ensure_ascii=False)},
+        )
+        try:
+            body = response.json()
+            rows = body["candidates"]
+            if len(rows) != len(candidates):
+                raise ValueError(f"{len(rows)} scores for {len(candidates)} candidates")
+            return CandidateScores(
+                candidates=tuple(
+                    CandidateScore(
+                        text=text,
+                        ctc=None if r["ctc"] is None else float(r["ctc"]),
+                        letters=int(r["letters"]),
+                    )
+                    for text, r in zip(candidates, rows)
+                ),
+                model=body.get("model", "unknown"),
+            )
+        except (ValueError, KeyError, TypeError) as exc:
+            log.warning("speech service sent unreadable scores: %s", exc)
             raise TranscriptionError("The speech service sent an unreadable reply") from exc
 
     async def _post(

@@ -325,3 +325,76 @@ async def test_a_service_without_the_endpoint_is_unavailable_not_a_rejection(spe
     t = speech_service(lambda r: httpx.Response(404, json={"detail": "Not Found"}))
     with pytest.raises(TranscriptionUnavailable):
         await t.align(b"wav", content_type="audio/wav", words=["a"])
+
+
+# --- candidate scoring over the same seam (the conversation turn) ------------
+
+
+@pytest.mark.anyio
+async def test_a_good_score_reply_keeps_each_candidate_in_order(speech_service):
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.path == "/score"
+        return httpx.Response(
+            200,
+            json={
+                "candidates": [
+                    {"text": "Jeg bor i Oslo.", "ctc": -12.0, "letters": 12},
+                    {"text": "8", "ctc": None, "letters": 0},
+                ],
+                "model": "NbAiLab/nb-wav2vec2-300m-bokmaal",
+            },
+        )
+
+    t = speech_service(handler)
+    result = await t.score(b"wav", content_type="audio/wav", candidates=["Jeg bor i Oslo.", "8"])
+
+    assert result.candidates[0].per_letter == -1.0
+    assert result.candidates[1].ctc is None  # unscorable is not an error
+    assert result.candidates[1].per_letter is None
+    assert "wav2vec2" in result.model
+
+
+@pytest.mark.anyio
+async def test_the_candidates_travel_with_the_audio_as_json(speech_service):
+    seen = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen["body"] = request.content.decode("utf-8", "replace")
+        return httpx.Response(
+            200, json={"candidates": [{"text": "Hei på deg", "ctc": -3.0, "letters": 8}], "model": "m"}
+        )
+
+    t = speech_service(handler)
+    await t.score(b"wav", content_type="audio/wav", candidates=["Hei på deg"])
+    # Non-ASCII stays readable on the wire: æ ø å are the content.
+    assert '["Hei på deg"]' in seen["body"]
+
+
+@pytest.mark.anyio
+async def test_a_score_reply_with_the_wrong_count_is_a_failure(speech_service):
+    t = speech_service(
+        lambda request: httpx.Response(200, json={"candidates": [], "model": "m"})
+    )
+    with pytest.raises(TranscriptionError):
+        await t.score(b"wav", content_type="audio/wav", candidates=["Hei"])
+
+
+@pytest.mark.anyio
+async def test_a_service_without_score_is_unavailable(speech_service):
+    t = speech_service(lambda request: httpx.Response(404))
+    with pytest.raises(TranscriptionUnavailable):
+        await t.score(b"wav", content_type="audio/wav", candidates=["Hei"])
+
+
+@pytest.mark.anyio
+async def test_the_null_backend_cannot_score_either():
+    with pytest.raises(TranscriptionUnavailable):
+        await NullTranscriber().score(b"x", content_type="audio/wav", candidates=["Hei"])
+
+
+def test_the_http_backend_is_a_scorer():
+    from app.speech import CandidateScorer, get_scorer
+
+    t = HttpTranscriber("http://speech:8001", model="nb-whisper-small")
+    assert isinstance(t, CandidateScorer)
+    assert get_scorer(t) is t

@@ -8,6 +8,9 @@ hosting without a route changing (ADR-032).
 
 from app.speech.base import (
     Alignment,
+    CandidateScore,
+    CandidateScorer,
+    CandidateScores,
     SpeechToText,
     Transcript,
     TranscriptionError,
@@ -15,10 +18,13 @@ from app.speech.base import (
     WordAligner,
     WordSpan,
 )
-from app.speech.registry import get_aligner, get_transcriber
+from app.speech.registry import get_aligner, get_scorer, get_transcriber
 
 __all__ = [
     "Alignment",
+    "CandidateScore",
+    "CandidateScorer",
+    "CandidateScores",
     "SpeechToText",
     "Transcript",
     "TranscriptionError",
@@ -26,5 +32,6 @@ __all__ = [
     "WordAligner",
     "WordSpan",
     "get_aligner",
+    "get_scorer",
     "get_transcriber",
 ]

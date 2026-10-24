@@ -15,7 +15,7 @@ from typing import Annotated
 from fastapi import Depends
 
 from app.config import Settings, get_settings
-from app.speech.base import SpeechToText, WordAligner
+from app.speech.base import CandidateScorer, SpeechToText, WordAligner
 from app.speech.http import HttpTranscriber
 from app.speech.null import NullTranscriber
 
@@ -106,5 +106,19 @@ def get_aligner(
     aligner: the per-word compare is then absent, and nothing else changes.
     """
     if isinstance(transcriber, WordAligner):
+        return transcriber
+    return NullTranscriber()
+
+
+def get_scorer(
+    transcriber: Annotated[SpeechToText, Depends(get_transcriber)],
+) -> CandidateScorer:
+    """FastAPI dependency: the candidate scorer behind the configured backend.
+
+    Derived from get_transcriber for the same reasons as get_aligner. A
+    backend that cannot score gets the null scorer, and the conversation turn
+    falls through to asking the learner which answer they gave.
+    """
+    if isinstance(transcriber, CandidateScorer):
         return transcriber
     return NullTranscriber()
