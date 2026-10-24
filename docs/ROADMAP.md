@@ -297,6 +297,48 @@ each step is useful on its own and makes the next one cheaper.
    directly is the only real alternative, worth a bake-off on this corpus once the
    feature exists.
 
+   **Context, measured 2026-10-24 — the turn's expected answers are the big lever.**
+   A turn knows roughly what the learner will say, so `scripts/bench_context.py`
+   simulated that on the same 569 takes. Each take got an answer set: its true target
+   plus four alternatives. Every candidate was scored by how well the audio supports it
+   (log P(text | audio) under the aligner's `nb-wav2vec2` CTC model, ~0.16 s a take),
+   against Whisper's own transcript as the open guess. The rule: take the best expected
+   answer unless the open guess beats it by more than a margin. "Off-script" is the
+   same set with the target removed — how often a wrong expected answer gets accepted
+   when the learner said something else. Sentences, 506; free decoding gets 34% exact:
+
+   | answer set: target + 4… | set alone | with open guess, margin +5 / +10 | wrong answer taken off-script |
+   |---|---|---|---|
+   | nearest deck sentences | 92% | 74% / 82% | 13% / 16% |
+   | one-word near-spellings (*hjelpe / hjalp*) | 73% | 62% / 68% | 44% / 59% |
+
+   - **Distinct answers make recognition work.** 34% exact becomes ~80% when the
+     alternatives differ by more than a word.
+   - **Near-spellings defeat it.** When the alternatives differ only by one
+     similar-sounding word, the audio cannot tell them apart reliably — and sometimes
+     that is because the learner did say the other word, a pronunciation fact the turn
+     should report, not paper over.
+   - **Whisper's n-best adds nothing.** Beam search (10 wide, up to 5 distinct
+     transcripts) held the target only 37% of the time; letting CTC choose among them
+     gave 33% exact against greedy's 34%. As the open guess, greedy matches n-best and
+     saves ~0.5 s a turn. *The greedy-as-open-guess figures in the table come from a
+     one-off pass, not yet from the script; n-best gives 70% / 80% and 10% / 15% for
+     the first row.* transformers 5.18's Whisper `generate` returns copies of the top
+     beam for `num_return_sequences`; the script goes through `GenerationMixin.generate`
+     instead.
+   - **Comparing against the unconstrained CTC path** (a GOP-style threshold) did worse
+     than comparing against the open guess, so it is not the way to spot off-script
+     answers.
+
+   So the turn design follows: author answer sets whose alternatives differ by more
+   than one similar-sounding word; run Whisper once, score the expected answers and its
+   transcript with CTC, margin around +5 to +10; always confirm with *"I think you
+   said: …"*, since 13–16% wrong acceptances are too many to act on silently; and keep
+   the unassisted transcript for pronunciation feedback. Caveats: these takes are
+   sentences read aloud after a reference, not spontaneous replies, so real turns will
+   be harder; and the sets are simulated — authored alternatives (*Oslo / Bergen*)
+   should separate more easily than the nearest-neighbour worst case used here.
+
 Open questions: hosting for NB-Whisper once it leaves the Mac (Workers AI
 whisper-large-v3-turbo at $0.0005/audio-min is the cheap fallback, but generic Whisper
 gives up the Norwegian accuracy margin); how speaking attempts should feed CEFR
