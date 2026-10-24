@@ -27,7 +27,7 @@ from pydantic import BaseModel
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.audio import audio_url
+from app.audio import CONVERSATION_SCALE, CONVERSATION_SCALES, PRIMARY_VOICE, audio_url
 from app.auth import get_current_user
 from app.config import get_settings
 from app.content import _s3_client, load_dialogues
@@ -50,7 +50,7 @@ from app.models import (
 from app.models.common import utcnow
 from app.pronunciation import SAID, compare, normalise
 from app.routes.recordings import EXTENSIONS, MAX_BYTES, _base_type
-from app.routes.speaking import SpeedOut, _speeds
+from app.routes.speaking import SpeedOut
 from app.speech import (
     CandidateScorer,
     SpeechToText,
@@ -95,6 +95,7 @@ class NodeOut(BaseModel):
 class CharacterOut(BaseModel):
     name: str
     role: str
+    voice: str = PRIMARY_VOICE
 
 
 class DialogueOut(BaseModel):
@@ -168,13 +169,22 @@ class StartIn(BaseModel):
 # --- helpers ----------------------------------------------------------------------
 
 
-def _line(text: str, en: str) -> LineOut:
+def _line(text: str, en: str, voice: str) -> LineOut:
+    """A line in the character's own voice, on the conversation ladder, its
+    default clip at the conversational rung (app/audio.py)."""
     return LineOut(
         text=text,
         en=en,
-        audio_url=audio_url(LANGUAGE, text, primary=True),
-        speeds=_speeds(LANGUAGE, text),
+        audio_url=audio_url(LANGUAGE, text, scale=CONVERSATION_SCALE, voice=voice),
+        speeds=[
+            SpeedOut(scale=s, url=audio_url(LANGUAGE, text, scale=s, voice=voice))
+            for s in CONVERSATION_SCALES
+        ],
     )
+
+
+def _voice(dialogue: Dialogue) -> str:
+    return dialogue.character.get("voice", PRIMARY_VOICE)
 
 
 def _universal_answers() -> list[AnswerOut]:
@@ -185,7 +195,7 @@ def _node_out(dialogue: Dialogue, node_id: str) -> NodeOut:
     node = dialogue.nodes[node_id]
     return NodeOut(
         id=node_id,
-        line=_line(node["say"], node["say_en"]),
+        line=_line(node["say"], node["say_en"], _voice(dialogue)),
         answers=[AnswerOut(id=a["id"], text=a["text"], en=a["en"]) for a in node["answers"]]
         + _universal_answers(),
     )
@@ -251,9 +261,9 @@ async def _catalogue(session: AsyncSession, user: User) -> list[tuple[Dialogue, 
     return out
 
 
-def _fixed() -> dict[str, LineOut]:
+def _fixed(voice: str) -> dict[str, LineOut]:
     _, fixed = load_dialogues(LANGUAGE)
-    return {k: _line(fixed[k], fixed[f"{k}_en"]) for k in ("unclear", "choice", "offscript")}
+    return {k: _line(fixed[k], fixed[f"{k}_en"], voice) for k in ("unclear", "choice", "offscript")}
 
 
 async def _owned(session: AsyncSession, user: User, conversation_id: uuid.UUID) -> Conversation:
@@ -309,7 +319,7 @@ async def _apply(
         return StepOut(node=_node_out(dialogue, turn.node_id), repeat=True)
 
     conversation.node_id = answer["next"]
-    reply = _line(answer["reply"], answer["reply_en"])
+    reply = _line(answer["reply"], answer["reply_en"], _voice(dialogue))
     if answer["next"] is None:
         conversation.finished_at = utcnow()
         return StepOut(reply=reply, finished=True)
@@ -347,7 +357,7 @@ async def start(
         id=conversation.id,
         dialogue=summary,
         node=_node_out(dialogue, dialogue.start),
-        **_fixed(),
+        **_fixed(_voice(dialogue)),
     )
 
 

@@ -34,6 +34,14 @@ LEADING_GAP_MAX = 0.5
 SPEECH_DBFS = -45
 CLIP_FORMAT = "lead0.5"
 PRIMARY_VOICE = "talesyntese"
+# Conversation characters' ladder and default rung (keep in sync with
+# app/audio.py, which explains the 2.5).
+CONVERSATION_SCALES = [4.0, 3.4, 2.5, 1.6]
+CONVERSATION_SCALE = 2.5
+# A conversation clip whose opening is this weak is synthesised again (ADR-028
+# measure; Piper's output varies run to run), keeping the strongest attempt.
+ONSET_FLOOR = 0.60
+ONSET_TRIES = 8
 VOICE_POOL = [PRIMARY_VOICE] + [f"nvcc:{n}" for n in range(10)]
 
 MODELS = {
@@ -66,8 +74,10 @@ def voice_for_text(text: str, primary: bool = False) -> str:
     return VOICE_POOL[pick % len(VOICE_POOL)]
 
 
-def audio_object_key(language: str, text: str, primary: bool = False, scale: float = LENGTH_SCALE) -> str:
-    voice = voice_for_text(text, primary)
+def audio_object_key(
+    language: str, text: str, primary: bool = False, scale: float = LENGTH_SCALE, voice: str | None = None
+) -> str:
+    voice = voice or voice_for_text(text, primary)
     digest = hashlib.sha256(f"{voice}|{scale}|{text.strip()}|{CLIP_FORMAT}".encode()).hexdigest()[:20]
     return f"audio/{language}/{digest}.wav"
 
@@ -124,21 +134,47 @@ def deck_variants() -> dict[tuple[str, bool, float], None]:
     return variants
 
 
-def dialogue_texts() -> list[str]:
-    """Every line a conversation character speaks: each node's line, each
-    answer's reply, and the fixed "didn't catch that" lines. Read from the
-    mounted data/ (the same mount as the voice overrides), not the deck."""
+def dialogue_clips() -> set[tuple[str, str, float]]:
+    """(text, voice, scale) for every line a conversation character speaks --
+    each node's line, each answer's reply, and the fixed "sorry?" lines in
+    every character's voice -- on the conversation ladder. Read from the
+    mounted data/, not the deck."""
     path = f"/data/dialogues_{LANGUAGE}.json"
     if not os.path.exists(path):
-        return []
+        return set()
     with open(path) as f:
         doc = json.load(f)
-    texts = [doc.get("fixed", {}).get(k) for k in ("unclear", "choice", "offscript")]
+    fixed = [doc.get("fixed", {}).get(k) for k in ("unclear", "choice", "offscript")]
+    clips: set[tuple[str, str, float]] = set()
     for d in doc.get("dialogues", []):
+        voice = d["character"].get("voice", PRIMARY_VOICE)
+        texts = list(fixed)
         for node in d["nodes"].values():
             texts.append(node["say"])
             texts += [a.get("reply") for a in node["answers"]]
-    return [t for t in dict.fromkeys(texts) if t]
+        for text in texts:
+            if text:
+                clips.update((text, voice, scale) for scale in CONVERSATION_SCALES)
+    return clips
+
+
+def onset_strength(data: bytes) -> float:
+    """Loudest 20 ms in the first 200 ms of speech, over the clip peak -- the
+    measure in scripts/check_audio_onsets.py (keep in sync)."""
+    with wave.open(io.BytesIO(data)) as w:
+        rate, frames = w.getframerate(), w.getnframes()
+        samples = array("h", w.readframes(frames))
+    size = int(rate * 0.02)
+    env = [
+        (sum(v * v for v in samples[i : i + size]) / size) ** 0.5
+        for i in range(0, frames - size, size)
+    ]
+    if not env:
+        return 1.0
+    peak = max(env) or 1.0
+    env = [e / peak for e in env]
+    start = next((i for i, e in enumerate(env) if e > 0.15), None)
+    return 1.0 if start is None else max(env[start : start + 10])
 
 
 def existing_keys() -> set[str]:
@@ -150,18 +186,16 @@ def existing_keys() -> set[str]:
 
 
 def main() -> None:
+    # key -> (text, voice, scale, retry a weak opening)
+    expected: dict[str, tuple[str, str, float, bool]] = {}
     variants = deck_variants()
-    # Conversation lines: the primary voice, on the whole imitation ladder so
-    # the speed chooser works as it does for pronunciation.
-    lines = dialogue_texts()
-    for text in lines:
-        for scale in PRONUNCIATION_SCALES:
-            variants.setdefault((text, True, scale), None)
-    print(f"{len(lines)} conversation lines", flush=True)
-    expected = {
-        audio_object_key(LANGUAGE, t, primary, scale): (t, primary, scale)
-        for t, primary, scale in variants
-    }
+    for t, primary, scale in variants:
+        expected[audio_object_key(LANGUAGE, t, primary, scale)] = (t, voice_for_text(t, primary), scale, False)
+    conversation = dialogue_clips()
+    for t, voice, scale in conversation:
+        expected[audio_object_key(LANGUAGE, t, scale=scale, voice=voice)] = (t, voice, scale, True)
+    print(f"{len(conversation)} conversation clips", flush=True)
+
     have = existing_keys()
     todo = sorted((key, *expected[key]) for key in expected.keys() - have)
     stale = sorted(have - expected.keys())
@@ -169,26 +203,33 @@ def main() -> None:
     # regenerated on the voice that swallowed its first word.
     print(f"{len(VOICE_OVERRIDES)} voice overrides from {OVERRIDES_PATH}", flush=True)
     print(
-        f"{len(variants)} variants, {len(have)} clips exist, generating {len(todo)}, pruning {len(stale)}",
+        f"{len(expected)} variants, {len(have)} clips exist, generating {len(todo)}, pruning {len(stale)}",
         flush=True,
     )
 
     if todo:
         voices = {name: PiperVoice.load(path) for name, path in MODELS.items()}
-        for i, (key, text, primary, scale) in enumerate(todo, 1):
-            voice_id = voice_for_text(text, primary)
+        weak = 0
+        for i, (key, text, voice_id, scale, retry) in enumerate(todo, 1):
             model_name, _, speaker = voice_id.partition(":")
-            config = SynthesisConfig(
-                length_scale=scale,
-                speaker_id=int(speaker) if speaker else None,
-            )
-            buf = io.BytesIO()
-            with wave.open(buf, "wb") as wav:
-                voices[model_name].synthesize_wav(text, wav, syn_config=config)
-            clip, _ = trim_leading_silence(buf.getvalue())
-            s3.upload_fileobj(io.BytesIO(clip), BUCKET, key, ExtraArgs={"ContentType": "audio/wav"})
+            config = SynthesisConfig(length_scale=scale, speaker_id=int(speaker) if speaker else None)
+            best, best_onset = b"", -1.0
+            for _ in range(ONSET_TRIES if retry else 1):
+                buf = io.BytesIO()
+                with wave.open(buf, "wb") as wav:
+                    voices[model_name].synthesize_wav(text, wav, syn_config=config)
+                clip, _ = trim_leading_silence(buf.getvalue())
+                strength = onset_strength(clip) if retry else 1.0
+                if strength > best_onset:
+                    best, best_onset = clip, strength
+                if best_onset >= ONSET_FLOOR:
+                    break
+            weak += best_onset < ONSET_FLOOR
+            s3.upload_fileobj(io.BytesIO(best), BUCKET, key, ExtraArgs={"ContentType": "audio/wav"})
             if i % 100 == 0 or i == len(todo):
                 print(f"  {i}/{len(todo)}", flush=True)
+        if weak:
+            print(f"  {weak} conversation clip(s) still open weakly after {ONSET_TRIES} tries", flush=True)
 
     for i in range(0, len(stale), 1000):
         s3.delete_objects(

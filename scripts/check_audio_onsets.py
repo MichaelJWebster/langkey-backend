@@ -41,7 +41,13 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import date
 from pathlib import Path
 
-from app.audio import LENGTH_SCALE, audio_object_key, voice_for_text
+from app.audio import (
+    CONVERSATION_SCALE,
+    LENGTH_SCALE,
+    PRIMARY_VOICE,
+    audio_object_key,
+    voice_for_text,
+)
 from app.config import get_settings
 from app.content import _s3_client, load_deck, load_dialogues
 
@@ -79,8 +85,10 @@ def onset_strength(data: bytes) -> float | None:
     return max(envelope[start : start + ONSET_WINDOW_MS // FRAME_MS])
 
 
-def deck_clips() -> list[tuple[str, bool]]:
-    """(text, primary) for the example-sentence clips.
+def deck_clips() -> list[tuple[str, bool, str | None, float]]:
+    """(text, primary, voice, scale) for the example-sentence clips, and for
+    every conversation line in its character's voice at the conversational
+    rung -- the one a conversation plays by default.
 
     Headwords are deliberately excluded. Many are an unstressed article or
     infinitive marker before a stressed word -- "et hus", "aa ville" -- where a
@@ -89,21 +97,20 @@ def deck_clips() -> list[tuple[str, bool]]:
     excluded too: same text, same primary voice, other speeds.
     """
     entries, _ = load_deck()
-    clips: dict[tuple[str, bool], None] = {}
+    clips: dict[tuple[str, bool, str | None, float], None] = {}
     for entry in entries:
         for example in entry["examples"]:
-            clips.setdefault((example["no"], False), None)
-    # The conversation characters' lines: sentences on the primary voice,
-    # measured at the natural rung (LENGTH_SCALE is on their ladder).
+            clips.setdefault((example["no"], False, None, LENGTH_SCALE), None)
     dialogues, fixed = load_dialogues()
-    lines = [fixed.get(k) for k in ("unclear", "choice", "offscript")]
     for d in dialogues:
+        voice = d["character"].get("voice", PRIMARY_VOICE)
+        lines = [fixed.get(k) for k in ("unclear", "choice", "offscript")]
         for node in d["nodes"].values():
             lines.append(node["say"])
             lines += [a.get("reply") for a in node["answers"]]
-    for text in lines:
-        if text:
-            clips.setdefault((text, True), None)
+        for text in lines:
+            if text:
+                clips.setdefault((text, False, voice, CONVERSATION_SCALE), None)
     return list(clips)
 
 
@@ -128,9 +135,9 @@ def main() -> int:
     bucket = get_settings().s3_bucket
     client = _s3_client()
 
-    def measure(clip: tuple[str, bool]):
-        text, primary = clip
-        key = audio_object_key("nb", text, primary)
+    def measure(clip: tuple[str, bool, str | None, float]):
+        text, primary, voice, scale = clip
+        key = audio_object_key("nb", text, primary, scale, voice)
         try:
             data = client.get_object(Bucket=bucket, Key=key)["Body"].read()
         except Exception:
@@ -140,9 +147,9 @@ def main() -> int:
             return None
         return {
             "text": text,
-            "voice": voice_for_text(text, primary),
+            "voice": voice or voice_for_text(text, primary),
             "primary": primary,
-            "scale": LENGTH_SCALE,
+            "scale": scale,
             "key": key,
             "onset_strength": round(strength, 3),
         }

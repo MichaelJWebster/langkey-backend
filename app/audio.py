@@ -87,6 +87,13 @@ DICTATION_SUGGESTED = (2.8, 2.2, 1.6)
 # Primary voice reads headwords; example sentences draw from the pool so the
 # learner hears varied speakers. "nvcc:N" = speaker N of no_NO-nvcc-medium.
 PRIMARY_VOICE = "talesyntese"
+# Conversation characters speak on their own ladder (keep in sync with the
+# generator). The default rung, 2.5, is halfway between the imitation default
+# (3.4) and natural (1.6) by measured speaking time: 9.9 s of speech against
+# 13.1 and 7.2 for the same four lines (2026-10-24, talesyntese). 4.0 stays
+# for "Kan du gjenta?".
+CONVERSATION_SCALES = [4.0, 3.4, 2.5, 1.6]
+CONVERSATION_SCALE = 2.5
 VOICE_POOL = [PRIMARY_VOICE] + [f"nvcc:{n}" for n in range(10)]
 
 
@@ -160,18 +167,28 @@ def voice_for_text(text: str, primary: bool = False) -> str:
 
 
 def audio_object_key(
-    language: str, text: str, primary: bool = False, scale: float | None = None
+    language: str,
+    text: str,
+    primary: bool = False,
+    scale: float | None = None,
+    voice: str | None = None,
 ) -> str:
-    voice = voice_for_text(text, primary)
+    """`voice` names the speaker outright -- a conversation character always
+    speaks in their own voice -- and otherwise it is chosen as for the deck."""
+    voice = voice or voice_for_text(text, primary)
     s = scale or LENGTH_SCALE
     digest = hashlib.sha256(f"{voice}|{s}|{text.strip()}|{CLIP_FORMAT}".encode()).hexdigest()[:20]
     return f"audio/{language}/{digest}.wav"
 
 
 def audio_url(
-    language: str, text: str, primary: bool = False, scale: float | None = None
+    language: str,
+    text: str,
+    primary: bool = False,
+    scale: float | None = None,
+    voice: str | None = None,
 ) -> str:
-    return f"/api/v1/{audio_object_key(language, text, primary, scale)}"
+    return f"/api/v1/{audio_object_key(language, text, primary, scale, voice)}"
 
 
 # A single `bytes=a-b` range, either end optional ("bytes=0-", "bytes=-500").

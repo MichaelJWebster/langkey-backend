@@ -136,7 +136,9 @@ async def test_start_gives_the_first_line_with_audio_and_its_answers(client):
     line = conv["node"]["line"]
     assert line["text"] == HEI["nodes"][HEI["start"]]["say"]
     assert line["audio_url"].startswith("/api/v1/audio/nb/")
-    assert len(line["speeds"]) == 5
+    assert [sp["scale"] for sp in line["speeds"]] == [4.0, 3.4, 2.5, 1.6]
+    # The default clip is the conversational rung.
+    assert line["audio_url"] == next(sp["url"] for sp in line["speeds"] if sp["scale"] == 2.5)
     universal = [a["text"] for a in conv["node"]["answers"] if a["universal"]]
     assert universal == ["Jeg forstår ikke.", "Kan du gjenta?"]
     assert conv["unclear"]["text"] and conv["choice"]["text"]
@@ -327,3 +329,15 @@ async def test_start_carries_the_off_script_line(client):
     headers = await login(client)
     conv = await _start(client, headers)
     assert "annen måte" in conv["offscript"]["text"]
+
+
+async def test_each_character_speaks_in_their_own_voice(client):
+    from app.audio import audio_url
+
+    headers = await login(client)
+    conv = await _start(client, headers)  # Ingrid
+    first = HEI["nodes"][HEI["start"]]["say"]
+    assert conv["dialogue"]["character"]["voice"] == "nvcc:3"
+    assert conv["node"]["line"]["audio_url"] == audio_url("nb", first, scale=2.5, voice="nvcc:3")
+    # Her "sorry?" lines are in her voice too.
+    assert conv["unclear"]["audio_url"] != audio_url("nb", conv["unclear"]["text"], scale=2.5, voice="talesyntese")

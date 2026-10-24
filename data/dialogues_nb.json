@@ -4,8 +4,8 @@
     "unclear_en": "Sorry, I didn't quite hear. Can you say it again?",
     "choice": "Unnskyld, hva sa du?",
     "choice_en": "Sorry, what did you say?",
-    "offscript": "Beklager, det forstod jeg ikke helt. Kan du si det på en annen måte?",
-    "offscript_en": "Sorry, I didn't quite understand that. Can you say it another way?"
+    "offscript": "Hm, det forstod jeg ikke. Kan du si det på en annen måte?",
+    "offscript_en": "Hm, I didn't understand that. Can you say it another way?"
   },
   "dialogues": [
     {
@@ -14,7 +14,7 @@
       "title_en": "Hello!",
       "blurb": "Meet your new neighbour on the stairs: greetings, how you are, where you're from.",
       "level": 1,
-      "character": { "name": "Ingrid", "role": "your neighbour" },
+      "character": { "voice": "nvcc:3", "name": "Ingrid", "role": "your neighbour" },
       "start": "hilse",
       "nodes": {
         "hilse": {
@@ -74,7 +74,7 @@
       "title_en": "At the café",
       "blurb": "Order a drink and something to eat, find a table, and pay.",
       "level": 2,
-      "character": { "name": "Lars", "role": "a waiter" },
+      "character": { "voice": "talesyntese", "name": "Lars", "role": "a waiter" },
       "start": "bestille",
       "nodes": {
         "bestille": {
@@ -149,7 +149,7 @@
       "title_en": "Where do you live?",
       "blurb": "Talk to a classmate on your first day at the Norwegian course: home, family, work, free time.",
       "level": 3,
-      "character": { "name": "Sofie", "role": "a classmate" },
+      "character": { "voice": "nvcc:3", "name": "Sofie", "role": "a classmate" },
       "start": "ny",
       "nodes": {
         "ny": {
@@ -164,7 +164,7 @@
           "say": "Hvor bor du?",
           "say_en": "Where do you live?",
           "answers": [
-            { "id": "sentrum", "text": "Jeg bor i sentrum.", "en": "I live in the city centre.", "reply": "I sentrum? Det er praktisk.", "reply_en": "In the centre? That's handy.", "next": "alene" },
+            { "id": "sentrum", "text": "Jeg bor i sentrum.", "en": "I live in the city centre.", "reply": "Midt i sentrum? Det er praktisk.", "reply_en": "Right in the centre? That's handy.", "next": "alene" },
             { "id": "leilighet", "text": "Jeg bor i en liten leilighet.", "en": "I live in a small flat.", "reply": "Liten er koselig!", "reply_en": "Small is cosy!", "next": "alene" },
             { "id": "hus", "text": "Vi bor i et hus utenfor byen.", "en": "We live in a house outside the city.", "reply": "Et hus! Så fint.", "reply_en": "A house! How nice.", "next": "alene" },
             { "id": "besok", "text": "Jeg bor i Australia, men jeg er på besøk.", "en": "I live in Australia, but I'm visiting.", "reply": "Australia! Du har reist langt.", "reply_en": "Australia! You've travelled far.", "next": "alene" },
@@ -238,7 +238,7 @@
       "title_en": "In the shop",
       "blurb": "Do the grocery shopping: find things, prices, bags, paying, the receipt.",
       "level": 4,
-      "character": { "name": "Kari", "role": "a shop assistant" },
+      "character": { "voice": "nvcc:3", "name": "Kari", "role": "a shop assistant" },
       "start": "hjelpe",
       "nodes": {
         "hjelpe": {
@@ -321,7 +321,7 @@
       "title_en": "Shall we meet?",
       "blurb": "A friend rings to invite you to dinner: days, times, places and food.",
       "level": 5,
-      "character": { "name": "Jonas", "role": "a friend, on the phone" },
+      "character": { "voice": "talesyntese", "name": "Jonas", "role": "a friend, on the phone" },
       "start": "tid",
       "nodes": {
         "tid": {
@@ -422,7 +422,7 @@
       "title_en": "The way to the station",
       "blurb": "Lost in Oslo: follow directions, sort out a ticket, and chat about the city.",
       "level": 6,
-      "character": { "name": "Anne", "role": "a passer-by in Oslo" },
+      "character": { "voice": "nvcc:3", "name": "Anne", "role": "a passer-by in Oslo" },
       "start": "hjelpe",
       "nodes": {
         "hjelpe": {
@@ -465,7 +465,7 @@
           "say_en": "Do you already have a ticket?",
           "answers": [
             { "id": "nettet", "text": "Ja, jeg kjøpte den på nettet.", "en": "Yes, I bought it online.", "reply": "Smart!", "reply_en": "Smart!", "next": "nar" },
-            { "id": "hvor-kjope", "text": "Nei, hvor kan jeg kjøpe billett?", "en": "No, where can I buy a ticket?", "reply": "Du kan kjøpe billett i appen eller på stasjonen.", "reply_en": "You can buy a ticket in the app or at the station.", "next": "nar" },
+            { "id": "hvor-kjope", "text": "Nei, hvor kan jeg kjøpe billett?", "en": "No, where can I buy a ticket?", "reply": "Billett kan du kjøpe i appen eller på stasjonen.", "reply_en": "You can buy a ticket in the app or at the station.", "next": "nar" },
             { "id": "pa-toget", "text": "Nei, jeg kjøper den på toget.", "en": "No, I'll buy it on the train.", "reply": "Det går an, men det er dyrere.", "reply_en": "You can, but it's more expensive.", "next": "nar" }
           ]
         },

@@ -34,6 +34,7 @@ from difflib import SequenceMatcher
 from itertools import pairwise
 from pathlib import Path
 
+from app.audio import VOICE_POOL
 from app.conversation import UNIVERSAL, paths
 from app.pronunciation import words
 
@@ -82,6 +83,9 @@ def check_dialogue(d: dict) -> list[str]:
     for key in ("slug", "title", "title_en", "blurb", "level", "character", "start", "nodes"):
         if key not in d:
             problems.append(f"{slug}: missing {key!r}")
+    voice = d.get("character", {}).get("voice")
+    if voice is not None and voice not in VOICE_POOL:
+        problems.append(f"{slug}: unknown voice {voice!r} (one of {', '.join(VOICE_POOL)})")
     if d.get("start") not in nodes:
         problems.append(f"{slug}: start {d.get('start')!r} is not a node")
         return problems
