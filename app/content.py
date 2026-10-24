@@ -215,6 +215,29 @@ def grammar_hash(entries: list[GrammarUnitEntry]) -> str:
     return hashlib.sha256(payload.encode()).hexdigest()
 
 
+DialogueEntry = dict[str, Any]
+# keys: slug, title, title_en, blurb, level, character{name, role}, start,
+#       nodes{id: {say, say_en, answers[{id, text, en, reply, reply_en, next}]}}
+
+
+def load_dialogues(language: str = "nb") -> tuple[list[DialogueEntry], dict[str, str]]:
+    """Conversation dialogues and the character's fixed lines (unclear,
+    choice), from the local JSON, easiest first. Local-only like the
+    grammar. The gates in scripts/check_dialogues.py run over this file in
+    the test suite, so what loads here has passed them."""
+    path = DATA_DIR / f"dialogues_{language}.json"
+    if not path.exists():
+        return [], {}
+    doc = json.loads(path.read_text())
+    return doc["dialogues"], doc.get("fixed", {})
+
+
+def dialogues_hash(entries: list[DialogueEntry]) -> str:
+    """Stable fingerprint, used to skip no-op DB syncs."""
+    payload = json.dumps(entries, sort_keys=True, ensure_ascii=False)
+    return hashlib.sha256(payload.encode()).hexdigest()
+
+
 def _s3_client(*, fail_fast: bool = False):
     """Shared S3/R2 client.
 

@@ -10,7 +10,7 @@ pronunciation scoring against later.
 import uuid
 from datetime import datetime
 
-from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import JSON, Boolean, CheckConstraint, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db import Base
@@ -69,8 +69,14 @@ class PronunciationAttempt(Base):
     user_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"), index=True
     )
-    recording_id: Mapped[uuid.UUID] = mapped_column(
+    # Which take the word came from: a pronunciation recording, or a spoken
+    # conversation turn -- exactly one. Conversation feeds the same tally, so
+    # speaking practice leans toward sounds that do not land in either.
+    recording_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("user_recordings.id", ondelete="CASCADE"), index=True
+    )
+    turn_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("conversation_turns.id", ondelete="CASCADE"), index=True
     )
     language_code: Mapped[str] = mapped_column(String(8), default="nb")
     # Normalised: lower-case, no punctuation, so attempts tally across
@@ -80,3 +86,10 @@ class PronunciationAttempt(Base):
     heard: Mapped[str | None] = mapped_column(String(64))
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+    __table_args__ = (
+        CheckConstraint(
+            "(recording_id IS NULL) <> (turn_id IS NULL)",
+            name="pronunciation_attempts_one_source",
+        ),
+    )

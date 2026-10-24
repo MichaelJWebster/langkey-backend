@@ -108,3 +108,13 @@ def test_the_speech_service_splits_words_the_way_the_app_does():
 
     for text in ["Hei, hvordan går det?", "Jeg bor i Oslo.", "Klokka er halv åtte!", "Ja - takk."]:
         assert service_words(text) == app_words(text)
+
+
+def test_a_close_call_between_answers_that_mean_the_same_is_accepted():
+    same = [
+        Answer("bra", "Bra, takk.", meaning="m1"),
+        Answer("fint", "Jeg har det fint.", meaning="m1"),
+        Answer("trott", "Jeg er trøtt.", meaning="m2"),
+    ]
+    d = decide(same, {"bra": s(-1.0), "fint": s(-1.05), "trott": s(-3.0)}, "Bra tak", s(-1.0))
+    assert (d.kind, d.picked, d.reason) == (ACCEPTED, "bra", "close call, same meaning")

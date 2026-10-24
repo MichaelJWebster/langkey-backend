@@ -7,6 +7,7 @@ callers use `from app.models import ...` without caring about the split.
 
 from app.models.alignments import ClipAlignment
 from app.models.content import Item, ItemCategory, ItemExample, Language
+from app.models.conversation import Conversation, ConversationTurn, Dialogue
 from app.models.exercises import ExerciseAttempt
 from app.models.learning import (
     FSRS_REVIEW_STATE,
@@ -42,6 +43,9 @@ from app.models.users import User
 __all__ = [
     "AppMeta",
     "ClipAlignment",
+    "Conversation",
+    "ConversationTurn",
+    "Dialogue",
     "ExerciseAttempt",
     "FSRS_REVIEW_STATE",
     "GAMES",

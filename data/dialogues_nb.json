@@ -1,0 +1,514 @@
+{
+  "fixed": {
+    "unclear": "Unnskyld, jeg hørte ikke helt. Kan du si det igjen?",
+    "unclear_en": "Sorry, I didn't quite hear. Can you say it again?",
+    "choice": "Unnskyld, hva sa du?",
+    "choice_en": "Sorry, what did you say?"
+  },
+  "dialogues": [
+    {
+      "slug": "hei",
+      "title": "Hei!",
+      "title_en": "Hello!",
+      "blurb": "Meet your new neighbour on the stairs: greetings, how you are, where you're from.",
+      "level": 1,
+      "character": { "name": "Ingrid", "role": "your neighbour" },
+      "start": "hilse",
+      "nodes": {
+        "hilse": {
+          "say": "Hei! Jeg heter Ingrid. Jeg bor i leiligheten ved siden av.",
+          "say_en": "Hi! My name is Ingrid. I live in the flat next door.",
+          "answers": [
+            { "id": "hyggelig", "text": "Hei, Ingrid! Hyggelig å møte deg.", "en": "Hi, Ingrid! Nice to meet you.", "reply": "Hyggelig å møte deg også!", "reply_en": "Nice to meet you too!", "next": "hvordan" },
+            { "id": "ny", "text": "Hei! Jeg er ny her.", "en": "Hi! I'm new here.", "reply": "Velkommen til huset!", "reply_en": "Welcome to the building!", "next": "hvordan" },
+            { "id": "heihei", "text": "Hei hei!", "en": "Hi there!", "reply": "Hei hei!", "reply_en": "Hi there!", "next": "hvordan" }
+          ]
+        },
+        "hvordan": {
+          "say": "Hvordan har du det?",
+          "say_en": "How are you?",
+          "answers": [
+            { "id": "bra", "text": "Bra, takk. Og du?", "en": "Good, thanks. And you?", "reply": "Jeg har det fint, takk!", "reply_en": "I'm fine, thanks!", "next": "fra" },
+            { "id": "fint", "text": "Jeg har det fint.", "en": "I'm fine.", "reply": "Så bra!", "reply_en": "Great!", "next": "fra" },
+            { "id": "trott", "text": "Jeg er litt trøtt.", "en": "I'm a bit tired.", "reply": "Å nei! Du trenger kaffe.", "reply_en": "Oh no! You need coffee.", "next": "fra" },
+            { "id": "ikke-bra", "text": "Ikke så bra.", "en": "Not so good.", "reply": "Det var synd.", "reply_en": "That's a pity.", "next": "fra" }
+          ]
+        },
+        "fra": {
+          "say": "Hvor kommer du fra?",
+          "say_en": "Where are you from?",
+          "answers": [
+            { "id": "australia", "text": "Jeg kommer fra Australia.", "en": "I'm from Australia.", "reply": "Australia! Det er langt borte.", "reply_en": "Australia! That's far away.", "next": "norsk" },
+            { "id": "england", "text": "Jeg kommer fra England.", "en": "I'm from England.", "reply": "Hyggelig! England er et fint land.", "reply_en": "How nice! England is a lovely country.", "next": "norsk" },
+            { "id": "amerika", "text": "Fra Amerika.", "en": "From America.", "reply": "Amerika! Spennende.", "reply_en": "America! Exciting.", "next": "norsk" },
+            { "id": "skottland", "text": "Fra Skottland.", "en": "From Scotland.", "reply": "Skottland! Der er det fint.", "reply_en": "Scotland! It's lovely there.", "next": "norsk" }
+          ]
+        },
+        "norsk": {
+          "say": "Snakker du norsk?",
+          "say_en": "Do you speak Norwegian?",
+          "answers": [
+            { "id": "litt", "text": "Ja, litt.", "en": "Yes, a little.", "reply": "Du snakker bra!", "reply_en": "You speak well!", "next": "ha-det" },
+            { "id": "laerer", "text": "Jeg lærer norsk.", "en": "I'm learning Norwegian.", "reply": "Så flott! Norsk er gøy.", "reply_en": "How great! Norwegian is fun.", "next": "ha-det" },
+            { "id": "ikke-godt", "text": "Nei, ikke så godt.", "en": "No, not very well.", "reply": "Det går fint. Jeg snakker sakte.", "reply_en": "That's fine. I'll speak slowly.", "next": "ha-det" }
+          ]
+        },
+        "ha-det": {
+          "say": "Jeg må gå nå. Ha en fin dag!",
+          "say_en": "I have to go now. Have a nice day!",
+          "answers": [
+            { "id": "i-like-mate", "text": "Takk, i like måte!", "en": "Thanks, same to you!", "reply": "Ha det!", "reply_en": "Bye!", "next": null },
+            { "id": "ha-det-bra", "text": "Ha det bra!", "en": "Goodbye!", "reply": "Ha det!", "reply_en": "Bye!", "next": null },
+            { "id": "vi-ses", "text": "Vi ses!", "en": "See you!", "reply": "Vi ses!", "reply_en": "See you!", "next": null }
+          ]
+        }
+      }
+    },
+    {
+      "slug": "kafe",
+      "title": "På kafé",
+      "title_en": "At the café",
+      "blurb": "Order a drink and something to eat, find a table, and pay.",
+      "level": 2,
+      "character": { "name": "Lars", "role": "a waiter" },
+      "start": "bestille",
+      "nodes": {
+        "bestille": {
+          "say": "Hei, velkommen! Hva vil du ha?",
+          "say_en": "Hi, welcome! What would you like?",
+          "answers": [
+            { "id": "kaffe", "text": "En kaffe, takk.", "en": "A coffee, please.", "reply": "En kaffe. Gjerne!", "reply_en": "A coffee. With pleasure!", "next": "spise" },
+            { "id": "te", "text": "Jeg vil ha en kopp te.", "en": "I'd like a cup of tea.", "reply": "En kopp te. Gjerne!", "reply_en": "A cup of tea. With pleasure!", "next": "spise" },
+            { "id": "vann", "text": "Bare et glass vann, takk.", "en": "Just a glass of water, please.", "reply": "Et glass vann. Selvfølgelig.", "reply_en": "A glass of water. Of course.", "next": "spise" },
+            { "id": "meny", "text": "Kan jeg se menyen?", "en": "Can I see the menu?", "reply": "Ja, her er menyen.", "reply_en": "Yes, here's the menu.", "next": "spise" }
+          ]
+        },
+        "spise": {
+          "say": "Vil du ha noe å spise også?",
+          "say_en": "Would you like something to eat too?",
+          "answers": [
+            { "id": "bolle", "text": "Ja, en bolle, takk.", "en": "Yes, a bun, please.", "reply": "Bollene er ferske i dag.", "reply_en": "The buns are fresh today.", "next": "sitte" },
+            { "id": "smorbrod", "text": "Jeg vil ha et smørbrød.", "en": "I'd like an open sandwich.", "reply": "Gjerne, et smørbrød.", "reply_en": "With pleasure, an open sandwich.", "next": "palegg" },
+            { "id": "drikke", "text": "Nei takk, bare drikke.", "en": "No thanks, just a drink.", "reply": "Helt greit.", "reply_en": "Totally fine.", "next": "sitte" }
+          ]
+        },
+        "palegg": {
+          "say": "Med ost eller skinke?",
+          "say_en": "With cheese or ham?",
+          "answers": [
+            { "id": "ost", "text": "Med ost, takk.", "en": "With cheese, please.", "reply": "Ost er alltid godt.", "reply_en": "Cheese is always good.", "next": "sitte" },
+            { "id": "skinke", "text": "Med skinke, takk.", "en": "With ham, please.", "reply": "Skinke, ja.", "reply_en": "Ham, yes.", "next": "sitte" },
+            { "id": "begge", "text": "Begge deler, hvis det går.", "en": "Both, if that's possible.", "reply": "Det går fint!", "reply_en": "That's fine!", "next": "sitte" }
+          ]
+        },
+        "sitte": {
+          "say": "Vil du sitte inne eller ute?",
+          "say_en": "Would you like to sit inside or outside?",
+          "answers": [
+            { "id": "inne", "text": "Inne, takk.", "en": "Inside, please.", "reply": "Det er et bord ved vinduet.", "reply_en": "There's a table by the window.", "next": "noe-mer" },
+            { "id": "ute", "text": "Jeg vil sitte ute.", "en": "I'd like to sit outside.", "reply": "Sola skinner i dag!", "reply_en": "The sun is shining today!", "next": "noe-mer" },
+            { "id": "samme", "text": "Det er det samme.", "en": "It doesn't matter.", "reply": "Da kan du sitte her.", "reply_en": "Then you can sit here.", "next": "noe-mer" }
+          ]
+        },
+        "noe-mer": {
+          "say": "Værsågod! Er det noe mer?",
+          "say_en": "Here you go! Anything else?",
+          "answers": [
+            { "id": "alt", "text": "Nei takk, det er alt.", "en": "No thanks, that's all.", "reply": "Flott.", "reply_en": "Great.", "next": "smake" },
+            { "id": "sukker", "text": "Har du sukker?", "en": "Do you have sugar?", "reply": "Ja, sukkeret står der borte.", "reply_en": "Yes, the sugar is over there.", "next": "smake" },
+            { "id": "toalett", "text": "Hvor er toalettet?", "en": "Where is the toilet?", "reply": "Toalettet er til høyre.", "reply_en": "The toilet is on the right.", "next": "smake" }
+          ]
+        },
+        "smake": {
+          "say": "Hvordan smaker det?",
+          "say_en": "How does it taste?",
+          "answers": [
+            { "id": "godt", "text": "Det smaker veldig godt.", "en": "It tastes very good.", "reply": "Så bra å høre!", "reply_en": "Great to hear!", "next": "betale" },
+            { "id": "deilig", "text": "Deilig!", "en": "Delicious!", "reply": "Takk skal du ha!", "reply_en": "Thank you!", "next": "betale" },
+            { "id": "kaldt", "text": "Det er litt kaldt.", "en": "It's a bit cold.", "reply": "Beklager! Jeg henter en ny.", "reply_en": "Sorry! I'll get you a new one.", "next": "betale" }
+          ]
+        },
+        "betale": {
+          "say": "Vil du betale nå?",
+          "say_en": "Would you like to pay now?",
+          "answers": [
+            { "id": "kort", "text": "Ja, kan jeg betale med kort?", "en": "Yes, can I pay by card?", "reply": "Ja, selvfølgelig. Ha en fin dag!", "reply_en": "Yes, of course. Have a nice day!", "next": null },
+            { "id": "kontant", "text": "Jeg betaler kontant.", "en": "I'll pay cash.", "reply": "Takk! Ha en fin dag!", "reply_en": "Thanks! Have a nice day!", "next": null },
+            { "id": "ikke-enna", "text": "Ikke ennå, takk.", "en": "Not yet, thanks.", "reply": "Bare si fra. Kos deg!", "reply_en": "Just let me know. Enjoy!", "next": null }
+          ]
+        }
+      }
+    },
+    {
+      "slug": "kurset",
+      "title": "Hvor bor du?",
+      "title_en": "Where do you live?",
+      "blurb": "Talk to a classmate on your first day at the Norwegian course: home, family, work, free time.",
+      "level": 3,
+      "character": { "name": "Sofie", "role": "a classmate" },
+      "start": "ny",
+      "nodes": {
+        "ny": {
+          "say": "Hei! Er du ny på kurset?",
+          "say_en": "Hi! Are you new on the course?",
+          "answers": [
+            { "id": "forste-dag", "text": "Ja, dette er min første dag.", "en": "Yes, this is my first day.", "reply": "Velkommen! Jeg heter Sofie.", "reply_en": "Welcome! My name is Sofie.", "next": "bor" },
+            { "id": "forrige-uke", "text": "Nei, jeg kom forrige uke.", "en": "No, I came last week.", "reply": "Å, da er vi begge nye! Jeg heter Sofie.", "reply_en": "Oh, then we're both new! My name is Sofie.", "next": "bor" }
+          ]
+        },
+        "bor": {
+          "say": "Hvor bor du?",
+          "say_en": "Where do you live?",
+          "answers": [
+            { "id": "sentrum", "text": "Jeg bor i sentrum.", "en": "I live in the city centre.", "reply": "I sentrum? Det er praktisk.", "reply_en": "In the centre? That's handy.", "next": "alene" },
+            { "id": "leilighet", "text": "Jeg bor i en liten leilighet.", "en": "I live in a small flat.", "reply": "Liten er koselig!", "reply_en": "Small is cosy!", "next": "alene" },
+            { "id": "hus", "text": "Vi bor i et hus utenfor byen.", "en": "We live in a house outside the city.", "reply": "Et hus! Så fint.", "reply_en": "A house! How nice.", "next": "alene" },
+            { "id": "besok", "text": "Jeg bor i Australia, men jeg er på besøk.", "en": "I live in Australia, but I'm visiting.", "reply": "Australia! Du har reist langt.", "reply_en": "Australia! You've travelled far.", "next": "alene" }
+          ]
+        },
+        "alene": {
+          "say": "Bor du alene?",
+          "say_en": "Do you live alone?",
+          "answers": [
+            { "id": "alene", "text": "Ja, jeg bor alene.", "en": "Yes, I live alone.", "reply": "Det er fint med ro.", "reply_en": "Peace and quiet is nice.", "next": "jobb" },
+            { "id": "kona", "text": "Nei, jeg bor med kona mi.", "en": "No, I live with my wife.", "reply": "Så hyggelig.", "reply_en": "How nice.", "next": "barn" },
+            { "id": "familien", "text": "Jeg bor med familien min.", "en": "I live with my family.", "reply": "Så hyggelig.", "reply_en": "How nice.", "next": "barn" },
+            { "id": "venn", "text": "Nei, sammen med en venn.", "en": "No, together with a friend.", "reply": "Det er sikkert gøy.", "reply_en": "That must be fun.", "next": "jobb" }
+          ]
+        },
+        "barn": {
+          "say": "Har du barn?",
+          "say_en": "Do you have children?",
+          "answers": [
+            { "id": "to-barn", "text": "Ja, jeg har to barn.", "en": "Yes, I have two children.", "reply": "To barn! Da har du mye å gjøre.", "reply_en": "Two children! Then you have a lot to do.", "next": "jobb" },
+            { "id": "sonn-datter", "text": "Ja, en sønn og en datter.", "en": "Yes, a son and a daughter.", "reply": "Så fint!", "reply_en": "How lovely!", "next": "jobb" },
+            { "id": "ingen-barn", "text": "Nei, vi har ikke barn.", "en": "No, we don't have children.", "reply": "Ok, da har dere god tid.", "reply_en": "Okay, then you have plenty of time.", "next": "jobb" }
+          ]
+        },
+        "jobb": {
+          "say": "Hva jobber du med?",
+          "say_en": "What do you do for work?",
+          "answers": [
+            { "id": "data", "text": "Jeg jobber med data.", "en": "I work with computers.", "reply": "Data! Det er nyttig.", "reply_en": "Computers! That's useful.", "next": "hvorfor" },
+            { "id": "laerer", "text": "Jeg er lærer.", "en": "I'm a teacher.", "reply": "Lærer! Da kan du hjelpe meg med leksene.", "reply_en": "A teacher! Then you can help me with my homework.", "next": "hvorfor" },
+            { "id": "pensjonist", "text": "Jeg er pensjonist.", "en": "I'm retired.", "reply": "Så deilig, da har du god tid.", "reply_en": "How lovely, then you have plenty of time.", "next": "hvorfor" },
+            { "id": "student", "text": "Jeg studerer.", "en": "I'm studying.", "reply": "Jeg også!", "reply_en": "Me too!", "next": "hvorfor" }
+          ]
+        },
+        "hvorfor": {
+          "say": "Hvorfor lærer du norsk?",
+          "say_en": "Why are you learning Norwegian?",
+          "answers": [
+            { "id": "liker-norge", "text": "Fordi jeg liker Norge.", "en": "Because I like Norway.", "reply": "Norge er et fint land.", "reply_en": "Norway is a lovely country.", "next": "fritid" },
+            { "id": "familie-norge", "text": "Jeg har familie i Norge.", "en": "I have family in Norway.", "reply": "Så bra! Da kan du snakke norsk med dem.", "reply_en": "Great! Then you can speak Norwegian with them.", "next": "fritid" },
+            { "id": "flytte", "text": "Jeg skal flytte til Norge.", "en": "I'm going to move to Norway.", "reply": "Spennende! Lykke til!", "reply_en": "Exciting! Good luck!", "next": "fritid" },
+            { "id": "sprak", "text": "Det er gøy å lære språk.", "en": "It's fun to learn languages.", "reply": "Enig!", "reply_en": "Agreed!", "next": "fritid" }
+          ]
+        },
+        "fritid": {
+          "say": "Hva liker du å gjøre i fritiden?",
+          "say_en": "What do you like doing in your free time?",
+          "answers": [
+            { "id": "tur", "text": "Jeg liker å gå tur.", "en": "I like going for walks.", "reply": "Jeg også! Vi kan gå tur sammen.", "reply_en": "Me too! We can go for a walk together.", "next": "sette-seg" },
+            { "id": "lese", "text": "Jeg leser mye.", "en": "I read a lot.", "reply": "Lesing er bra for norsken!", "reply_en": "Reading is good for your Norwegian!", "next": "sette-seg" },
+            { "id": "mat", "text": "Jeg liker å lage mat.", "en": "I like cooking.", "reply": "Mmm, det liker jeg også.", "reply_en": "Mmm, I like that too.", "next": "sette-seg" },
+            { "id": "fotball", "text": "Jeg spiller fotball.", "en": "I play football.", "reply": "Kult!", "reply_en": "Cool!", "next": "sette-seg" }
+          ]
+        },
+        "sette-seg": {
+          "say": "Kurset begynner nå. Skal vi sette oss?",
+          "say_en": "The course is starting now. Shall we sit down?",
+          "answers": [
+            { "id": "gjerne", "text": "Ja, gjerne.", "en": "Yes, gladly.", "reply": "Kom, her er to ledige stoler.", "reply_en": "Come, here are two free chairs.", "next": null },
+            { "id": "la-oss-ga", "text": "Ja, la oss gå.", "en": "Yes, let's go.", "reply": "Kom, her er to ledige stoler.", "reply_en": "Come, here are two free chairs.", "next": null },
+            { "id": "hente-kaffe", "text": "Et øyeblikk, jeg må hente kaffe.", "en": "One moment, I have to get a coffee.", "reply": "Ok, jeg holder av en plass til deg.", "reply_en": "Okay, I'll save a seat for you.", "next": null }
+          ]
+        }
+      }
+    },
+    {
+      "slug": "butikken",
+      "title": "I butikken",
+      "title_en": "In the shop",
+      "blurb": "Do the grocery shopping: find things, prices, bags, paying, the receipt.",
+      "level": 4,
+      "character": { "name": "Kari", "role": "a shop assistant" },
+      "start": "hjelpe",
+      "nodes": {
+        "hjelpe": {
+          "say": "Hei! Kan jeg hjelpe deg?",
+          "say_en": "Hi! Can I help you?",
+          "answers": [
+            { "id": "melk", "text": "Ja, jeg leter etter melk.", "en": "Yes, I'm looking for milk.", "reply": "Melken står bakerst i butikken.", "reply_en": "The milk is at the back of the shop.", "next": "epler" },
+            { "id": "brod", "text": "Ja takk, hvor er brødet?", "en": "Yes please, where is the bread?", "reply": "Brødet ligger ved inngangen.", "reply_en": "The bread is by the entrance.", "next": "epler" },
+            { "id": "bare-ser", "text": "Nei takk, jeg bare ser.", "en": "No thanks, I'm just looking.", "reply": "Bare si fra hvis du trenger hjelp.", "reply_en": "Just say if you need help.", "next": "epler" }
+          ]
+        },
+        "epler": {
+          "say": "Vi har ferske epler i dag. Vil du ha noen?",
+          "say_en": "We have fresh apples today. Would you like some?",
+          "answers": [
+            { "id": "koster", "text": "Ja, hvor mye koster de?", "en": "Yes, how much do they cost?", "reply": "De koster tjue kroner kiloen.", "reply_en": "They cost twenty kroner a kilo.", "next": "pose" },
+            { "id": "seks", "text": "Ja, jeg tar seks epler.", "en": "Yes, I'll take six apples.", "reply": "Seks epler. Værsågod.", "reply_en": "Six apples. Here you are.", "next": "pose" },
+            { "id": "hjemme", "text": "Nei takk, jeg har epler hjemme.", "en": "No thanks, I have apples at home.", "reply": "Greit!", "reply_en": "Fine!", "next": "pose" }
+          ]
+        },
+        "pose": {
+          "say": "Trenger du en pose?",
+          "say_en": "Do you need a bag?",
+          "answers": [
+            { "id": "ja-takk", "text": "Ja, takk.", "en": "Yes, please.", "reply": "Posen koster to kroner.", "reply_en": "The bag costs two kroner.", "next": "kundekort" },
+            { "id": "egen", "text": "Nei, jeg har med min egen pose.", "en": "No, I've brought my own bag.", "reply": "Så bra for miljøet!", "reply_en": "Good for the environment!", "next": "kundekort" },
+            { "id": "to-poser", "text": "Ja, to poser, takk.", "en": "Yes, two bags, please.", "reply": "To poser. Det blir fire kroner.", "reply_en": "Two bags. That's four kroner.", "next": "kundekort" }
+          ]
+        },
+        "kundekort": {
+          "say": "Har du kundekort?",
+          "say_en": "Do you have a loyalty card?",
+          "answers": [
+            { "id": "her", "text": "Ja, her er kortet mitt.", "en": "Yes, here's my card.", "reply": "Takk.", "reply_en": "Thanks.", "next": "pris" },
+            { "id": "nei", "text": "Nei, det har jeg ikke.", "en": "No, I don't.", "reply": "Det går fint.", "reply_en": "That's fine.", "next": "pris" },
+            { "id": "hva-er", "text": "Hva er et kundekort?", "en": "What is a loyalty card?", "reply": "Med kundekort får du rabatt.", "reply_en": "With a loyalty card you get a discount.", "next": "pris" }
+          ]
+        },
+        "pris": {
+          "say": "Det blir hundre og femti kroner.",
+          "say_en": "That will be a hundred and fifty kroner.",
+          "answers": [
+            { "id": "kort", "text": "Kan jeg betale med kort?", "en": "Can I pay by card?", "reply": "Ja, bare hold kortet her.", "reply_en": "Yes, just hold the card here.", "next": "kvittering" },
+            { "id": "to-hundre", "text": "Her er to hundre kroner.", "en": "Here's two hundred kroner.", "reply": "Takk. Du får femti kroner tilbake.", "reply_en": "Thanks. You get fifty kroner back.", "next": "kvittering" },
+            { "id": "hvor-mye", "text": "Hvor mye sa du?", "en": "How much did you say?", "reply": "Hundre og femti kroner.", "reply_en": "A hundred and fifty kroner.", "next": "kvittering" }
+          ]
+        },
+        "kvittering": {
+          "say": "Vil du ha kvitteringen?",
+          "say_en": "Would you like the receipt?",
+          "answers": [
+            { "id": "ja", "text": "Ja, gjerne.", "en": "Yes, please.", "reply": "Værsågod.", "reply_en": "Here you are.", "next": "alt" },
+            { "id": "trenger-ikke", "text": "Nei, det trenger jeg ikke.", "en": "No, I don't need it.", "reply": "Ok.", "reply_en": "Okay.", "next": "alt" },
+            { "id": "epost", "text": "Kan du sende den på e-post?", "en": "Can you send it by email?", "reply": "Beklager, det kan vi ikke.", "reply_en": "Sorry, we can't.", "next": "alt" }
+          ]
+        },
+        "alt": {
+          "say": "Har du fått alt du trenger?",
+          "say_en": "Have you got everything you need?",
+          "answers": [
+            { "id": "alt", "text": "Ja, jeg har alt.", "en": "Yes, I have everything.", "reply": "Fint!", "reply_en": "Great!", "next": "takk" },
+            { "id": "egg", "text": "Nei, jeg glemte egg.", "en": "No, I forgot eggs.", "reply": "Eggene står ved melken.", "reply_en": "The eggs are by the milk.", "next": "takk" },
+            { "id": "frimerker", "text": "Selger dere frimerker?", "en": "Do you sell stamps?", "reply": "Nei, dessverre ikke.", "reply_en": "No, unfortunately not.", "next": "takk" }
+          ]
+        },
+        "takk": {
+          "say": "Takk for handelen! Ha en fin kveld.",
+          "say_en": "Thanks for shopping with us! Have a nice evening.",
+          "answers": [
+            { "id": "i-like-mate", "text": "Takk, i like måte.", "en": "Thanks, same to you.", "reply": "Ha det!", "reply_en": "Bye!", "next": null },
+            { "id": "hjelpen", "text": "Takk for hjelpen!", "en": "Thanks for the help!", "reply": "Bare hyggelig!", "reply_en": "My pleasure!", "next": null },
+            { "id": "ha-det", "text": "Ha det bra!", "en": "Goodbye!", "reply": "Ha det!", "reply_en": "Bye!", "next": null }
+          ]
+        }
+      }
+    },
+    {
+      "slug": "middag",
+      "title": "Skal vi møtes?",
+      "title_en": "Shall we meet?",
+      "blurb": "A friend rings to invite you to dinner: days, times, places and food.",
+      "level": 5,
+      "character": { "name": "Jonas", "role": "a friend, on the phone" },
+      "start": "tid",
+      "nodes": {
+        "tid": {
+          "say": "Hei, det er Jonas! Har du tid til å snakke?",
+          "say_en": "Hi, it's Jonas! Do you have time to talk?",
+          "answers": [
+            { "id": "god-tid", "text": "Ja, jeg har god tid.", "en": "Yes, I have plenty of time.", "reply": "Fint!", "reply_en": "Great!", "next": "invitere" },
+            { "id": "litt", "text": "Ja, men bare litt.", "en": "Yes, but only a little.", "reply": "Det tar ikke lang tid.", "reply_en": "It won't take long.", "next": "invitere" },
+            { "id": "skjer", "text": "Hei, Jonas! Hva skjer?", "en": "Hi, Jonas! What's up?", "reply": "Ikke så mye.", "reply_en": "Not much.", "next": "invitere" }
+          ]
+        },
+        "invitere": {
+          "say": "Vil du spise middag med meg denne uka?",
+          "say_en": "Would you like to have dinner with me this week?",
+          "answers": [
+            { "id": "gjerne", "text": "Ja, gjerne! Hvilken dag?", "en": "Yes, I'd love to! Which day?", "reply": "Så bra!", "reply_en": "Great!", "next": "fredag" },
+            { "id": "hyggelig", "text": "Det høres hyggelig ut.", "en": "That sounds nice.", "reply": "Så bra.", "reply_en": "Great.", "next": "fredag" },
+            { "id": "ikke-tid", "text": "Jeg har dessverre ikke tid denne uka.", "en": "Unfortunately I don't have time this week.", "reply": "Det var synd.", "reply_en": "That's a pity.", "next": "neste-uke" }
+          ]
+        },
+        "neste-uke": {
+          "say": "Hva med neste uke?",
+          "say_en": "What about next week?",
+          "answers": [
+            { "id": "passer", "text": "Ja, neste uke passer bra.", "en": "Yes, next week suits me.", "reply": "Flott!", "reply_en": "Great!", "next": "fredag" },
+            { "id": "sjekke", "text": "Kanskje. Jeg må sjekke.", "en": "Maybe. I have to check.", "reply": "Ok, vi prøver.", "reply_en": "Okay, let's try.", "next": "fredag" }
+          ]
+        },
+        "fredag": {
+          "say": "Passer det på fredag?",
+          "say_en": "Does Friday suit you?",
+          "answers": [
+            { "id": "fredag-fint", "text": "Ja, fredag passer fint.", "en": "Yes, Friday is fine.", "reply": "Da sier vi fredag.", "reply_en": "Friday it is, then.", "next": "klokka" },
+            { "id": "lordag", "text": "Nei, men lørdag passer.", "en": "No, but Saturday works.", "reply": "Lørdag er også bra.", "reply_en": "Saturday is good too.", "next": "klokka" },
+            { "id": "jobber", "text": "Jeg jobber på fredag.", "en": "I'm working on Friday.", "reply": "Da tar vi lørdag.", "reply_en": "Then let's do Saturday.", "next": "klokka" }
+          ]
+        },
+        "klokka": {
+          "say": "Hva tid passer for deg?",
+          "say_en": "What time suits you?",
+          "answers": [
+            { "id": "seks", "text": "Klokka seks.", "en": "Six o'clock.", "reply": "Seks er perfekt.", "reply_en": "Six is perfect.", "next": "hvor" },
+            { "id": "halv-sju", "text": "Halv sju passer bra.", "en": "Half past six works well.", "reply": "Halv sju, da.", "reply_en": "Half past six, then.", "next": "hvor" },
+            { "id": "etter-atte", "text": "Etter klokka åtte.", "en": "After eight o'clock.", "reply": "Det er litt sent, men ok.", "reply_en": "That's a bit late, but okay.", "next": "hvor" },
+            { "id": "sju", "text": "Kan vi si sju?", "en": "Can we say seven?", "reply": "Sju er fint.", "reply_en": "Seven is fine.", "next": "hvor" }
+          ]
+        },
+        "hvor": {
+          "say": "Hvor skal vi møtes?",
+          "say_en": "Where shall we meet?",
+          "answers": [
+            { "id": "hjemme", "text": "Hjemme hos meg.", "en": "At my place.", "reply": "Hyggelig! Jeg tar med dessert.", "reply_en": "Lovely! I'll bring dessert.", "next": "fisk" },
+            { "id": "restaurant", "text": "På restauranten i sentrum.", "en": "At the restaurant in the centre.", "reply": "God idé.", "reply_en": "Good idea.", "next": "fisk" },
+            { "id": "stasjonen", "text": "Ved stasjonen.", "en": "By the station.", "reply": "Ved stasjonen, da.", "reply_en": "By the station, then.", "next": "fisk" }
+          ]
+        },
+        "fisk": {
+          "say": "Liker du fisk?",
+          "say_en": "Do you like fish?",
+          "answers": [
+            { "id": "elsker", "text": "Ja, jeg elsker fisk.", "en": "Yes, I love fish.", "reply": "Fint, da blir det fisk.", "reply_en": "Great, fish it is.", "next": "melding" },
+            { "id": "spiser-ikke", "text": "Nei, jeg spiser ikke fisk.", "en": "No, I don't eat fish.", "reply": "Ingen problem. Vi finner noe annet.", "reply_en": "No problem. We'll find something else.", "next": "melding" },
+            { "id": "vegetarianer", "text": "Jeg er vegetarianer.", "en": "I'm a vegetarian.", "reply": "Ok, da spiser vi grønnsaker.", "reply_en": "Okay, then we'll eat vegetables.", "next": "melding" }
+          ]
+        },
+        "melding": {
+          "say": "Skal jeg sende deg en melding samme dag?",
+          "say_en": "Shall I send you a message on the day?",
+          "answers": [
+            { "id": "fint", "text": "Ja, det er fint.", "en": "Yes, that's good.", "reply": "Da gjør jeg det.", "reply_en": "Then I'll do that.", "next": "nummer" },
+            { "id": "trengs-ikke", "text": "Nei, det trengs ikke.", "en": "No, there's no need.", "reply": "Ok.", "reply_en": "Okay.", "next": "nummer" },
+            { "id": "ring", "text": "Ring meg heller.", "en": "Call me instead.", "reply": "Ok, jeg ringer.", "reply_en": "Okay, I'll call.", "next": "nummer" }
+          ]
+        },
+        "nummer": {
+          "say": "Har du nummeret mitt?",
+          "say_en": "Do you have my number?",
+          "answers": [
+            { "id": "har-det", "text": "Ja, jeg har det.", "en": "Yes, I have it.", "reply": "Bra.", "reply_en": "Good.", "next": "gleder" },
+            { "id": "send", "text": "Nei, kan du sende det?", "en": "No, can you send it?", "reply": "Jeg sender det nå.", "reply_en": "I'll send it now.", "next": "gleder" },
+            { "id": "sikker", "text": "Jeg tror det, men jeg er ikke sikker.", "en": "I think so, but I'm not sure.", "reply": "Jeg sender det igjen.", "reply_en": "I'll send it again.", "next": "gleder" }
+          ]
+        },
+        "gleder": {
+          "say": "Flott! Jeg gleder meg. Ha det så lenge!",
+          "say_en": "Great! I'm looking forward to it. Bye for now!",
+          "answers": [
+            { "id": "ogsa", "text": "Jeg gleder meg også. Ha det!", "en": "I'm looking forward to it too. Bye!", "reply": "Ha det!", "reply_en": "Bye!", "next": null },
+            { "id": "ha-det-jonas", "text": "Ha det, Jonas!", "en": "Bye, Jonas!", "reply": "Ha det!", "reply_en": "Bye!", "next": null },
+            { "id": "invitasjonen", "text": "Takk for invitasjonen!", "en": "Thanks for the invitation!", "reply": "Bare hyggelig. Ha det!", "reply_en": "My pleasure. Bye!", "next": null }
+          ]
+        }
+      }
+    },
+    {
+      "slug": "veien",
+      "title": "Veien til stasjonen",
+      "title_en": "The way to the station",
+      "blurb": "Lost in Oslo: follow directions, sort out a ticket, and chat about the city.",
+      "level": 6,
+      "character": { "name": "Anne", "role": "a passer-by in Oslo" },
+      "start": "hjelpe",
+      "nodes": {
+        "hjelpe": {
+          "say": "Unnskyld, kan jeg hjelpe deg? Du ser litt forvirret ut.",
+          "say_en": "Excuse me, can I help you? You look a bit confused.",
+          "answers": [
+            { "id": "stasjonen", "text": "Ja, takk. Jeg leter etter togstasjonen.", "en": "Yes, thanks. I'm looking for the train station.", "reply": "Togstasjonen er ikke langt herfra.", "reply_en": "The train station isn't far from here.", "next": "tog-buss" },
+            { "id": "vill", "text": "Ja, jeg har gått meg vill.", "en": "Yes, I'm lost.", "reply": "Ingen fare, jeg hjelper deg.", "reply_en": "No worries, I'll help you.", "next": "tog-buss" }
+          ]
+        },
+        "tog-buss": {
+          "say": "Skal du ta toget eller bussen?",
+          "say_en": "Are you taking the train or the bus?",
+          "answers": [
+            { "id": "bergen", "text": "Jeg skal ta toget til Bergen.", "en": "I'm taking the train to Bergen.", "reply": "Bergen! Det er en lang og fin tur.", "reply_en": "Bergen! That's a long, lovely trip.", "next": "veibeskrivelse" },
+            { "id": "flybussen", "text": "Jeg skal ta flybussen.", "en": "I'm taking the airport bus.", "reply": "Flybussen går også fra stasjonen.", "reply_en": "The airport bus goes from the station too.", "next": "veibeskrivelse" },
+            { "id": "vet-ikke", "text": "Det vet jeg ikke ennå.", "en": "I don't know yet.", "reply": "Begge går fra stasjonen.", "reply_en": "Both go from the station.", "next": "veibeskrivelse" }
+          ]
+        },
+        "veibeskrivelse": {
+          "say": "Gå rett fram, og ta til venstre ved kirken.",
+          "say_en": "Go straight ahead, and turn left at the church.",
+          "answers": [
+            { "id": "venstre", "text": "Til venstre ved kirken?", "en": "Left at the church?", "reply": "Ja, akkurat.", "reply_en": "Yes, exactly.", "next": "til-fots" },
+            { "id": "en-gang-til", "text": "Kan du si det en gang til?", "en": "Can you say it one more time?", "reply": "Rett fram, og så til venstre ved kirken.", "reply_en": "Straight ahead, and then left at the church.", "next": "til-fots" },
+            { "id": "ok-takk", "text": "Ok, takk!", "en": "Okay, thanks!", "reply": "Bare hyggelig.", "reply_en": "You're welcome.", "next": "til-fots" }
+          ]
+        },
+        "til-fots": {
+          "say": "Er du til fots?",
+          "say_en": "Are you on foot?",
+          "answers": [
+            { "id": "gar", "text": "Ja, jeg går.", "en": "Yes, I'm walking.", "reply": "Da tar det omtrent ti minutter.", "reply_en": "Then it takes about ten minutes.", "next": "billett" },
+            { "id": "sykkel", "text": "Nei, jeg har sykkel.", "en": "No, I have a bike.", "reply": "Da er du der på fem minutter.", "reply_en": "Then you'll be there in five minutes.", "next": "billett" },
+            { "id": "langt", "text": "Hvor langt er det?", "en": "How far is it?", "reply": "Omtrent en kilometer.", "reply_en": "About a kilometre.", "next": "billett" }
+          ]
+        },
+        "billett": {
+          "say": "Har du billett allerede?",
+          "say_en": "Do you already have a ticket?",
+          "answers": [
+            { "id": "nettet", "text": "Ja, jeg kjøpte den på nettet.", "en": "Yes, I bought it online.", "reply": "Smart!", "reply_en": "Smart!", "next": "nar" },
+            { "id": "hvor-kjope", "text": "Nei, hvor kan jeg kjøpe billett?", "en": "No, where can I buy a ticket?", "reply": "Du kan kjøpe billett i appen eller på stasjonen.", "reply_en": "You can buy a ticket in the app or at the station.", "next": "nar" },
+            { "id": "pa-toget", "text": "Nei, jeg kjøper den på toget.", "en": "No, I'll buy it on the train.", "reply": "Det går an, men det er dyrere.", "reply_en": "You can, but it's more expensive.", "next": "nar" }
+          ]
+        },
+        "nar": {
+          "say": "Når går toget ditt?",
+          "say_en": "When does your train leave?",
+          "answers": [
+            { "id": "halv-tre", "text": "Klokka halv tre.", "en": "At half past two.", "reply": "Da har du god tid.", "reply_en": "Then you have plenty of time.", "next": "forste-gang" },
+            { "id": "tjue-min", "text": "Om tjue minutter.", "en": "In twenty minutes.", "reply": "Da må du skynde deg litt!", "reply_en": "Then you'll have to hurry a bit!", "next": "forste-gang" },
+            { "id": "husker-ikke", "text": "Det husker jeg ikke.", "en": "I don't remember.", "reply": "Du kan sjekke på tavla på stasjonen.", "reply_en": "You can check the board at the station.", "next": "forste-gang" }
+          ]
+        },
+        "forste-gang": {
+          "say": "Er det første gang du er i Oslo?",
+          "say_en": "Is it your first time in Oslo?",
+          "answers": [
+            { "id": "forste", "text": "Ja, det er første gang.", "en": "Yes, it's the first time.", "reply": "Velkommen til Oslo!", "reply_en": "Welcome to Oslo!", "next": "byen" },
+            { "id": "i-fjor", "text": "Nei, jeg var her i fjor.", "en": "No, I was here last year.", "reply": "Da liker du nok Oslo!", "reply_en": "Then you must like Oslo!", "next": "byen" },
+            { "id": "mange-ganger", "text": "Nei, jeg har vært her mange ganger.", "en": "No, I've been here many times.", "reply": "Da kjenner du byen godt.", "reply_en": "Then you know the city well.", "next": "byen" }
+          ]
+        },
+        "byen": {
+          "say": "Hva synes du om byen?",
+          "say_en": "What do you think of the city?",
+          "answers": [
+            { "id": "fin", "text": "Jeg synes den er veldig fin.", "en": "I think it's very nice.", "reply": "Det synes jeg også.", "reply_en": "I think so too.", "next": "vise" },
+            { "id": "dyr", "text": "Den er fin, men dyr.", "en": "It's nice, but expensive.", "reply": "Ja, Oslo er dyrt!", "reply_en": "Yes, Oslo is expensive!", "next": "vise" },
+            { "id": "kaldt", "text": "Det er litt kaldt her.", "en": "It's a bit cold here.", "reply": "Ja, men sommeren er fin.", "reply_en": "Yes, but the summer is lovely.", "next": "vise" }
+          ]
+        },
+        "vise": {
+          "say": "Vil du at jeg skal vise deg veien?",
+          "say_en": "Would you like me to show you the way?",
+          "answers": [
+            { "id": "hadde-vaert-fint", "text": "Ja, det hadde vært fint.", "en": "Yes, that would be nice.", "reply": "Kom, vi går sammen.", "reply_en": "Come on, let's walk together.", "next": "god-tur" },
+            { "id": "selv", "text": "Nei takk, jeg finner det selv.", "en": "No thanks, I'll find it myself.", "reply": "Ok. Rett fram, og så til venstre!", "reply_en": "Okay. Straight ahead, then left!", "next": "god-tur" },
+            { "id": "snilt", "text": "Det er snilt av deg, men det går bra.", "en": "That's kind of you, but I'll be fine.", "reply": "Ok. Rett fram, og så til venstre!", "reply_en": "Okay. Straight ahead, then left!", "next": "god-tur" }
+          ]
+        },
+        "god-tur": {
+          "say": "God tur videre! Ha det bra.",
+          "say_en": "Have a good trip! Goodbye.",
+          "answers": [
+            { "id": "tusen-takk", "text": "Tusen takk for hjelpen!", "en": "Thanks so much for the help!", "reply": "Bare hyggelig!", "reply_en": "My pleasure!", "next": null },
+            { "id": "takk-ha-det", "text": "Takk, ha det bra!", "en": "Thanks, goodbye!", "reply": "Ha det!", "reply_en": "Bye!", "next": null },
+            { "id": "snill", "text": "Takk, du var veldig snill.", "en": "Thanks, you were very kind.", "reply": "Bare hyggelig. Ha det!", "reply_en": "My pleasure. Bye!", "next": null }
+          ]
+        }
+      }
+    }
+  ]
+}

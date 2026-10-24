@@ -43,7 +43,7 @@ from pathlib import Path
 
 from app.audio import LENGTH_SCALE, audio_object_key, voice_for_text
 from app.config import get_settings
-from app.content import _s3_client, load_deck
+from app.content import _s3_client, load_deck, load_dialogues
 
 ISSUES_PATH = Path(__file__).parent.parent / "data" / "audio_onset_issues.json"
 
@@ -93,6 +93,17 @@ def deck_clips() -> list[tuple[str, bool]]:
     for entry in entries:
         for example in entry["examples"]:
             clips.setdefault((example["no"], False), None)
+    # The conversation characters' lines: sentences on the primary voice,
+    # measured at the natural rung (LENGTH_SCALE is on their ladder).
+    dialogues, fixed = load_dialogues()
+    lines = [fixed.get("unclear"), fixed.get("choice")]
+    for d in dialogues:
+        for node in d["nodes"].values():
+            lines.append(node["say"])
+            lines += [a.get("reply") for a in node["answers"]]
+    for text in lines:
+        if text:
+            clips.setdefault((text, True), None)
     return list(clips)
 
 

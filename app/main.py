@@ -13,6 +13,7 @@ from app.config import check_production_config, get_settings
 from app.db import engine
 from app.routes import (
     categories,
+    conversation,
     exercises,
     games,
     glossary,
@@ -80,6 +81,7 @@ app.include_router(games.router)
 app.include_router(grammar.router)
 app.include_router(recordings.router)
 app.include_router(speaking.router)
+app.include_router(conversation.router)
 
 
 @app.get("/api/v1/health", tags=["health"])

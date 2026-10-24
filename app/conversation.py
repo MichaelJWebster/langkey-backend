@@ -52,6 +52,9 @@ UNIVERSAL_IDS = frozenset(u[0] for u in UNIVERSAL)
 class Answer:
     id: str
     text: str
+    #: Answers with the same meaning lead the same way (same reply, same next
+    #: line); a close call between two of them needs no question.
+    meaning: str | None = None
 
 
 @dataclass(frozen=True)
@@ -111,5 +114,29 @@ def decide(
         return Decision(UNCLEAR, None, reason="transcript fits better")
 
     if len(ranked) > 1 and best_value - ranked[1][0] < clear:
-        return Decision(CHOICE, best_id, offered=(best_id, ranked[1][1]), reason="close call")
+        meanings = {a.id: a.meaning for a in answers}
+        runner_up = ranked[1][1]
+        if meanings.get(best_id) is not None and meanings.get(best_id) == meanings.get(runner_up):
+            return Decision(ACCEPTED, best_id, reason="close call, same meaning")
+        return Decision(CHOICE, best_id, offered=(best_id, runner_up), reason="close call")
     return Decision(ACCEPTED, best_id, reason="clear win")
+
+
+def paths(nodes: dict, start: str) -> list[list[str]]:
+    """Every route through a dialogue from `start` to an end, as the ids of
+    the nodes the learner answers. Raises ValueError on a cycle."""
+    found: list[list[str]] = []
+
+    def walk(node_id: str, trail: list[str]) -> None:
+        if node_id in trail:
+            raise ValueError(f"cycle through {node_id!r}")
+        trail = [*trail, node_id]
+        nexts = {a["next"] for a in nodes[node_id]["answers"]}
+        for nxt in sorted(nexts, key=lambda n: (n is None, n or "")):
+            if nxt is None:
+                found.append(trail)
+            else:
+                walk(nxt, trail)
+
+    walk(start, [])
+    return found

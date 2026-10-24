@@ -124,6 +124,23 @@ def deck_variants() -> dict[tuple[str, bool, float], None]:
     return variants
 
 
+def dialogue_texts() -> list[str]:
+    """Every line a conversation character speaks: each node's line, each
+    answer's reply, and the fixed "didn't catch that" lines. Read from the
+    mounted data/ (the same mount as the voice overrides), not the deck."""
+    path = f"/data/dialogues_{LANGUAGE}.json"
+    if not os.path.exists(path):
+        return []
+    with open(path) as f:
+        doc = json.load(f)
+    texts = [doc.get("fixed", {}).get(k) for k in ("unclear", "choice")]
+    for d in doc.get("dialogues", []):
+        for node in d["nodes"].values():
+            texts.append(node["say"])
+            texts += [a.get("reply") for a in node["answers"]]
+    return [t for t in dict.fromkeys(texts) if t]
+
+
 def existing_keys() -> set[str]:
     keys: set[str] = set()
     paginator = s3.get_paginator("list_objects_v2")
@@ -134,6 +151,13 @@ def existing_keys() -> set[str]:
 
 def main() -> None:
     variants = deck_variants()
+    # Conversation lines: the primary voice, on the whole imitation ladder so
+    # the speed chooser works as it does for pronunciation.
+    lines = dialogue_texts()
+    for text in lines:
+        for scale in PRONUNCIATION_SCALES:
+            variants.setdefault((text, True, scale), None)
+    print(f"{len(lines)} conversation lines", flush=True)
     expected = {
         audio_object_key(LANGUAGE, t, primary, scale): (t, primary, scale)
         for t, primary, scale in variants

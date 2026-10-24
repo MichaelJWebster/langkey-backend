@@ -20,13 +20,16 @@ from app.auth import hash_password
 from app.config import get_settings
 from app.content import (
     DeckEntry,
+    DialogueEntry,
     GameEntry,
     GrammarUnitEntry,
     PassageEntry,
     deck_hash,
+    dialogues_hash,
     games_hash,
     grammar_hash,
     load_deck,
+    load_dialogues,
     load_games,
     load_grammar,
     load_passages,
@@ -36,6 +39,7 @@ from app.db import Base
 from app.glossary import _WORD_RE
 from app.models import (
     AppMeta,
+    Dialogue,
     ExerciseAttempt,
     Item,
     ItemCategory,
@@ -389,6 +393,49 @@ async def _sync_grammar(
         meta.value = fingerprint
 
 
+async def _sync_dialogues(
+    session: AsyncSession, language: str, entries: list[DialogueEntry]
+) -> None:
+    """Bring `dialogues` in line with the content file, matched by slug.
+
+    Updated in place, so a learner's conversations keep pointing at their
+    dialogue. A dialogue dropped from the file keeps its row and stops being
+    listed (`seq` -1). A turn records the node and answer ids it was for, so
+    editing a line's wording leaves history readable; renaming an id is what
+    would orphan it.
+    """
+    fingerprint = dialogues_hash(entries)
+    meta_key = f"dialogues_hash:{language}"
+    meta = await session.get(AppMeta, meta_key)
+    if meta is not None and meta.value == fingerprint:
+        return
+
+    rows = {
+        row.slug: row
+        for row in await session.scalars(select(Dialogue).where(Dialogue.language_code == language))
+    }
+    for seq, e in enumerate(entries, start=1):
+        row = rows.pop(e["slug"], None)
+        if row is None:
+            row = Dialogue(language_code=language, slug=e["slug"])
+            session.add(row)
+        row.title = e["title"]
+        row.title_en = e["title_en"]
+        row.blurb = e["blurb"]
+        row.level = e["level"]
+        row.seq = seq
+        row.character = e["character"]
+        row.start = e["start"]
+        row.nodes = e["nodes"]
+    for row in rows.values():
+        row.seq = -1
+
+    if meta is None:
+        session.add(AppMeta(key=meta_key, value=fingerprint))
+    else:
+        meta.value = fingerprint
+
+
 async def seed_data() -> None:
     async with db.session_factory() as session:
         for code, name in LANGUAGES.items():
@@ -422,6 +469,8 @@ async def seed_data() -> None:
             await _sync_grammar(
                 session, code, await asyncio.to_thread(load_grammar, code)
             )
+            dialogues, _fixed = await asyncio.to_thread(load_dialogues, code)
+            await _sync_dialogues(session, code, dialogues)
         await session.commit()
 
 
