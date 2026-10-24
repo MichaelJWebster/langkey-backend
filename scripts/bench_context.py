@@ -360,7 +360,10 @@ def ctc(out: Path) -> None:
     from speech_service.config import SpeechSettings
 
     scores = ctc_scorer(SpeechSettings())
-    headwords = json.loads((out / "pool.json").read_text())["headwords"]
+    # pool.json is absent for an exported conversation corpus, which brings
+    # its own candidate sets (turn_answers.json) instead.
+    headwords = json.loads((out / "pool.json").read_text())["headwords"] if (out / "pool.json").exists() else []
+    turn_answers = json.loads((out / "turn_answers.json").read_text()) if (out / "turn_answers.json").exists() else {}
     context = load_context(out)
     greedy = {r["id"]: r["heard"] for r in read_jsonl(out / "nb-whisper-medium.jsonl")}
     sets = {r["target"]: r for r in read_jsonl(out / "llm_sets.jsonl")}
@@ -378,6 +381,7 @@ def ctc(out: Path) -> None:
                 texts += sets[target]["alternatives"] + sets[target]["anticipated"]
             if i in posthoc:
                 texts += [posthoc[i]["best"], *posthoc[i]["candidates"]]
+            texts += turn_answers.get(i, [])
             distinct = list({normalise(t): t for t in texts if normalise(t)}.values())
             samples = transcriber.decode((out / "takes" / f"{i}.audio").read_bytes())
             started = time.monotonic()
@@ -404,7 +408,10 @@ def score(out: Path, raw: bool) -> None:
     greedy = {r["id"]: r["heard"] for r in read_jsonl(out / "nb-whisper-medium.jsonl")}
     sets = {r["target"]: r for r in read_jsonl(out / "llm_sets.jsonl")}
     posthoc = {r["id"]: r for r in read_jsonl(out / "posthoc.jsonl")}
-    headwords = json.loads((out / "pool.json").read_text())["headwords"]
+    # pool.json is absent for an exported conversation corpus, which brings
+    # its own candidate sets (turn_answers.json) instead.
+    headwords = json.loads((out / "pool.json").read_text())["headwords"] if (out / "pool.json").exists() else []
+    turn_answers = json.loads((out / "turn_answers.json").read_text()) if (out / "turn_answers.json").exists() else {}
     if not ctc_rows:
         sys.exit("run the ctc step first")
 
@@ -458,6 +465,9 @@ def score(out: Path, raw: bool) -> None:
             f"target + {DISTRACTORS} nearest deck sentences": {i: context[i]["distractors"] for i in ids if i in context},
             f"target + {DISTRACTORS} one-word near-spellings": {i: slot_variants(takes[i]["target"], headwords, DISTRACTORS) for i in ids},
         }
+        if turn_answers:
+            # Real conversation turns: the line's own answers, as the learner met them.
+            kinds = {"the line's own answers (conversation turns)": {i: turn_answers[i] for i in ids if i in turn_answers}}
         if sets:
             kinds["target + 7 Haiku alternatives (question + target shown)"] = {
                 i: sets[takes[i]["target"]]["alternatives"] for i in ids if takes[i]["target"] in sets}

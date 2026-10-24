@@ -1,5 +1,7 @@
 # Plan: the first conversation, built to collect its own corpus
 
+*Executed 2026-10-24 — see ADR-051 for what was built and where it departs from this plan (dialogues authored directly, no name turn, same-meaning close calls accepted). Kept as the record of the reasoning.*
+
 *Written 2026-10-24 for an executing session. ROADMAP M3 step 5. Read this whole
 document, then the files it names, before writing code. Record decisions as ADRs in
 `docs/ARCHITECTURE.md` (newest first; the next number is ADR-051) and keep

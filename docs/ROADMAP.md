@@ -284,7 +284,7 @@ each step is useful on its own and makes the next one cheaper.
    that transcribes a learner correctly, which NB-Whisper does not; per-phoneme scoring
    needs only alignment to a sentence already known, which is why ADR-025 picks it as the
    route to real feedback.
-5. **Conversation last.** Turn-by-turn: record → NB-Whisper → constrained character with a
+5. ✅ **Conversation last (v1 built 2026-10-24, ADR-051).** Six graded scripted dialogues, a messaging-style screen, answers judged by per-letter CTC against each line's expected answers, every turn kept with its confirmed answer as corpus (`scripts/export_conversations.py`). Next: a week of real use, then export and re-tune `MARGIN`/`CLEAR` on replies. Original plan: Turn-by-turn: record → NB-Whisper → constrained character with a
    couple of tools → reply text → Piper audio. The most work, and steps 1–2 build most of
    what it needs. Not an open-ended agent (ADR-026). The 2026-10-24 benchmark (step 2)
    says a bigger recogniser will not carry it — a third of sentences lose their gist on
