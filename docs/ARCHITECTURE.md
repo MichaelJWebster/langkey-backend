@@ -21,7 +21,7 @@ The deterministic gates (ADR-029) found nothing in any of them. Gemma 4 12B is a
 
 **Thinking off.** The first run hung: Gemma 4 has a thinking mode, on by default in Ollama, and spent 47 s and its whole token budget reasoning about one paragraph without returning a translation. `prepare_text.ollama` now sends `"think": false`, which models without the mode accept and ignore.
 
-Existing translations are untouched: every library sentence is still a `gemma3:12b` draft, and `sentence_translations` is versioned per translator (ADR-021), so re-translating is a separate decision. Revisit: re-translate the library with gemma4:26b, and re-run this comparison when a new local model appears.
+**Library re-translated the same evening** with `scripts/retranslate.py` (prepare_text's translation path over texts already in the database; a new translation becomes current only if it passes the translation-side gates; per-paragraph commits; `--restore` switches back; nothing deleted), under `caffeinate -i` because this Mac idle-sleeps after a minute: 9,751 of 9,760 sentences are now `gemma4:26b`, in 90 minutes. The 9 kept on `gemma3:12b` all tripped the archaic-English gate — Gemma 4 rendering folktale speech as *thee/thou/askest* — so the gate did its job. Revisit: re-run this comparison when a new local model appears.
 
 ## ADR-051 (2026-10-24) — Conversation v1: scripted dialogues, answers judged by CTC, every turn kept as corpus
 
