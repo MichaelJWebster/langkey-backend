@@ -3,7 +3,9 @@
     "unclear": "Unnskyld, jeg hørte ikke helt. Kan du si det igjen?",
     "unclear_en": "Sorry, I didn't quite hear. Can you say it again?",
     "choice": "Unnskyld, hva sa du?",
-    "choice_en": "Sorry, what did you say?"
+    "choice_en": "Sorry, what did you say?",
+    "offscript": "Beklager, det forstod jeg ikke helt. Kan du si det på en annen måte?",
+    "offscript_en": "Sorry, I didn't quite understand that. Can you say it another way?"
   },
   "dialogues": [
     {
@@ -21,7 +23,8 @@
           "answers": [
             { "id": "hyggelig", "text": "Hei, Ingrid! Hyggelig å møte deg.", "en": "Hi, Ingrid! Nice to meet you.", "reply": "Hyggelig å møte deg også!", "reply_en": "Nice to meet you too!", "next": "hvordan" },
             { "id": "ny", "text": "Hei! Jeg er ny her.", "en": "Hi! I'm new here.", "reply": "Velkommen til huset!", "reply_en": "Welcome to the building!", "next": "hvordan" },
-            { "id": "heihei", "text": "Hei hei!", "en": "Hi there!", "reply": "Hei hei!", "reply_en": "Hi there!", "next": "hvordan" }
+            { "id": "heihei", "text": "Hei hei!", "en": "Hi there!", "reply": "Hei hei!", "reply_en": "Hi there!", "next": "hvordan" },
+            { "id": "navn", "text": "Hei! Jeg heter …", "en": "Hi! My name is …", "match": "(hei |hallo )?(ingrid )?(jeg heter|mitt navn er|jeg er) \\w+( \\w+)?", "example": "Hei, jeg heter Michael.", "reply": "Hyggelig å møte deg!", "reply_en": "Nice to meet you!", "next": "hvordan" }
           ]
         },
         "hvordan": {
@@ -41,7 +44,8 @@
             { "id": "australia", "text": "Jeg kommer fra Australia.", "en": "I'm from Australia.", "reply": "Australia! Det er langt borte.", "reply_en": "Australia! That's far away.", "next": "norsk" },
             { "id": "england", "text": "Jeg kommer fra England.", "en": "I'm from England.", "reply": "Hyggelig! England er et fint land.", "reply_en": "How nice! England is a lovely country.", "next": "norsk" },
             { "id": "amerika", "text": "Fra Amerika.", "en": "From America.", "reply": "Amerika! Spennende.", "reply_en": "America! Exciting.", "next": "norsk" },
-            { "id": "skottland", "text": "Fra Skottland.", "en": "From Scotland.", "reply": "Skottland! Der er det fint.", "reply_en": "Scotland! It's lovely there.", "next": "norsk" }
+            { "id": "skottland", "text": "Fra Skottland.", "en": "From Scotland.", "reply": "Skottland! Der er det fint.", "reply_en": "Scotland! It's lovely there.", "next": "norsk" },
+            { "id": "land", "text": "Jeg kommer fra …", "en": "I'm from …", "match": "(jeg kommer |jeg er )?fra \\w+( \\w+)?", "example": "Jeg kommer fra Canada.", "reply": "Spennende! Velkommen til Norge.", "reply_en": "Exciting! Welcome to Norway.", "next": "norsk" }
           ]
         },
         "norsk": {
@@ -163,7 +167,8 @@
             { "id": "sentrum", "text": "Jeg bor i sentrum.", "en": "I live in the city centre.", "reply": "I sentrum? Det er praktisk.", "reply_en": "In the centre? That's handy.", "next": "alene" },
             { "id": "leilighet", "text": "Jeg bor i en liten leilighet.", "en": "I live in a small flat.", "reply": "Liten er koselig!", "reply_en": "Small is cosy!", "next": "alene" },
             { "id": "hus", "text": "Vi bor i et hus utenfor byen.", "en": "We live in a house outside the city.", "reply": "Et hus! Så fint.", "reply_en": "A house! How nice.", "next": "alene" },
-            { "id": "besok", "text": "Jeg bor i Australia, men jeg er på besøk.", "en": "I live in Australia, but I'm visiting.", "reply": "Australia! Du har reist langt.", "reply_en": "Australia! You've travelled far.", "next": "alene" }
+            { "id": "besok", "text": "Jeg bor i Australia, men jeg er på besøk.", "en": "I live in Australia, but I'm visiting.", "reply": "Australia! Du har reist langt.", "reply_en": "Australia! You've travelled far.", "next": "alene" },
+            { "id": "bor-i", "text": "Jeg bor i …", "en": "I live in …", "match": "(jeg|vi) bor (i|på) \\w+( \\w+)?", "example": "Jeg bor i Sydney.", "reply": "Så hyggelig!", "reply_en": "How nice!", "next": "alene" }
           ]
         },
         "alene": {
@@ -192,7 +197,8 @@
             { "id": "data", "text": "Jeg jobber med data.", "en": "I work with computers.", "reply": "Data! Det er nyttig.", "reply_en": "Computers! That's useful.", "next": "hvorfor" },
             { "id": "laerer", "text": "Jeg er lærer.", "en": "I'm a teacher.", "reply": "Lærer! Da kan du hjelpe meg med leksene.", "reply_en": "A teacher! Then you can help me with my homework.", "next": "hvorfor" },
             { "id": "pensjonist", "text": "Jeg er pensjonist.", "en": "I'm retired.", "reply": "Så deilig, da har du god tid.", "reply_en": "How lovely, then you have plenty of time.", "next": "hvorfor" },
-            { "id": "student", "text": "Jeg studerer.", "en": "I'm studying.", "reply": "Jeg også!", "reply_en": "Me too!", "next": "hvorfor" }
+            { "id": "student", "text": "Jeg studerer.", "en": "I'm studying.", "reply": "Jeg også!", "reply_en": "Me too!", "next": "hvorfor" },
+            { "id": "jobber-som", "text": "Jeg jobber som …", "en": "I work as …", "match": "jeg (jobber som|jobber med|er) \\w+( \\w+)?", "example": "Jeg jobber som ingeniør.", "reply": "Så interessant!", "reply_en": "How interesting!", "next": "hvorfor" }
           ]
         },
         "hvorfor": {

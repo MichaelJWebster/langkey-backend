@@ -118,3 +118,35 @@ def test_a_close_call_between_answers_that_mean_the_same_is_accepted():
     ]
     d = decide(same, {"bra": s(-1.0), "fint": s(-1.05), "trott": s(-3.0)}, "Bra tak", s(-1.0))
     assert (d.kind, d.picked, d.reason) == (ACCEPTED, "bra", "close call, same meaning")
+
+
+NAME = r"(hei |hallo )?(ingrid )?(jeg heter|mitt navn er|jeg er) \w+( \w+)?"
+HILSE = [
+    Answer("hyggelig", "Hei, Ingrid! Hyggelig å møte deg."),
+    Answer("ny", "Hei! Jeg er ny her."),
+    Answer("heihei", "Hei hei!"),
+    Answer("navn", "Hei! Jeg heter …", match=NAME),
+]
+
+
+def test_introducing_yourself_is_accepted_as_a_slot_answer():
+    """Michael's turn of 2026-10-24, with its logged per-letter scores: the
+    fixed answers lost to the transcript by a mile, and "unclear" followed."""
+    scores = {"hyggelig": s(-7.52), "ny": s(-4.62), "heihei": s(-15.46)}
+    d = decide(HILSE, scores, "Hei, jeg heter Michael.", s(-1.61))
+    assert (d.kind, d.picked, d.reason) == (ACCEPTED, "navn", "slot")
+
+
+def test_a_slot_does_not_steal_a_fixed_answer_that_fits():
+    d = decide(HILSE, {"hyggelig": s(-3.0), "ny": s(-1.0), "heihei": s(-4.0)}, "Hei jeg er ny her", s(-1.1))
+    assert d.picked == "ny"
+
+
+def test_a_slot_rescues_the_turn_with_the_scorer_down():
+    d = decide(HILSE, None, "Hei, jeg heter Michael.", None)
+    assert (d.kind, d.picked) == (ACCEPTED, "navn")
+
+
+def test_off_script_without_a_fitting_slot_stays_unclear():
+    d = decide(HILSE, {"hyggelig": s(-6.0), "ny": s(-5.0), "heihei": s(-9.0)}, "Jeg har en stor hund", s(-1.5))
+    assert (d.kind, d.reason) == (UNCLEAR, "transcript fits better")

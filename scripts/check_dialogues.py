@@ -20,12 +20,15 @@ Failures (any one stops the file):
   separate (83% from the set alone, against 95-96% for distinct sets).
 * **order** -- levels rise strictly with position, so the list the learner
   sees runs from easiest to hardest.
+* **slots** -- a slot answer ("Jeg heter …", for a value only the learner
+  knows) has a pattern that compiles and matches its own example.
 
 Reported, not failed: words in a learner answer that the deck does not
 contain. A dialogue may teach a word; it should not do so by accident.
 """
 
 import json
+import re
 import sys
 from difflib import SequenceMatcher
 from itertools import pairwise
@@ -55,6 +58,23 @@ def near_pair(a: str, b: str) -> str | None:
     return None
 
 
+def _check_slot(where: str, a: dict) -> list[str]:
+    """A slot answer ("Jeg heter …") is a pattern over the normalised
+    transcript: it must compile, show its slot as "…", and match its own
+    example."""
+    try:
+        pattern = re.compile(a["match"])
+    except re.error as exc:
+        return [f"{where}: match does not compile ({exc})"]
+    problems = []
+    if "…" not in a.get("text", ""):
+        problems.append(f"{where}: a slot answer's text shows its slot as '…'")
+    example = " ".join(words(a.get("example", "")))
+    if not example or not pattern.fullmatch(example):
+        problems.append(f"{where}: match does not fit its example {a.get('example')!r}")
+    return problems
+
+
 def check_dialogue(d: dict) -> list[str]:
     problems: list[str] = []
     slug = d.get("slug", "?")
@@ -82,6 +102,8 @@ def check_dialogue(d: dict) -> list[str]:
                     problems.append(f"{where}/{a.get('id')}: missing {key!r}")
             if a.get("id") in universal_ids:
                 problems.append(f"{where}/{a['id']}: id is reserved for a universal answer")
+            if a.get("match") is not None:
+                problems += _check_slot(f"{where}/{a.get('id')}", a)
             if a.get("next") is not None and a["next"] not in nodes:
                 problems.append(f"{where}/{a.get('id')}: next {a['next']!r} is not a node")
         texts = [(a.get("id"), a.get("text", "")) for a in answers] + [
@@ -114,7 +136,7 @@ def check_dialogue(d: dict) -> list[str]:
 
 def check(doc: dict) -> list[str]:
     problems: list[str] = []
-    for key in ("unclear", "unclear_en", "choice", "choice_en"):
+    for key in ("unclear", "unclear_en", "choice", "choice_en", "offscript", "offscript_en"):
         if not doc.get("fixed", {}).get(key):
             problems.append(f"fixed: missing {key!r}")
     dialogues = doc.get("dialogues", [])

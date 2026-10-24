@@ -133,7 +133,7 @@ def dialogue_texts() -> list[str]:
         return []
     with open(path) as f:
         doc = json.load(f)
-    texts = [doc.get("fixed", {}).get(k) for k in ("unclear", "choice")]
+    texts = [doc.get("fixed", {}).get(k) for k in ("unclear", "choice", "offscript")]
     for d in doc.get("dialogues", []):
         for node in d["nodes"].values():
             texts.append(node["say"])

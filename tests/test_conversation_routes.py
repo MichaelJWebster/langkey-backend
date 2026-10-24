@@ -303,3 +303,27 @@ async def test_confirm_needs_exactly_one_kind_of_answer(client, bucket, speech):
         json={"answer_id": "hyggelig", "retry": True},
     )
     assert resp.status_code == 400
+
+
+async def test_saying_your_name_to_ingrid_is_accepted_and_shown_as_said(client, bucket, speech):
+    headers = await login(client)
+    conv = await _start(client, headers)
+    # Whisper heard it cleanly; no fixed answer fits.
+    speech["fake"] = FakeSpeech(heard="Hei, jeg heter Michael.", transcript_fit=-1.0)
+
+    result = await _turn(client, headers, conv["id"])
+
+    assert (result["decision"], result["reason"]) == ("accepted", "slot")
+    assert result["picked"]["text"] == "Hei, jeg heter Michael."
+    assert result["step"]["reply"]["text"] == "Hyggelig å møte deg!"
+    # The slot answer is never sent for scoring: it has no fixed text.
+    assert not any("…" in t for t in speech["fake"].scored[0])
+    async with db.session_factory() as session:
+        marks = list(await session.scalars(select(PronunciationAttempt)))
+    assert marks == []  # nothing fixed to mark the take against
+
+
+async def test_start_carries_the_off_script_line(client):
+    headers = await login(client)
+    conv = await _start(client, headers)
+    assert "annen måte" in conv["offscript"]["text"]

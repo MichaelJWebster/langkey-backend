@@ -96,7 +96,7 @@ def deck_clips() -> list[tuple[str, bool]]:
     # The conversation characters' lines: sentences on the primary voice,
     # measured at the natural rung (LENGTH_SCALE is on their ladder).
     dialogues, fixed = load_dialogues()
-    lines = [fixed.get("unclear"), fixed.get("choice")]
+    lines = [fixed.get(k) for k in ("unclear", "choice", "offscript")]
     for d in dialogues:
         for node in d["nodes"].values():
             lines.append(node["say"])

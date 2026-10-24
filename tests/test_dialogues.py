@@ -52,7 +52,7 @@ def _tiny(turns: int, *, answers=None):
             ],
         }
     return {
-        "fixed": {"unclear": "x", "unclear_en": "x", "choice": "x", "choice_en": "x"},
+        "fixed": {"unclear": "x", "unclear_en": "x", "choice": "x", "choice_en": "x", "offscript": "x", "offscript_en": "x"},
         "dialogues": [{
             "slug": "t", "title": "T", "title_en": "T", "blurb": "b", "level": 1,
             "character": {"name": "A", "role": "r"}, "start": "n0", "nodes": nodes,
@@ -79,3 +79,13 @@ def test_a_dangling_next_fails():
     doc = _tiny(MIN_TURNS)
     doc["dialogues"][0]["nodes"]["n0"]["answers"][0]["next"] = "nowhere"
     assert any("nowhere" in p for p in check(doc))
+
+
+def test_a_slot_answer_must_match_its_own_example():
+    slot = {"id": "navn", "text": "Jeg heter …", "en": "x", "reply": "x", "reply_en": "x", "next": None,
+            "match": r"jeg heter \w+", "example": "Jeg heter Michael."}
+    other = {"id": "a", "text": "Ja, takk.", "en": "x", "reply": "x", "reply_en": "x", "next": None}
+    doc = _tiny(1, answers=[other, slot])
+    assert not any("slot" in p or "match" in p for p in check(doc))
+    slot["example"] = "Jeg bor i Oslo."
+    assert any("does not fit its example" in p for p in check(doc))

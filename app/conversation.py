@@ -22,6 +22,7 @@ Pure functions, so the rule is tested without a model and re-run offline on
 logged turns.
 """
 
+import re
 from dataclasses import dataclass
 
 from app.pronunciation import normalise
@@ -55,6 +56,11 @@ class Answer:
     #: Answers with the same meaning lead the same way (same reply, same next
     #: line); a close call between two of them needs no question.
     meaning: str | None = None
+    #: A slot answer -- "Jeg heter …", "Jeg kommer fra …" -- whose value only
+    #: the learner knows: a regular expression over the normalised transcript.
+    #: It has no fixed text to score, so it is never scored; it rescues a turn
+    #: the scored answers could not place, when Whisper's transcript fits it.
+    match: str | None = None
 
 
 @dataclass(frozen=True)
@@ -94,6 +100,26 @@ def decide(
         # Nothing heard is silence or a failed capture, not an answer -- and
         # without a transcript there is nothing to measure "off-script" by.
         return Decision(UNCLEAR, None, reason="nothing heard")
+
+    decision = _scored(answers, scores, transcript_score, margin=margin, clear=clear)
+    if decision.kind == UNCLEAR:
+        # The fixed answers could not place it; a slot answer may. Whisper
+        # heard a sentence of the right shape -- "jeg heter michael" -- and the
+        # value is the learner's own, so the transcript is the answer.
+        for a in answers:
+            if a.match and re.fullmatch(a.match, heard):
+                return Decision(ACCEPTED, a.id, reason="slot")
+    return decision
+
+
+def _scored(
+    answers: list[Answer],
+    scores: dict[str, CandidateScore] | None,
+    transcript_score: CandidateScore | None,
+    *,
+    margin: float,
+    clear: float,
+) -> Decision:
     if not scores:
         return Decision(UNCLEAR, None, reason="no scores")
 

@@ -117,9 +117,11 @@ class ConversationOut(BaseModel):
     id: uuid.UUID
     dialogue: DialogueOut
     node: NodeOut
-    #: Said when the turn was unclear, and when offering a choice.
+    #: Said when nothing usable was heard, when offering a choice, and when
+    #: the learner was heard clearly but said something the line does not expect.
     unclear: LineOut
     choice: LineOut
+    offscript: LineOut
 
 
 class StepOut(BaseModel):
@@ -249,12 +251,9 @@ async def _catalogue(session: AsyncSession, user: User) -> list[tuple[Dialogue, 
     return out
 
 
-def _fixed() -> tuple[LineOut, LineOut]:
+def _fixed() -> dict[str, LineOut]:
     _, fixed = load_dialogues(LANGUAGE)
-    return (
-        _line(fixed["unclear"], fixed["unclear_en"]),
-        _line(fixed["choice"], fixed["choice_en"]),
-    )
+    return {k: _line(fixed[k], fixed[f"{k}_en"]) for k in ("unclear", "choice", "offscript")}
 
 
 async def _owned(session: AsyncSession, user: User, conversation_id: uuid.UUID) -> Conversation:
@@ -265,13 +264,13 @@ async def _owned(session: AsyncSession, user: User, conversation_id: uuid.UUID) 
 
 
 async def _record_marks(
-    session: AsyncSession, user: User, turn: ConversationTurn, said_text: str
+    session: AsyncSession, user: User, turn: ConversationTurn, said_text: str | None
 ) -> None:
     """Feed the pronunciation tally from a confirmed turn (ADR-036): each
     word of what the learner says they said, against what Whisper heard.
     Replaces any marks from an earlier confirmation of the same turn."""
     await session.execute(delete(PronunciationAttempt).where(PronunciationAttempt.turn_id == turn.id))
-    if not turn.transcript:
+    if not turn.transcript or not said_text:
         return
     session.add_all(
         PronunciationAttempt(
@@ -300,7 +299,10 @@ async def _apply(
     turn.confirmed_id = answer["id"]
     turn.confirmed_text = None
     turn.confirmed_how = how
-    await _record_marks(session, user, turn, answer["text"])
+    # A slot answer ("Jeg heter …") has no fixed text to mark the take
+    # against: the transcript is the only account of it, and marking it
+    # against itself would count every word as said.
+    await _record_marks(session, user, turn, None if answer.get("match") else answer["text"])
 
     if answer["id"] in UNIVERSAL_IDS:
         # "I don't understand" / "can you repeat": the same line again.
@@ -341,13 +343,11 @@ async def start(
     conversation = Conversation(user_id=user.id, dialogue_id=dialogue.id, node_id=dialogue.start)
     session.add(conversation)
     await session.commit()
-    unclear, choice = _fixed()
     return ConversationOut(
         id=conversation.id,
         dialogue=summary,
         node=_node_out(dialogue, dialogue.start),
-        unclear=unclear,
-        choice=choice,
+        **_fixed(),
     )
 
 
@@ -399,8 +399,12 @@ async def take_turn(
 
     node = dialogue.nodes[conversation.node_id]
     answers = [
-        Answer(a["id"], a["text"], meaning=f"{a['next']}|{a['reply']}") for a in node["answers"]
+        Answer(a["id"], a["text"], meaning=f"{a['next']}|{a['reply']}", match=a.get("match"))
+        for a in node["answers"]
     ] + [Answer(i, t) for i, t, _ in UNIVERSAL]
+    # Slot answers have no fixed text to score; the rule matches them on the
+    # transcript instead.
+    scored = [a for a in answers if not a.match]
 
     transcript = transcript_model = None
     transcribe_ms = score_ms = None
@@ -412,7 +416,7 @@ async def take_turn(
         logger.info("turn %s not transcribed: %s", turn_id, exc)
     transcribe_ms = int((time.monotonic() - started) * 1000)
 
-    texts = [a.text for a in answers] + ([transcript] if transcript else [])
+    texts = [a.text for a in scored] + ([transcript] if transcript else [])
     scores = transcript_score = None
     scorer_model = None
     stored_candidates = None
@@ -424,11 +428,11 @@ async def take_turn(
             logger.info("turn %s not scored: %s", turn_id, exc)
         else:
             scorer_model = result.model
-            scores = {a.id: c for a, c in zip(answers, result.candidates)}
-            transcript_score = result.candidates[len(answers)]
+            scores = {a.id: c for a, c in zip(scored, result.candidates)}
+            transcript_score = result.candidates[len(scored)]
             stored_candidates = [
                 {"id": a.id, "text": c.text, "ctc": c.ctc, "letters": c.letters}
-                for a, c in zip(answers, result.candidates)
+                for a, c in zip(scored, result.candidates)
             ] + [
                 {"id": None, "text": transcript_score.text, "ctc": transcript_score.ctc,
                  "letters": transcript_score.letters}
@@ -465,12 +469,16 @@ async def take_turn(
         step = await _apply(session, user, conversation, dialogue, turn, picked, "echo")
     await session.commit()
 
+    picked_out = _answer_out(picked) if picked else None
+    if picked_out is not None and picked.get("match") and transcript:
+        # The learner's own value: show what they said, not "Jeg heter …".
+        picked_out = picked_out.model_copy(update={"text": transcript})
     return TurnOut(
         turn_id=turn.id,
         decision=decision.kind,
         reason=decision.reason,
         transcript=transcript,
-        picked=_answer_out(picked) if picked else None,
+        picked=picked_out,
         offered=[_answer_out(_answer(dialogue, turn.node_id, i)) for i in decision.offered],
         step=step,
     )

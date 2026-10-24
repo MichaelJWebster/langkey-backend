@@ -79,7 +79,13 @@ def main() -> None:
             node = dialogue.nodes.get(turn.node_id)
             if node is None or turn.confirmed_id is None:
                 continue
-            answers = {a["id"]: a["text"] for a in node["answers"]} | universal
+            slots = {a["id"] for a in node["answers"] if a.get("match")}
+            if turn.confirmed_id in slots:
+                # "Jeg heter …": the value is the learner's own, so there is
+                # no fixed target to benchmark against.
+                tally["slot answers (not exported)"] += 1
+                continue
+            answers = {a["id"]: a["text"] for a in node["answers"] if not a.get("match")} | universal
             target = answers.get(turn.confirmed_id)
             if target is None:
                 continue  # the answer has since been renamed in the content
