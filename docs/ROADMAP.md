@@ -297,47 +297,61 @@ each step is useful on its own and makes the next one cheaper.
    directly is the only real alternative, worth a bake-off on this corpus once the
    feature exists.
 
-   **Context, measured 2026-10-24 — the turn's expected answers are the big lever.**
-   A turn knows roughly what the learner will say, so `scripts/bench_context.py`
-   simulated that on the same 569 takes. Each take got an answer set: its true target
-   plus four alternatives. Every candidate was scored by how well the audio supports it
-   (log P(text | audio) under the aligner's `nb-wav2vec2` CTC model, ~0.16 s a take),
-   against Whisper's own transcript as the open guess. The rule: take the best expected
-   answer unless the open guess beats it by more than a margin. "Off-script" is the
-   same set with the target removed — how often a wrong expected answer gets accepted
-   when the learner said something else. Sentences, 506; free decoding gets 34% exact:
+   **Context, measured 2026-10-24 — the turn's expected answers are the big lever, and the
+   answers have to be known before the learner speaks.** A turn knows roughly what the
+   learner will say, so `scripts/bench_context.py` simulated that on the same 569 takes.
+   Each take got an answer set — its true target plus alternatives — and every candidate
+   was scored by how well the audio supports it: log P(text | audio) under the aligner's
+   `nb-wav2vec2` CTC model, **per letter** (the raw sum favours shorter texts: the target
+   beat Whisper's transcript 86 times when it was the shorter text and 55 when longer),
+   ~0.16 s a take for all candidates. The rule: take the best expected answer unless
+   Whisper's own transcript beats it by more than a margin. "Off-script" removes the target
+   and asks how often a wrong expected answer is accepted anyway. Sentences, 506; free
+   decoding gets 34% exact, 56% gist:
 
-   | answer set: target + 4… | set alone | with open guess, margin +5 / +10 | wrong answer taken off-script |
+   | answer set: target + … | set alone | with transcript, margin 0.3 / 0.5 nats per letter | wrong answer taken off-script |
    |---|---|---|---|
-   | nearest deck sentences | 92% | 74% / 82% | 13% / 16% |
-   | one-word near-spellings (*hjelpe / hjalp*) | 73% | 62% / 68% | 44% / 59% |
+   | 4 nearest deck sentences | 95% | 81% / 88% | 11% / 12% |
+   | 7 Haiku-written alternatives (question + target shown) | 96% | 82% / 89% | 10% / 12% |
+   | 4 one-word near-spellings (*hjelpe / hjalp*) | 83% | 72% / 78% | 44% / 56% |
 
-   - **Distinct answers make recognition work.** 34% exact becomes ~80% when the
-     alternatives differ by more than a word.
-   - **Near-spellings defeat it.** When the alternatives differ only by one
-     similar-sounding word, the audio cannot tell them apart reliably — and sometimes
-     that is because the learner did say the other word, a pronunciation fact the turn
-     should report, not paper over.
-   - **Whisper's n-best adds nothing.** Beam search (10 wide, up to 5 distinct
-     transcripts) held the target only 37% of the time; letting CTC choose among them
-     gave 33% exact against greedy's 34%. As the open guess, greedy matches n-best and
-     saves ~0.5 s a turn. *The greedy-as-open-guess figures in the table come from a
-     one-off pass, not yet from the script; n-best gives 70% / 80% and 10% / 15% for
-     the first row.* transformers 5.18's Whisper `generate` returns copies of the top
-     beam for `num_return_sequences`; the script goes through `GenerationMixin.generate`
-     instead.
-   - **Comparing against the unconstrained CTC path** (a GOP-style threshold) did worse
-     than comparing against the open guess, so it is not the way to spot off-script
-     answers.
+   - **Distinct answers make recognition work.** 34% exact becomes ~85% when the
+     alternatives differ by more than a word, and an LLM writes sets as separable as
+     hand-picked ones — so the sets need not be authored.
+   - **Near-spellings defeat it.** One similar-sounding word apart, the audio cannot tell
+     the candidates apart reliably — and sometimes that is because the learner did say the
+     other word, a pronunciation fact the turn should report, not paper over.
+   - **The answer cannot be anticipated from the question alone.** Haiku's eight likeliest
+     A1 answers to the question contained what the learner actually said 4% of the time
+     exactly, 15% by gist. (Pessimistic — the questions were invented from deck sentences,
+     which are odd answers to anything — but the direction is clear.) So the set has to
+     come from the turn's design, not from guessing.
+   - **Proposing after hearing is a modest gain, not a fix.** Given the question and
+     Whisper's misheard transcript, Haiku's single best guess reaches 40% exact / 57% gist;
+     its eight candidates contain the target 59% of the time; letting CTC choose among them
+     plus the transcript gives **44% exact / 65% gist**, while asserting a repaired sentence
+     that is wrong 19% of the time. The candidates are all phonetic neighbours of the
+     transcript, which is the near-spelling case again.
+   - **Whisper's n-best adds nothing** (target present 37%; CTC choosing among the beams
+     33% exact against greedy's 34%; transformers 5.18's Whisper `generate` returns copies
+     of the top beam — the script goes through `GenerationMixin.generate`). **wav2vec2's own
+     transcript is unusable** as text (4% exact, 23% gist): it stays the acoustic judge, not
+     the scribe, and Whisper stays the pronunciation record. A GOP-style threshold against
+     the unconstrained CTC path did worse than comparing against the transcript.
 
-   So the turn design follows: author answer sets whose alternatives differ by more
-   than one similar-sounding word; run Whisper once, score the expected answers and its
-   transcript with CTC, margin around +5 to +10; always confirm with *"I think you
-   said: …"*, since 13–16% wrong acceptances are too many to act on silently; and keep
-   the unassisted transcript for pronunciation feedback. Caveats: these takes are
-   sentences read aloud after a reference, not spontaneous replies, so real turns will
-   be harder; and the sets are simulated — authored alternatives (*Oslo / Bergen*)
-   should separate more easily than the nearest-neighbour worst case used here.
+   So the turn design follows. **Shape turns so the answer space is small and known** —
+   closed questions, offered choices, slots whose values the app already holds (the
+   learner's town, the menu it just showed) — which is ADR-026's constrained character
+   anyway; have the LLM write the alternatives when it writes the question, requiring them
+   to differ by more than one similar-sounding word; run Whisper once; CTC-score the set
+   and the transcript per letter, margin 0.3–0.5 nats per letter. **Open turns get the
+   post-hoc proposal** (question + transcript → candidates → CTC), knowing it lifts exact
+   from a third to under a half and must not act silently. Confirmation is gated on the
+   acoustic margin: a clear win is echoed in the character's reply (*"I Oslo! Hyggelig."*);
+   a narrow one becomes a choice (*"Sa du Oslo eller Molde?"*), which also teaches. Keep
+   the unassisted transcript for pronunciation feedback, and log audio, candidates, scores
+   and the pick: that is the real conversation corpus, which does not exist yet — these
+   takes are sentences read after a reference, not replies.
 
 Open questions: hosting for NB-Whisper once it leaves the Mac (Workers AI
 whisper-large-v3-turbo at $0.0005/audio-min is the cheap fallback, but generic Whisper
