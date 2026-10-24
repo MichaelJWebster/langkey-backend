@@ -6,6 +6,7 @@ __pycache__/
 dist/
 *.egg-info/
 data/texts_staging/
+data/dialogues_staging/
 .neon
 .env.local
 .secrets.local

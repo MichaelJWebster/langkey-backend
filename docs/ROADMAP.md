@@ -353,6 +353,11 @@ each step is useful on its own and makes the next one cheaper.
    and the pick: that is the real conversation corpus, which does not exist yet — these
    takes are sentences read after a reference, not replies.
 
+   **Build plan for the first conversation: `docs/plans/conversation-corpus.md`**
+   (2026-10-24) — scripted dialogues as content, pre-generated Piper lines, CTC-scored
+   expected answers, confirmation banding, every turn logged as corpus. No LLM in the
+   request path in v1.
+
 Open questions: hosting for NB-Whisper once it leaves the Mac (Workers AI
 whisper-large-v3-turbo at $0.0005/audio-min is the cheap fallback, but generic Whisper
 gives up the Norwegian accuracy margin); how speaking attempts should feed CEFR
